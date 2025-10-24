@@ -1,14 +1,12 @@
-import requests
+#!/usr/bin/env python3
+"""
+Investment Projection Tool - Main Entry Point
 
-url = "https://alpha-vantage.p.rapidapi.com/query"
+This is the main entry point that uses the new object-oriented architecture.
+The actual application logic is now organized into proper models and services.
+"""
 
-querystring = {"interval":"5min","function":"TIME_SERIES_INTRADAY","symbol":"MSFT","datatype":"json","output_size":"compact"}
+from app import main
 
-headers = {
-	"X-RapidAPI-Key": "bbdcece22bmsh033b0147a3782aep1e472djsnd160f92c628e",
-	"X-RapidAPI-Host": "alpha-vantage.p.rapidapi.com"
-}
-
-response = requests.get(url, headers=headers, params=querystring)
-
-print(response.json())
+if __name__ == "__main__":
+    main()

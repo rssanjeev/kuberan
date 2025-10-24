@@ -1,1 +1,21 @@
 testenv/
+.mypy_cache/
+__pycache__/
+.env
+
+# Ignore CSV files in root directory but keep them in Reports/Projections
+/*.csv
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
