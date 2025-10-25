@@ -2,7 +2,7 @@
 Main application class for investment projection tool.
 """
 import asyncio
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import inquirer
 
 from models.config import Config
@@ -22,7 +22,7 @@ class InvestmentProjectionApp:
         self.price_service = PriceService()
         self.report_service = ReportService()
 
-    async def run(self, ticker: Optional[str] = None) -> str:
+    async def run(self, ticker: Optional[str] = None) -> Optional[str]:
         """
         Run the investment projection analysis.
 
@@ -74,11 +74,55 @@ class InvestmentProjectionApp:
         for projections in strategy_projections:
             all_projections.extend(projections)
 
-        # Generate report asynchronously
-        report_path = await self.report_service.generate_csv_report(all_projections, ticker)
-        print(f"Projection saved to {report_path}")
-
-        return report_path
+        # Display projection summary
+        display_projection_summary(all_projections, ticker)
+        
+        # Ask user's choice: export, no export, or custom strategy
+        choice = get_export_or_custom_choice()
+        
+        if choice == 'Yes':
+            # Generate and save report
+            report_service = ReportService()
+            report_path = await report_service.generate_csv_report(all_projections, ticker)
+            return report_path
+        elif choice == 'Try Custom Strategy':
+            # Get custom strategy inputs
+            initial_investment, monthly_investment = get_custom_strategy_inputs()
+            
+            # Create custom strategy
+            custom_strategy = InvestmentStrategy(
+                name="Custom Strategy",
+                initial_investment=int(initial_investment),
+                monthly_contribution=int(monthly_investment)
+            )
+            
+            # Generate projection for custom strategy
+            print(f"\n� Generating custom projection for {ticker}...")
+            custom_projector = PortfolioProjector(stock_data)
+            custom_projections = await custom_projector.project_strategy(custom_strategy, self.config.quarters)
+            
+            # Display custom strategy summary
+            print(f"\n📊 CUSTOM STRATEGY PROJECTION FOR {ticker}")
+            print("=" * 90)
+            display_projection_summary(custom_projections, ticker)
+            
+            # Ask if they want to export the custom strategy results
+            export_questions = [
+                inquirer.List('export_custom',
+                             message="Would you like to export the custom strategy results to CSV?",
+                             choices=['Yes', 'No'],
+                             carousel=True)
+            ]
+            export_answers = inquirer.prompt(export_questions)
+            
+            if export_answers['export_custom'] == 'Yes':
+                report_service = ReportService()
+                report_path = await report_service.generate_csv_report(custom_projections, f"{ticker}_custom_strategy")
+                return report_path
+            else:
+                return None
+        else:
+            return None
 
     def _create_strategies(self) -> List[InvestmentStrategy]:
         """Create InvestmentStrategy objects from configuration."""
@@ -132,6 +176,75 @@ def get_continue_choice() -> bool:
     answers = inquirer.prompt(questions)
     return answers['continue'] == 'Yes' if answers else False
 
+def get_export_or_custom_choice() -> str:
+    """Ask user if they want to export to CSV or try custom strategy."""
+    questions = [
+        inquirer.List('choice',
+                     message="Would you like to export detailed results to CSV or try out a custom strategy?",
+                     choices=['Yes', 'No', 'Try Custom Strategy'],
+                     carousel=True)
+    ]
+    
+    answers = inquirer.prompt(questions)
+    return answers['choice']
+
+def get_custom_strategy_inputs() -> tuple:
+    """Get custom strategy inputs from user."""
+    questions = [
+        inquirer.Text('initial',
+                     message="Enter initial investment amount (e.g., 10000)",
+                     validate=lambda _, x: x.replace('.', '').replace(',', '').isdigit()),
+        inquirer.Text('monthly',
+                     message="Enter monthly investment amount (e.g., 500)",
+                     validate=lambda _, x: x.replace('.', '').replace(',', '').isdigit())
+    ]
+    
+    answers = inquirer.prompt(questions)
+    return float(answers['initial']), float(answers['monthly'])
+
+
+def display_projection_summary(all_projections: List[Any], ticker: str):
+    """Display a summary table of projections by strategy."""
+    print(f"\n📊 PROJECTION SUMMARY FOR {ticker}")
+    print("=" * 90)
+    
+    # Group projections by strategy
+    strategies = {}
+    for proj in all_projections:
+        strategy = proj['Strategy']
+        quarter = int(proj['Quarter'].replace('Q', ''))
+        
+        if strategy not in strategies:
+            strategies[strategy] = {
+                'Initial_Investment': proj['Initial_Investment'],
+                'Quarterly_Investment': proj['Quarterly_Investment'],
+                'quarters': {}
+            }
+        
+        strategies[strategy]['quarters'][quarter] = proj['Projected_Balance']
+    
+    # Calculate monthly investment from quarterly
+    for strategy_data in strategies.values():
+        quarterly_amt = float(strategy_data['Quarterly_Investment'].replace('$', '').replace(',', ''))
+        strategy_data['Monthly_Investment'] = f"${quarterly_amt / 3:,.2f}"
+    
+    # Print header
+    print(f"{'Strategy':<12} {'Initial':<10} {'Monthly':<10} {'Q1 Balance':<12} {'Q4 Balance':<12} {'Q8 Balance':<12} {'Q12 Balance':<12}")
+    print(f"{'':12} {'':10} {'':10} {'(Year 1)':<12} {'(Year 1)':<12} {'(Year 2)':<12} {'(Year 3)':<12}")
+    print("-" * 90)
+    
+    # Print each strategy row
+    for strategy, data in strategies.items():
+        q1_balance = data['quarters'].get(1, 'N/A')
+        q4_balance = data['quarters'].get(4, 'N/A')
+        q8_balance = data['quarters'].get(8, 'N/A')
+        q12_balance = data['quarters'].get(12, 'N/A')
+        
+        print(f"{strategy:<12} {data['Initial_Investment']:<10} {data['Monthly_Investment']:<10} "
+              f"{q1_balance:<12} {q4_balance:<12} {q8_balance:<12} {q12_balance:<12}")
+    
+    print("=" * 90)
+
 async def main():
     """Main entry point with arrow key navigation."""
     app = InvestmentProjectionApp()
@@ -151,7 +264,10 @@ async def main():
             print(f"\n🔍 Generating projections for {ticker}...")
             try:
                 report_path = await app.run(ticker)
-                print(f"✅ Success! Report generated: {report_path}")
+                if report_path:
+                    print(f"✅ Success! Report generated: {report_path}")
+                else:
+                    print("✅ Projection analysis completed!")
             except (ValueError, ConnectionError) as e:
                 print(f"❌ Error generating projections: {e}")
             except Exception as e:
