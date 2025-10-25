@@ -1,6 +1,7 @@
 """
 Stock data scraping services.
 """
+import asyncio
 from typing import Optional, Dict, Any
 import yfinance as yf
 from models.stock import StockData
@@ -14,14 +15,15 @@ from models.stock import StockData
 class YahooFinanceScraper:
     """Yahoo Finance data provider using yfinance library."""
 
-    def scrape(self, ticker: str) -> Optional[Dict[str, Any]]:
+    async def scrape(self, ticker: str) -> Optional[Dict[str, Any]]:
         """Get stock data from Yahoo Finance using yfinance library."""
         data = {}
 
         try:
-            # Create yfinance ticker object
+            # Create yfinance ticker object in executor to avoid blocking
+            loop = asyncio.get_event_loop()
             stock = yf.Ticker(ticker)
-            info = stock.info
+            info = await loop.run_in_executor(None, lambda: stock.info)
             
             # Get dividend yield
             if 'dividendYield' in info and info['dividendYield']:
@@ -61,7 +63,7 @@ class StockDataService:
 
 
 
-    def get_stock_data(self, ticker: str) -> Optional[StockData]:
+    async def get_stock_data(self, ticker: str) -> Optional[StockData]:
         """
         Get stock data for a given ticker.
 
@@ -72,7 +74,7 @@ class StockDataService:
             StockData object with financial information
         """
         # Get data from Yahoo Finance
-        yahoo_data = self.yahoo_scraper.scrape(ticker)
+        yahoo_data = await self.yahoo_scraper.scrape(ticker)
         
         if not yahoo_data:
             print(f"Warning: No data available for {ticker}")

@@ -1,6 +1,7 @@
 """
 Investment strategy model and projection calculations.
 """
+import asyncio
 from dataclasses import dataclass
 from typing import List, Dict, Any
 from models.stock import StockData
@@ -27,7 +28,7 @@ class PortfolioProjector:
         """Initialize projector with stock data."""
         self.stock_data = stock_data
 
-    def project_strategy(self, strategy: InvestmentStrategy, quarters: int) -> List[Dict[str, Any]]:
+    async def project_strategy(self, strategy: InvestmentStrategy, quarters: int) -> List[Dict[str, Any]]:
         """
         Project investment growth for a given strategy over time.
 
@@ -43,6 +44,9 @@ class PortfolioProjector:
         shares = strategy.initial_investment / self.stock_data.price
 
         for quarter in range(1, quarters + 1):
+            # Yield control periodically for better async behavior
+            if quarter % 4 == 0:  # Every year (4 quarters)
+                await asyncio.sleep(0)  # Yield to event loop
             # Invest quarterly amount
             total_invested += strategy.quarterly_investment
             shares += strategy.quarterly_investment / self.stock_data.price

@@ -1,6 +1,7 @@
 """
 Simple price service for getting current stock prices.
 """
+import asyncio
 import yfinance as yf
 from typing import Optional
 
@@ -8,7 +9,7 @@ from typing import Optional
 class PriceService:
     """Service for retrieving current stock prices."""
 
-    def get_current_price(self, ticker: str) -> Optional[float]:
+    async def get_current_price(self, ticker: str) -> Optional[float]:
         """
         Get current price for a ticker.
         
@@ -19,8 +20,10 @@ class PriceService:
             Current price or None if unavailable
         """
         try:
+            # Run yfinance call in executor to avoid blocking
+            loop = asyncio.get_event_loop()
             stock = yf.Ticker(ticker)
-            info = stock.info
+            info = await loop.run_in_executor(None, lambda: stock.info)
             
             # Try different price fields
             if 'regularMarketPrice' in info and info['regularMarketPrice']:

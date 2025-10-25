@@ -1,6 +1,7 @@
 """
 Main application class for investment projection tool.
 """
+import asyncio
 from typing import List, Optional
 import inquirer
 
@@ -21,7 +22,7 @@ class InvestmentProjectionApp:
         self.price_service = PriceService()
         self.report_service = ReportService()
 
-    def run(self, ticker: Optional[str] = None) -> str:
+    async def run(self, ticker: Optional[str] = None) -> str:
         """
         Run the investment projection analysis.
 
@@ -34,15 +35,18 @@ class InvestmentProjectionApp:
         # Use provided ticker or default from config
         ticker = ticker or self.config.ticker
 
-        # Get stock data and current price
+        # Get stock data and current price concurrently
         print(f"Fetching data for {ticker}...")
-        stock_data = self.stock_service.get_stock_data(ticker)
+        
+        # Run data fetching concurrently for better performance
+        stock_data_task = asyncio.create_task(self.stock_service.get_stock_data(ticker))
+        price_task = asyncio.create_task(self.price_service.get_current_price(ticker))
+        
+        stock_data, current_price = await asyncio.gather(stock_data_task, price_task)
         
         if not stock_data:
             raise ValueError(f"Unable to fetch dividend data for ticker {ticker}")
             
-        # Get current price separately
-        current_price = self.price_service.get_current_price(ticker)
         if not current_price:
             raise ValueError(f"Unable to fetch current price for ticker {ticker}")
             
@@ -53,16 +57,25 @@ class InvestmentProjectionApp:
         # Create portfolio projector
         projector = PortfolioProjector(stock_data)
 
-        # Generate projections for all strategies
-        all_projections = []
+        # Generate projections for all strategies concurrently
         strategies = self._create_strategies()
-
-        for strategy in strategies:
-            projections = projector.project_strategy(strategy, self.config.quarters)
+        
+        # Create tasks for concurrent projection generation
+        projection_tasks = [
+            projector.project_strategy(strategy, self.config.quarters)
+            for strategy in strategies
+        ]
+        
+        # Run all projections concurrently
+        strategy_projections = await asyncio.gather(*projection_tasks)
+        
+        # Flatten the results
+        all_projections = []
+        for projections in strategy_projections:
             all_projections.extend(projections)
 
-        # Generate report
-        report_path = self.report_service.generate_csv_report(all_projections, ticker)
+        # Generate report asynchronously
+        report_path = await self.report_service.generate_csv_report(all_projections, ticker)
         print(f"Projection saved to {report_path}")
 
         return report_path
@@ -119,7 +132,7 @@ def get_continue_choice() -> bool:
     answers = inquirer.prompt(questions)
     return answers['continue'] == 'Yes' if answers else False
 
-def main():
+async def main():
     """Main entry point with arrow key navigation."""
     app = InvestmentProjectionApp()
     
@@ -137,7 +150,7 @@ def main():
                 
             print(f"\n🔍 Generating projections for {ticker}...")
             try:
-                report_path = app.run(ticker)
+                report_path = await app.run(ticker)
                 print(f"✅ Success! Report generated: {report_path}")
             except (ValueError, ConnectionError) as e:
                 print(f"❌ Error generating projections: {e}")
@@ -155,4 +168,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

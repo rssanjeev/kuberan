@@ -2,8 +2,11 @@
 CSV report generation service.
 """
 import csv
+import asyncio
+import aiofiles
 from typing import List, Dict, Any
 from pathlib import Path
+from io import StringIO
 
 
 class ReportService:
@@ -14,7 +17,7 @@ class ReportService:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def generate_csv_report(self, data: List[Dict[str, Any]], ticker: str) -> str:
+    async def generate_csv_report(self, data: List[Dict[str, Any]], ticker: str) -> str:
         """
         Generate CSV report from projection data.
 
@@ -37,10 +40,15 @@ class ReportService:
             "Projected_Balance"
         ]
 
-        with open(filename, "w", newline="", encoding="utf-8") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            for row in data:
-                writer.writerow(row)
+        # Generate CSV content in memory first
+        csv_content = StringIO()
+        writer = csv.DictWriter(csv_content, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in data:
+            writer.writerow(row)
+        
+        # Write to file asynchronously
+        async with aiofiles.open(filename, "w", newline="", encoding="utf-8") as csvfile:
+            await csvfile.write(csv_content.getvalue())
 
         return str(filename)
