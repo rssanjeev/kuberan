@@ -1,0 +1,1 @@
+"""Investment projections feature module."""
