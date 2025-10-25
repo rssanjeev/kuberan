@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""
+Demo script showing the interactive menu functionality.
+Run 'python main.py' to start the interactive application.
+"""
+
+print("🎯 KUBERAN - Interactive Investment Analysis Tool")
+print("=" * 55)
+print()
+print("📋 FEATURES:")
+print("• ⌨️  Arrow key navigation (↑↓ to navigate, Enter to select)")
+print("• 🎯 Interactive menu system with visual highlighting")
+print("• 📊 Ticker symbol input with validation")
+print("• 💰 Investment projection analysis") 
+print("• 📄 Professional CSV report generation")
+print("• 🔄 Support for multiple analyses in one session")
+print("• ✨ Clean, user-friendly interface")
+print()
+print("🚀 TO START:")
+print("Run: python main.py")
+print()
+print("📊 EXAMPLE USAGE:")
+print("1. Use ↑↓ arrow keys to highlight menu options")
+print("2. Press Enter to select 'Generate Investment Projections'")
+print("3. Type a ticker symbol (e.g., VTI, SCHD, VOO)")
+print("4. View generated CSV report in Reports/Projections/")
+print("5. Use arrows to choose 'Yes' to continue or 'No' to exit")
+print()
+print("💰 SAMPLE TICKERS TO TRY:")
+print("• VTI  - Vanguard Total Stock Market ETF")
+print("• SCHD - Schwab US Dividend Equity ETF") 
+print("• VOO  - Vanguard S&P 500 ETF")
+print("• SPY  - SPDR S&P 500 ETF Trust")
+print("• QQQ  - Invesco QQQ Trust ETF")
+print()
+print("Ready to start your investment analysis! 🚀")

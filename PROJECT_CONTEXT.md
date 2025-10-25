@@ -66,7 +66,7 @@
 
 ### Investment Strategies (configurable via .env)
 - **Safe**: $1,000 initial + $100/month
-- **Moderate**: $2,500 initial + $200/month  
+- **Moderate**: $2,500 initial + $200/month
 - **Growth**: $3,500 initial + $350/month
 - **Aggressive**: $5,000 initial + $500/month
 
