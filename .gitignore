@@ -19,3 +19,21 @@ venv/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+ENV/
+
+# Flutter/Dart
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# General
+*.log
