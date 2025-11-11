@@ -7,7 +7,8 @@ from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.models import User, StockMetadata, StockPrice, UserWatchlist, TickerConfig
 from app.auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from app.services.price_poller import price_poller
+from app.services.scheduler import job_scheduler
+from app.services.scheduler.registry import register_all_jobs
 
 app = FastAPI()
 
@@ -20,14 +21,15 @@ async def app_init():
         document_models=[User, StockMetadata, StockPrice, UserWatchlist, TickerConfig]
     )
     
-    # Start price polling service
-    price_poller.start()
+    # Register and start all scheduled jobs
+    register_all_jobs()
+    job_scheduler.start()
     print("✓ Application started successfully")
 
 @app.on_event("shutdown")
 async def app_shutdown():
-    # Stop price polling service
-    price_poller.stop()
+    # Stop all scheduled jobs
+    job_scheduler.stop()
     print("✓ Application shutdown complete")
 
 app.include_router(root.router)

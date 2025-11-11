@@ -1,10 +1,15 @@
+"""
+Stock data fetcher - Yahoo Finance integration.
+Provides functions to fetch stock prices, metadata, and historical data.
+"""
 import yfinance as yf
 from typing import List, Dict, Optional
 from datetime import datetime
 import asyncio
 from app.repositories.stock_repository import stock_repository
 
-class StockService:
+
+class StockFetcher:
     """Service for fetching stock data from Yahoo Finance and managing persistence."""
     
     def __init__(self):
@@ -188,5 +193,9 @@ class StockService:
             print(f"Error fetching history for {ticker}: {e}")
             return None
 
+
 # Singleton instance
-stock_service = StockService()
+stock_fetcher = StockFetcher()
+
+# For backwards compatibility with old code
+stock_service = stock_fetcher

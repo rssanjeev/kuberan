@@ -1,10 +1,23 @@
+"""
+Stock Router - All stock-related API endpoints
+
+IMPORTANT: When modifying endpoints in this file, update the API documentation:
+    docs/API.md
+
+This ensures the API documentation stays in sync with the actual implementation.
+"""
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
+from datetime import datetime
 from pydantic import BaseModel
-from app.services.stock_service import stock_service
+import pytz
+from app.services.stock.fetcher import stock_fetcher as stock_service
 from app.config_loader import config_loader
-from app.services.price_poller import price_poller
+from app.services.jobs.price_collector import price_collector_job
 from app.repositories.ticker_config_repository import ticker_config_repository
+from app.repositories.stock_repository import stock_repository
+from app.core.market_calendar import is_market_open
+from app.models import StockPrice
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
@@ -64,23 +77,17 @@ async def trigger_price_poll():
     Manually trigger a price poll for all configured tickers.
     Useful for testing the polling system.
     """
-    await price_poller.run_now()
-    return {
-        "message": "Price poll triggered successfully",
-        "tickers": await config_loader.get_tickers()
-    }
+    result = await price_collector_job.run_manual()
+    return result
 
 @router.get("/market/status")
 async def get_market_status():
     """
     Check if the NYSE market is open today.
     """
-    is_open = price_poller.is_market_open_today()
-    from datetime import datetime
-    import pytz
-    
     est = pytz.timezone('US/Eastern')
     today = datetime.now(est).date()
+    is_open = is_market_open(today)
     
     return {
         "date": today.isoformat(),
@@ -94,8 +101,6 @@ async def get_collection_stats():
     """
     Get statistics about collected price data.
     """
-    from app.models import StockPrice
-    
     # Count total records
     total = await StockPrice.count()
     
@@ -123,9 +128,13 @@ async def get_collected_prices(ticker: str, limit: int = 100):
         ticker: Stock ticker symbol
         limit: Maximum number of records to return (default 100)
     """
-    from app.repositories.stock_repository import stock_repository
-    
-    prices = await stock_repository.get_price_history(ticker.upper(), limit)
+    # Pass start_time=None explicitly or use a very old date to get all records
+    from datetime import timedelta
+    prices = await stock_repository.get_price_history(
+        ticker.upper(), 
+        start_time=datetime.utcnow() - timedelta(days=365),  # Get last year of data
+        limit=limit
+    )
     
     if not prices:
         return {
