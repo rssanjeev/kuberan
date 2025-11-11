@@ -37,3 +37,12 @@ build/
 
 # General
 *.log
+
+# Financial Documents - SECURITY: Never commit PDFs or extracted data
+*.pdf
+*_chase_extracted.json
+*_extracted.json
+category_mapping.json
+backend/*.pdf
+backend/**/*.pdf
+backend/*_extracted.json

@@ -3,16 +3,72 @@
 ## Project Context
 
 Kuberan is a stock price tracking and notification system built with:
-- **Backend**: FastAPI (Python) with MongoDB
+- **Backend**: FastAPI (Python 3.14) with MongoDB
 - **Frontend**: React (future implementation)
 - **Architecture**: Hybrid functional/OOP approach
 - **Deployment**: Docker Compose
+
+## Python Environment Requirements
+
+**CRITICAL**: Always use Python 3.14 for this project.
+
+- **Docker**: Uses Python 3.14 in containers
+- **Local Development**: Use `backend/venv` (Python 3.14)
+- **Command Syntax**: Always use `python3` (never `python`)
+- **Virtual Environment**: `backend/venv/bin/python3`
+
+**Examples:**
+```bash
+# ✅ Correct
+python3 script.py
+python3 -m pip install package
+./venv/bin/python3 script.py
+
+# ❌ Wrong
+python script.py
+python -m pip install package
+```
 
 ---
 
 ## Core Development Principles
 
-### 1. Architectural Guidelines
+### 1. Security & Privacy (Financial Documents)
+
+**CRITICAL SECURITY REQUIREMENTS:**
+
+#### PDF Processing Rules
+- **NEVER store PDF files** in the repository or database
+- **NEVER commit PDFs** to git (enforced via .gitignore)
+- Process PDFs in-memory only, extract data, then discard file
+- Use SHA256 file hash for deduplication (NOT filename)
+
+#### Account Information Protection
+- **NEVER store account numbers** (full or partial)
+- **NEVER store account holder names** or addresses
+- **NEVER expose SSNs, card numbers, or PINs**
+- Account info parsing is for **validation only**, NOT storage
+- Focus exclusively on transaction-level data
+
+#### Transaction Data Handling
+- Store ONLY: date, merchant, amount, category, location
+- **Obscure all personally identifiable information**
+- Transaction data is discrete - no linking to specific accounts
+- Use generic fields: statement_year, statement_month (not account-specific dates)
+
+#### Database Storage Policy
+- `CreditCardTransaction`: merchant, amount, category only
+- `FinancialDocumentMetadata`: SHA256 hash, counts, aggregates only
+- `MerchantCategory`: merchant-to-category mappings only
+- NO `AccountInfo` or `UserAccount` models allowed
+
+#### File Handling
+- PDFs processed via upload endpoint → extract → save to DB → delete file
+- No temporary file storage (use in-memory processing)
+- All PDFs excluded in .gitignore
+- Extracted JSON files (for testing) excluded in .gitignore
+
+### 2. Architectural Guidelines
 
 #### Separation of Concerns
 - **Services** (`backend/app/services/`): Business logic and external API integrations
@@ -170,6 +226,16 @@ After endpoint changes:
 3. Verify logs: `docker logs kuberan-backend-1 --tail 50`
 4. Check database: `docker exec kuberan-mongodb mongosh`
 
+**Python commands:** Always use `python3` syntax:
+```bash
+# ✅ Correct
+python3 test_script.py
+python3 -m pytest
+
+# ❌ Wrong
+python test_script.py
+```
+
 ---
 
 ## Error Handling
@@ -279,6 +345,9 @@ When customer provides new requirements, consider:
 - Update documentation with code changes
 - Use type hints everywhere
 - Handle errors gracefully with proper logging
+- **Process financial PDFs in-memory only**
+- **Store ONLY transaction data (no account info)**
+- **Use SHA256 hashes for file deduplication**
 
 ### ❌ DON'T
 - Create multiple scheduler instances
@@ -288,6 +357,10 @@ When customer provides new requirements, consider:
 - Hardcode configuration values
 - Ignore error cases
 - Use OOP when pure functions suffice
+- **Store PDF files anywhere**
+- **Store account numbers or personal info**
+- **Commit financial documents to git**
+- **Expose sensitive financial data in logs or responses**
 
 ---
 

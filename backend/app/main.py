@@ -1,11 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
-from app.routers import root, public, profile, stocks
+from app.routers import root, public, profile, stocks, documents
 from app.users import get_user_by_username, verify_password
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.models import User, StockMetadata, StockPrice, UserWatchlist, TickerConfig
+from app.models import (
+    User, StockMetadata, StockPrice, UserWatchlist, TickerConfig,
+    CreditCardTransaction, MerchantCategory, FinancialDocumentMetadata
+)
 from app.auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.services.scheduler import job_scheduler
 from app.services.scheduler.registry import register_all_jobs
@@ -18,7 +21,10 @@ async def app_init():
     client = AsyncIOMotorClient("mongodb://mongodb:27017")
     await init_beanie(
         database=client.kuberan, 
-        document_models=[User, StockMetadata, StockPrice, UserWatchlist, TickerConfig]
+        document_models=[
+            User, StockMetadata, StockPrice, UserWatchlist, TickerConfig,
+            CreditCardTransaction, MerchantCategory, FinancialDocumentMetadata
+        ]
     )
     
     # Register and start all scheduled jobs
@@ -36,6 +42,7 @@ app.include_router(root.router)
 app.include_router(public.router)
 app.include_router(profile.router)
 app.include_router(stocks.router)
+app.include_router(documents.router)
 
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
