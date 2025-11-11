@@ -1,0 +1,746 @@
+{
+	"info": {
+		"_postman_id": "financier-api-collection",
+		"name": "Kuberan - Financier API",
+		"description": "API endpoints for Financier - Financial Document Processing Service",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Upload Credit Card Statement",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": [],
+							"description": "PDF file of credit card statement (Chase supported)"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8000/financier/upload",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"upload"
+					]
+				},
+				"description": "Upload and process a single credit card statement PDF. Currently supports Chase credit card statements.\n\n**Security**: File is processed in-memory, data saved to database, then file is deleted. No PDFs are stored.\n\n**Response**: Returns processing status, file hash, transaction count, totals, and categories found."
+			},
+			"response": [
+				{
+					"name": "Success Example",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "May25.pdf"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:8000/financier/upload",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"financier",
+								"upload"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"body": "{\n    \"status\": \"success\",\n    \"message\": \"Document processed successfully\",\n    \"file_hash\": \"abc123def456...\",\n    \"transaction_count\": 42,\n    \"total_charges\": 1010.70,\n    \"total_credits\": -2036.97,\n    \"categories_found\": [\"Groceries\", \"Coffee & Cafes\", \"Restaurants & Dining\"]\n}"
+				}
+			]
+		},
+		{
+			"name": "Upload Multiple Credit Card Statements (Batch)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "files",
+							"type": "file",
+							"src": [],
+							"description": "Select multiple PDF files"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8000/financier/upload/batch?bank=Chase",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"upload",
+						"batch"
+					],
+					"query": [
+						{
+							"key": "bank",
+							"value": "Chase",
+							"description": "Bank name"
+						}
+					]
+				},
+				"description": "Upload and process multiple credit card statement PDFs in a single request.\n\n**Security**: All files are processed in-memory, data saved to database, then files are deleted. No PDFs are stored.\n\n**Response**: Returns summary with individual results for each file (successful and failed)."
+			},
+			"response": [
+				{
+					"name": "Success Example",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "files",
+									"type": "file",
+									"src": ["May25.pdf", "Jun25.pdf", "Jul25.pdf"]
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:8000/financier/upload/batch",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"financier",
+								"upload",
+								"batch"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"body": "{\n    \"total_files\": 3,\n    \"successful\": 3,\n    \"failed\": 0,\n    \"results\": [\n        {\n            \"filename\": \"May25.pdf\",\n            \"status\": \"success\",\n            \"data\": {\n                \"status\": \"success\",\n                \"transaction_count\": 42,\n                \"total_charges\": 1010.70\n            }\n        },\n        {\n            \"filename\": \"Jun25.pdf\",\n            \"status\": \"success\",\n            \"data\": {\n                \"status\": \"success\",\n                \"transaction_count\": 68,\n                \"total_charges\": 1066.02\n            }\n        }\n    ],\n    \"errors\": null\n}"
+				}
+			]
+		},
+		{
+			"name": "Get All Transactions",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/transactions",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"transactions"
+					]
+				},
+				"description": "Retrieve all transactions with optional filters.\n\n**Query Parameters** (all optional):\n- `year` - Filter by statement year (e.g., 2025)\n- `month` - Filter by statement month (1-12)\n- `category` - Filter by category name\n- `bank` - Filter by bank (e.g., 'Chase')\n- `limit` - Maximum number of results (default: 100)"
+			},
+			"response": [
+				{
+					"name": "Success Example",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/financier/transactions",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"financier",
+								"transactions"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"body": "{\n    \"count\": 110,\n    \"transactions\": [\n        {\n            \"date\": \"2025-05-15\",\n            \"merchant\": \"STARBUCKS\",\n            \"location\": \"SEATTLE WA\",\n            \"amount\": 5.75,\n            \"category\": \"Coffee & Cafes\",\n            \"bank\": \"Chase\",\n            \"statement_year\": 2025,\n            \"statement_month\": 5\n        }\n    ]\n}"
+				}
+			]
+		},
+		{
+			"name": "Get Transactions - Filtered by Year",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/transactions?year=2025",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"transactions"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025",
+							"description": "Filter by statement year"
+						}
+					]
+				},
+				"description": "Get all transactions from a specific year."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Transactions - Filtered by Year & Month",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/transactions?year=2025&month=5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"transactions"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025",
+							"description": "Statement year"
+						},
+						{
+							"key": "month",
+							"value": "5",
+							"description": "Statement month (1-12)"
+						}
+					]
+				},
+				"description": "Get transactions from a specific month and year."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Transactions - Filtered by Category",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/transactions?category=Groceries",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"transactions"
+					],
+					"query": [
+						{
+							"key": "category",
+							"value": "Groceries",
+							"description": "Filter by category name"
+						}
+					]
+				},
+				"description": "Get all transactions in a specific category."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Transactions - Multiple Filters",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/transactions?year=2025&month=5&category=Coffee%20%26%20Cafes&limit=50",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"transactions"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025"
+						},
+						{
+							"key": "month",
+							"value": "5"
+						},
+						{
+							"key": "category",
+							"value": "Coffee & Cafes"
+						},
+						{
+							"key": "limit",
+							"value": "50"
+						}
+					]
+				},
+				"description": "Combine multiple filters to narrow down results."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Spending Summary",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/spending/summary",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"spending",
+						"summary"
+					]
+				},
+				"description": "Get spending breakdown by category with percentages.\n\n**Query Parameters** (all optional):\n- `year` - Filter by statement year\n- `month` - Filter by statement month\n- `bank` - Filter by bank"
+			},
+			"response": [
+				{
+					"name": "Success Example",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/financier/spending/summary?year=2025",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"financier",
+								"spending",
+								"summary"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"body": "{\n    \"total_spending\": 2076.72,\n    \"categories\": [\n        {\n            \"category\": \"Groceries\",\n            \"total\": 643.85,\n            \"percentage\": 31.0\n        },\n        {\n            \"category\": \"Coffee & Cafes\",\n            \"total\": 299.15,\n            \"percentage\": 14.4\n        },\n        {\n            \"category\": \"Restaurants & Dining\",\n            \"total\": 276.42,\n            \"percentage\": 13.3\n        }\n    ]\n}"
+				}
+			]
+		},
+		{
+			"name": "Get Spending Summary - Filtered by Year",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/spending/summary?year=2025",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"spending",
+						"summary"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025",
+							"description": "Filter by year"
+						}
+					]
+				},
+				"description": "Get spending summary for a specific year."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Spending Summary - Year & Month",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/spending/summary?year=2025&month=6",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"spending",
+						"summary"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025"
+						},
+						{
+							"key": "month",
+							"value": "6"
+						}
+					]
+				},
+				"description": "Get spending summary for a specific month."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Detailed Spending Analysis",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/spending/analysis",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"spending",
+						"analysis"
+					]
+				},
+				"description": "Get comprehensive spending analysis with transaction stats, top merchants, and category breakdown."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Spending Analysis - By Year",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/spending/analysis?year=2025",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"spending",
+						"analysis"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025",
+							"description": "Filter by year"
+						}
+					]
+				},
+				"description": "Analyze spending for a full year with monthly breakdown."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Spending Analysis - By Month",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/spending/analysis?year=2025&month=7",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"spending",
+						"analysis"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025",
+							"description": "Filter by year"
+						},
+						{
+							"key": "month",
+							"value": "7",
+							"description": "Filter by month (1-12)"
+						}
+					]
+				},
+				"description": "Analyze spending for a specific month with daily breakdown and top merchants."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Spending Analysis - By Category",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/spending/analysis?category=Restaurants%20%26%20Dining",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"spending",
+						"analysis"
+					],
+					"query": [
+						{
+							"key": "category",
+							"value": "Restaurants & Dining",
+							"description": "Filter by category"
+						}
+					]
+				},
+				"description": "Analyze spending for a specific category across all time."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Spending Analysis - Category & Month",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/spending/analysis?year=2025&month=7&category=Groceries",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"spending",
+						"analysis"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025",
+							"description": "Filter by year"
+						},
+						{
+							"key": "month",
+							"value": "7",
+							"description": "Filter by month (1-12)"
+						},
+						{
+							"key": "category",
+							"value": "Groceries",
+							"description": "Filter by category"
+						}
+					]
+				},
+				"description": "Analyze spending for a specific category in a specific month with daily breakdown."
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Categories",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/categories",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"categories"
+					]
+				},
+				"description": "Get list of all available transaction categories."
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Merchants",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/merchants",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"merchants"
+					]
+				},
+				"description": "Get all merchants with their category mappings, source, confidence, and last update time."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Merchants by Category",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/merchants/category/Groceries",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"merchants",
+						"category",
+						"Groceries"
+					]
+				},
+				"description": "Get all merchants in a specific category (e.g., Groceries, Coffee & Cafes, Insurance, etc.)."
+			},
+			"response": []
+		},
+		{
+			"name": "Reassign Merchant to Different Category",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/merchants/STARBUCKS/category?new_category=Coffee%20%26%20Cafes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"merchants",
+						"STARBUCKS",
+						"category"
+					],
+					"query": [
+						{
+							"key": "new_category",
+							"value": "Coffee & Cafes",
+							"description": "New category to assign"
+						}
+					]
+				},
+				"description": "Reassign a merchant to a different category. This updates both the merchant mapping and all related transactions.\n\n**Example**: Reassign a merchant from 'Other' to 'Insurance'."
+			},
+			"response": []
+		},
+		{
+			"name": "Add Custom Category",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/categories/add?category_name=Subscriptions",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"categories",
+						"add"
+					],
+					"query": [
+						{
+							"key": "category_name",
+							"value": "Subscriptions",
+							"description": "Name of the new category"
+						}
+					]
+				},
+				"description": "Add a new custom category. The category will be available for assignment to merchants.\n\n**Example**: Add 'Subscriptions', 'Business Expenses', 'Travel', etc."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}

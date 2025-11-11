@@ -301,6 +301,90 @@ class MerchantCategoryRepository:
         mappings = await MerchantCategory.find_all().to_list()
         categories = sorted(set(m.category for m in mappings))
         return categories
+    
+    async def get_all_merchants(self) -> List[MerchantCategory]:
+        """
+        Get all merchant category mappings.
+        
+        Returns:
+            List of all merchant mappings
+        """
+        mappings = await MerchantCategory.find_all().sort('merchant_name').to_list()
+        return mappings
+    
+    async def get_merchants_by_category(self, category: str) -> List[MerchantCategory]:
+        """
+        Get all merchants in a specific category.
+        
+        Args:
+            category: Category name
+            
+        Returns:
+            List of merchant mappings in that category
+        """
+        mappings = await MerchantCategory.find(
+            MerchantCategory.category == category
+        ).sort('merchant_name').to_list()
+        return mappings
+    
+    async def update_merchant_category(
+        self,
+        merchant_name: str,
+        new_category: str,
+        source: str = "manual"
+    ) -> Optional[MerchantCategory]:
+        """
+        Update the category for a merchant and update all related transactions.
+        
+        Args:
+            merchant_name: Merchant name
+            new_category: New category name
+            source: Source of update (default: manual)
+            
+        Returns:
+            Updated merchant mapping or None if not found
+        """
+        # Update merchant mapping
+        mapping = await self.save_mapping(merchant_name, new_category, 1.0, source)
+        
+        # Update all transactions with this merchant
+        from app.models import CreditCardTransaction
+        transactions = await CreditCardTransaction.find(
+            CreditCardTransaction.merchant_name == merchant_name
+        ).to_list()
+        
+        for txn in transactions:
+            txn.category = new_category
+            await txn.save()
+        
+        return mapping
+    
+    async def add_custom_category(self, category_name: str) -> Dict[str, Any]:
+        """
+        Add a new custom category (validated by checking if it exists).
+        
+        Args:
+            category_name: Name of the new category
+            
+        Returns:
+            Status dictionary
+        """
+        # Check if category already exists
+        existing_categories = await self.get_all_categories()
+        
+        if category_name in existing_categories:
+            return {
+                "status": "exists",
+                "message": f"Category '{category_name}' already exists"
+            }
+        
+        # Category will be created when first merchant is assigned to it
+        # For now, just return success
+        return {
+            "status": "success",
+            "message": f"Category '{category_name}' is ready to use",
+            "category": category_name
+        }
 
 
 # Singleton instances

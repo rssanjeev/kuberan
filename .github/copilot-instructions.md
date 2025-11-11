@@ -148,6 +148,55 @@ class PriceCollectorJob:
 3. Update the "Last Updated" date at the top
 4. Commit router changes and documentation together
 
+### Postman Collections (`docs/*.json`)
+**CRITICAL**: When adding, modifying, or deleting any endpoint in `backend/app/routers/*.py`:
+
+1. **Always update BOTH Postman collection files**:
+   - `docs/Financier_Postman_Collection.json` - Service-specific collection
+   - `docs/Kuberan_Complete_API_Postman_Collection.json` - Complete API collection
+
+2. **For new endpoints**, add a new request object with:
+   - `name`: Descriptive name (e.g., "Get Spending Analysis - By Month")
+   - `request.method`: HTTP method (GET, POST, PUT, DELETE)
+   - `request.url`: Full URL structure with path segments and query parameters
+   - `request.query`: Array of query parameter objects with `key`, `value`, and `description`
+   - `description`: What the endpoint does and what filters/options are available
+
+3. **Placement in Financier Collection**:
+   - Add new endpoints in logical sections (e.g., after related endpoints)
+   - Maintain alphabetical or functional grouping
+
+4. **Placement in Complete Collection**:
+   - Maintain hierarchical structure: `Service → HTTP Method → Specific Operation`
+   - Use `{{baseUrl}}` variable instead of hardcoded URL
+   - Add to appropriate section (e.g., "GET - Spending Analysis")
+
+5. **For modified endpoints**: Update URL paths, query parameters, or descriptions
+6. **For deleted endpoints**: Remove from both collections
+7. **Test endpoints** after adding to collections to ensure correctness
+8. **Commit router changes and both collection files together**
+
+**Example new endpoint structure:**
+```json
+{
+  "name": "Get Spending Analysis - By Month",
+  "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+      "raw": "{{baseUrl}}/financier/spending/analysis?year=2025&month=7",
+      "host": ["{{baseUrl}}"],
+      "path": ["financier", "spending", "analysis"],
+      "query": [
+        {"key": "year", "value": "2025", "description": "Filter by year"},
+        {"key": "month", "value": "7", "description": "Filter by month (1-12)"}
+      ]
+    },
+    "description": "Analyze spending for a specific month with daily breakdown"
+  }
+}
+```
+
 ### Code Documentation
 - Use docstrings for all classes and functions
 - Document parameters with `Args:` section
@@ -276,9 +325,10 @@ python test_script.py
 ### Adding New Endpoints
 1. Add route function to appropriate router file
 2. Update `docs/API.md` with endpoint documentation
-3. Test endpoint thoroughly
-4. Update "Last Updated" dates
-5. Commit router + documentation together
+3. Update **BOTH Postman collections** (`docs/Financier_Postman_Collection.json` and `docs/Kuberan_Complete_API_Postman_Collection.json`)
+4. Test endpoint thoroughly
+5. Update "Last Updated" dates
+6. Commit router + documentation + collections together
 
 ### Adding New Jobs
 1. Create job file in `backend/app/services/jobs/`
@@ -353,7 +403,7 @@ When customer provides new requirements, consider:
 - Create multiple scheduler instances
 - Put business logic in routers
 - Use local imports (unless circular dependency)
-- Forget to update documentation
+- Forget to update documentation (API.md + both Postman collections)
 - Hardcode configuration values
 - Ignore error cases
 - Use OOP when pure functions suffice
@@ -393,4 +443,4 @@ docker-compose build backend
 - When in doubt, use functional programming first, add OOP when state/lifecycle needed
 - The user values thoughtful architecture over quick hacks
 
-**Last Updated:** November 11, 2025
+**Last Updated:** January 19, 2025

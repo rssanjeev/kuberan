@@ -86,6 +86,21 @@ Successfully integrated financial document processing into Kuberan with comprehe
 - Query params: year, month
 - Returns: spending breakdown by category with percentages
 
+#### `GET /documents/spending/analysis`
+- **NEW**: Detailed transaction analysis endpoint
+- Query params: year, month, category
+- Returns: comprehensive analysis including:
+  - Transaction count and spending statistics (total, average, min, max)
+  - Top 10 merchants by spending with transaction counts
+  - Category breakdown (when not filtering by category)
+  - Daily spending breakdown (when month/year specified)
+  - Monthly spending breakdown (when only year specified)
+- **Use Cases**:
+  - Analyze spending patterns for a specific month/year
+  - Identify top merchants in a category
+  - Track daily spending within a month
+  - Compare monthly spending across a year
+
 #### `GET /documents/categories`
 - Returns: list of all categories
 
@@ -218,6 +233,18 @@ curl "http://localhost:8000/documents/transactions?year=2025&month=6"
 
 # Get spending summary for 2025
 curl "http://localhost:8000/documents/spending/summary?year=2025"
+
+# Get detailed analysis for July 2025
+curl "http://localhost:8000/documents/spending/analysis?year=2025&month=7"
+# Returns: transaction stats, top merchants, category breakdown, daily spending
+
+# Analyze Groceries category across all time
+curl "http://localhost:8000/documents/spending/analysis?category=Groceries"
+# Returns: top grocery merchants, spending stats, transaction counts
+
+# Analyze full year 2025 with monthly breakdown
+curl "http://localhost:8000/documents/spending/analysis?year=2025"
+# Returns: yearly stats, top merchants, category breakdown, monthly trends
 ```
 
 ---

@@ -1,0 +1,1009 @@
+{
+	"info": {
+		"_postman_id": "kuberan-complete-api",
+		"name": "Kuberan - Complete API Collection",
+		"description": "Complete API endpoints for Kuberan platform organized by service and request type",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"description": "User authentication and authorization endpoints",
+			"item": [
+				{
+					"name": "POST",
+					"item": [
+						{
+							"name": "Login",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x-www-form-urlencoded"
+									}
+								],
+								"body": {
+									"mode": "urlencoded",
+									"urlencoded": [
+										{
+											"key": "username",
+											"value": "testuser",
+											"type": "text"
+										},
+										{
+											"key": "password",
+											"value": "password123",
+											"type": "text"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{baseUrl}}/token",
+									"host": ["{{baseUrl}}"],
+									"path": ["token"]
+								},
+								"description": "Login and receive access token for authenticated endpoints"
+							},
+							"response": []
+						},
+						{
+							"name": "Register User",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"username\": \"newuser\",\n    \"email\": \"user@example.com\",\n    \"password\": \"securepassword\",\n    \"full_name\": \"John Doe\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/register",
+									"host": ["{{baseUrl}}"],
+									"path": ["register"]
+								},
+								"description": "Register a new user account"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "User Profile",
+			"description": "User profile management endpoints",
+			"item": [
+				{
+					"name": "GET",
+					"item": [
+						{
+							"name": "Get Profile",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/profile",
+									"host": ["{{baseUrl}}"],
+									"path": ["profile"]
+								},
+								"description": "Get current user's profile information (requires authentication)"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Stocks Service",
+			"description": "Stock tracking, price monitoring, and ticker management",
+			"item": [
+				{
+					"name": "GET - Stock Information",
+					"item": [
+						{
+							"name": "Get Configured Stocks",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/configured",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "configured"]
+								},
+								"description": "Get information for all tickers configured in MongoDB"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Single Stock Info",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/AAPL",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "AAPL"]
+								},
+								"description": "Get current information for a specific ticker"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Stock Price (Lightweight)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/price/AAPL",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "price", "AAPL"]
+								},
+								"description": "Get just the current price for a ticker (lightweight endpoint)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Stock History",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/history/AAPL?period=1mo",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "history", "AAPL"],
+									"query": [
+										{
+											"key": "period",
+											"value": "1mo",
+											"description": "Time period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max"
+										}
+									]
+								},
+								"description": "Get historical stock data for a specific ticker"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GET - Price Collection",
+					"item": [
+						{
+							"name": "Get Collection Stats",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/price/stats",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "price", "stats"]
+								},
+								"description": "Get statistics about collected price data (total records, tickers, date range)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Collected Prices",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/price/collected/AAPL?limit=100",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "price", "collected", "AAPL"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "100",
+											"description": "Maximum number of records (default: 100)"
+										}
+									]
+								},
+								"description": "Get collected price data from MongoDB for a specific ticker"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GET - Market Status",
+					"item": [
+						{
+							"name": "Get Market Status",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/market/status",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "market", "status"]
+								},
+								"description": "Check if NYSE market is open today"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GET - Ticker Management",
+					"item": [
+						{
+							"name": "List All Tickers",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/tickers/",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "tickers", ""]
+								},
+								"description": "List all configured tickers (enabled and disabled) with full configuration"
+							},
+							"response": []
+						},
+						{
+							"name": "List Active Tickers",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/tickers/active/",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "tickers", "active", ""]
+								},
+								"description": "Get list of active (enabled) tickers only"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "POST - Stock Operations",
+					"item": [
+						{
+							"name": "Get Custom Stocks",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"tickers\": [\"AAPL\", \"GOOGL\", \"MSFT\"]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/stocks/custom",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "custom"]
+								},
+								"description": "Get stock information for a custom list of tickers (overrides YAML config)"
+							},
+							"response": []
+						},
+						{
+							"name": "Trigger Price Poll",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/poll/trigger",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "poll", "trigger"]
+								},
+								"description": "Manually trigger a price poll for all configured tickers (testing)"
+							},
+							"response": []
+						},
+						{
+							"name": "Add Ticker",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/tickers/add/TSLA?enabled=true",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "tickers", "add", "TSLA"],
+									"query": [
+										{
+											"key": "enabled",
+											"value": "true",
+											"description": "Enable polling for this ticker (default: true)"
+										}
+									]
+								},
+								"description": "Add a new ticker to the configuration"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "PUT - Ticker Management",
+					"item": [
+						{
+							"name": "Enable Ticker",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/tickers/AAPL/enable",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "tickers", "AAPL", "enable"]
+								},
+								"description": "Enable polling for a ticker"
+							},
+							"response": []
+						},
+						{
+							"name": "Disable Ticker",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/tickers/AAPL/disable",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "tickers", "AAPL", "disable"]
+								},
+								"description": "Disable polling for a ticker (keeps in database)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "DELETE - Ticker Management",
+					"item": [
+						{
+							"name": "Remove Ticker",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/tickers/remove/TSLA",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "tickers", "remove", "TSLA"]
+								},
+								"description": "Remove a ticker from configuration"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Financier Service",
+			"description": "Financial document processing and transaction analysis",
+			"item": [
+				{
+					"name": "POST - Upload & Process",
+					"item": [
+						{
+							"name": "Upload Credit Card Statement",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": [],
+											"description": "PDF file of credit card statement"
+										},
+										{
+											"key": "bank",
+											"value": "Chase",
+											"type": "text",
+											"description": "Bank name (Chase, Amex, etc.)"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{baseUrl}}/financier/upload?bank=Chase",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "upload"],
+									"query": [
+										{
+											"key": "bank",
+											"value": "Chase",
+											"description": "Bank name"
+										}
+									]
+								},
+								"description": "Upload and process a single credit card statement PDF. File is processed in-memory only, never stored. Only transaction data is saved (no account info)."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "file",
+													"type": "file",
+													"src": "May25.pdf"
+												}
+											]
+										},
+										"url": {
+											"raw": "{{baseUrl}}/financier/upload",
+											"host": ["{{baseUrl}}"],
+											"path": ["financier", "upload"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"status\": \"success\",\n    \"message\": \"Document processed successfully\",\n    \"file_hash\": \"abc123def456...\",\n    \"transaction_count\": 42,\n    \"total_charges\": 1010.70,\n    \"total_credits\": -2036.97,\n    \"categories_found\": [\"Groceries\", \"Coffee & Cafes\", \"Restaurants & Dining\"]\n}"
+								}
+							]
+						},
+						{
+							"name": "Upload Multiple Statements (Batch)",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "files",
+											"type": "file",
+											"src": [],
+											"description": "Select multiple PDF files"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{baseUrl}}/financier/upload/batch?bank=Chase",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "upload", "batch"],
+									"query": [
+										{
+											"key": "bank",
+											"value": "Chase",
+											"description": "Bank name"
+										}
+									]
+								},
+								"description": "Upload and process multiple credit card statement PDFs in a single request. All files are processed in-memory only, never stored."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "files",
+													"type": "file",
+													"src": ["May25.pdf", "Jun25.pdf"]
+												}
+											]
+										},
+										"url": {
+											"raw": "{{baseUrl}}/financier/upload/batch",
+											"host": ["{{baseUrl}}"],
+											"path": ["financier", "upload", "batch"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"total_files\": 2,\n    \"successful\": 2,\n    \"failed\": 0,\n    \"results\": [\n        {\n            \"filename\": \"May25.pdf\",\n            \"status\": \"success\",\n            \"data\": {\"transaction_count\": 42}\n        },\n        {\n            \"filename\": \"Jun25.pdf\",\n            \"status\": \"success\",\n            \"data\": {\"transaction_count\": 68}\n        }\n    ],\n    \"errors\": null\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "GET - Transactions",
+					"item": [
+						{
+							"name": "Get All Transactions",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/transactions",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "transactions"]
+								},
+								"description": "Get all transactions (no filters, default limit 100)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Transactions - By Year",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/transactions?year=2025",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "transactions"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025",
+											"description": "Filter by statement year"
+										}
+									]
+								},
+								"description": "Get all transactions from a specific year"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Transactions - By Year & Month",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/transactions?year=2025&month=5",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "transactions"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025"
+										},
+										{
+											"key": "month",
+											"value": "5",
+											"description": "Month (1-12)"
+										}
+									]
+								},
+								"description": "Get transactions from a specific month"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Transactions - By Category",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/transactions?category=Groceries",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "transactions"],
+									"query": [
+										{
+											"key": "category",
+											"value": "Groceries",
+											"description": "Filter by category"
+										}
+									]
+								},
+								"description": "Get all transactions in a specific category"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Transactions - Multiple Filters",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/transactions?year=2025&month=5&category=Coffee%20%26%20Cafes&limit=50",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "transactions"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025"
+										},
+										{
+											"key": "month",
+											"value": "5"
+										},
+										{
+											"key": "category",
+											"value": "Coffee & Cafes"
+										},
+										{
+											"key": "limit",
+											"value": "50"
+										}
+									]
+								},
+								"description": "Combine multiple filters"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GET - Spending Analysis",
+					"item": [
+						{
+							"name": "Get Spending Summary - All Time",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/spending/summary",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "spending", "summary"]
+								},
+								"description": "Get overall spending breakdown by category (all time)"
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/financier/spending/summary?year=2025",
+											"host": ["{{baseUrl}}"],
+											"path": ["financier", "spending", "summary"],
+											"query": [
+												{
+													"key": "year",
+													"value": "2025"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"total_spending\": 2076.72,\n    \"categories\": [\n        {\n            \"category\": \"Groceries\",\n            \"total\": 643.85,\n            \"percentage\": 31.0\n        },\n        {\n            \"category\": \"Coffee & Cafes\",\n            \"total\": 299.15,\n            \"percentage\": 14.4\n        },\n        {\n            \"category\": \"Restaurants & Dining\",\n            \"total\": 276.42,\n            \"percentage\": 13.3\n        }\n    ]\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Spending Summary - By Year",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/spending/summary?year=2025",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "spending", "summary"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025",
+											"description": "Filter by year"
+										}
+									]
+								},
+								"description": "Get spending summary for a specific year"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Spending Summary - By Month",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/spending/summary?year=2025&month=6",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "spending", "summary"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025"
+										},
+										{
+											"key": "month",
+											"value": "6"
+										}
+									]
+								},
+								"description": "Get spending summary for a specific month"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Detailed Analysis - All Time",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/spending/analysis",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "spending", "analysis"]
+								},
+								"description": "Comprehensive spending analysis with transaction stats, top merchants, and category breakdown"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Detailed Analysis - By Year",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/spending/analysis?year=2025",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "spending", "analysis"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025"
+										}
+									]
+								},
+								"description": "Analyze spending for a full year with monthly breakdown"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Detailed Analysis - By Month",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/spending/analysis?year=2025&month=7",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "spending", "analysis"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025"
+										},
+										{
+											"key": "month",
+											"value": "7"
+										}
+									]
+								},
+								"description": "Analyze spending for a specific month with daily breakdown and top merchants"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Detailed Analysis - By Category",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/spending/analysis?category=Restaurants%20%26%20Dining",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "spending", "analysis"],
+									"query": [
+										{
+											"key": "category",
+											"value": "Restaurants & Dining"
+										}
+									]
+								},
+								"description": "Analyze spending for a specific category across all time"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Detailed Analysis - Category & Month",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/spending/analysis?year=2025&month=7&category=Groceries",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "spending", "analysis"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025"
+										},
+										{
+											"key": "month",
+											"value": "7"
+										},
+										{
+											"key": "category",
+											"value": "Groceries"
+										}
+									]
+								},
+								"description": "Analyze spending for a specific category in a specific month with daily breakdown"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GET - Categories",
+					"item": [
+						{
+							"name": "Get All Categories",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/categories",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "categories"]
+								},
+								"description": "Get list of all available transaction categories"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GET - Merchants",
+					"item": [
+						{
+							"name": "Get All Merchants",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/merchants",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "merchants"]
+								},
+								"description": "Get all merchants with their category mappings, source, confidence, and last update time"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Merchants by Category",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/merchants/category/Groceries",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "merchants", "category", "Groceries"]
+								},
+								"description": "Get all merchants in a specific category (e.g., Groceries, Coffee & Cafes, etc.)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "PUT - Merchant Management",
+					"item": [
+						{
+							"name": "Reassign Merchant Category",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/merchants/STARBUCKS/category?new_category=Coffee%20%26%20Cafes",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "merchants", "STARBUCKS", "category"],
+									"query": [
+										{
+											"key": "new_category",
+											"value": "Coffee & Cafes",
+											"description": "New category to assign"
+										}
+									]
+								},
+								"description": "Reassign a merchant to a different category. This updates both the merchant mapping and all related transactions."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "POST - Category Management",
+					"item": [
+						{
+							"name": "Add Custom Category",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/categories/add?category_name=Subscriptions",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "categories", "add"],
+									"query": [
+										{
+											"key": "category_name",
+											"value": "Subscriptions",
+											"description": "Name of the new category"
+										}
+									]
+								},
+								"description": "Add a new custom category. The category will be available for assignment to merchants."
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "General",
+			"description": "General API endpoints",
+			"item": [
+				{
+					"name": "GET",
+					"item": [
+						{
+							"name": "Root",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/",
+									"host": ["{{baseUrl}}"],
+									"path": [""]
+								},
+								"description": "Root endpoint - health check"
+							},
+							"response": []
+						},
+						{
+							"name": "Public Endpoint",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/public",
+									"host": ["{{baseUrl}}"],
+									"path": ["public"]
+								},
+								"description": "Public test endpoint"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
