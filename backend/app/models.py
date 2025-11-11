@@ -68,3 +68,19 @@ class UserWatchlist(Document):
         indexes = [
             "user_id",
         ]
+
+
+class TickerConfig(Document):
+    """Store global ticker configuration for price polling."""
+    ticker: str
+    enabled: bool = True
+    added_at: datetime
+    updated_at: datetime
+    
+    class Settings:
+        name = "ticker_config"
+        indexes = [
+            "ticker",
+            "enabled",
+        ]
+

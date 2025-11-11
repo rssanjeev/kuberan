@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from app.services.stock_service import stock_service
 from app.config_loader import config_loader
 from app.services.price_poller import price_poller
+from app.repositories.ticker_config_repository import ticker_config_repository
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
@@ -13,9 +14,9 @@ class TickerList(BaseModel):
 @router.get("/configured")
 async def get_configured_stocks():
     """
-    Get stock information for all tickers configured in YAML.
+    Get stock information for all tickers configured in MongoDB.
     """
-    tickers = config_loader.get_tickers()
+    tickers = await config_loader.get_tickers()
     if not tickers:
         raise HTTPException(status_code=404, detail="No tickers configured")
     
@@ -24,32 +25,6 @@ async def get_configured_stocks():
         "count": len(stocks),
         "stocks": stocks
     }
-
-@router.get("/{ticker}")
-async def get_stock(ticker: str):
-    """
-    Get current stock information for a specific ticker.
-    
-    Args:
-        ticker: Stock ticker symbol (e.g., AAPL)
-    """
-    stock = await stock_service.get_stock_info(ticker.upper())
-    if not stock:
-        raise HTTPException(status_code=404, detail=f"Stock data not found for {ticker}")
-    return stock
-
-@router.get("/{ticker}/price")
-async def get_stock_price(ticker: str):
-    """
-    Get just the current price for a specific ticker (lightweight).
-    
-    Args:
-        ticker: Stock ticker symbol (e.g., AAPL)
-    """
-    price = await stock_service.get_stock_price(ticker.upper())
-    if not price:
-        raise HTTPException(status_code=404, detail=f"Price not found for {ticker}")
-    return price
 
 @router.post("/custom")
 async def get_custom_stocks(ticker_list: TickerList):
@@ -69,7 +44,7 @@ async def get_custom_stocks(ticker_list: TickerList):
         "stocks": stocks
     }
 
-@router.get("/{ticker}/history")
+@router.get("/history/{ticker}")
 async def get_stock_history(ticker: str, period: str = "1mo"):
     """
     Get historical stock data for a specific ticker.
@@ -83,16 +58,6 @@ async def get_stock_history(ticker: str, period: str = "1mo"):
         raise HTTPException(status_code=404, detail=f"History not found for {ticker}")
     return history
 
-@router.get("/config/tickers")
-async def get_configured_tickers():
-    """
-    Get the list of tickers configured in YAML.
-    """
-    return {
-        "tickers": config_loader.get_tickers(),
-        "refresh_interval": config_loader.get_refresh_interval()
-    }
-
 @router.post("/poll/trigger")
 async def trigger_price_poll():
     """
@@ -102,10 +67,36 @@ async def trigger_price_poll():
     await price_poller.run_now()
     return {
         "message": "Price poll triggered successfully",
-        "tickers": config_loader.get_tickers()
+        "tickers": await config_loader.get_tickers()
     }
 
-@router.get("/{ticker}/prices/collected")
+# Price-related endpoints
+@router.get("/price/stats")
+async def get_collection_stats():
+    """
+    Get statistics about collected price data.
+    """
+    from app.models import StockPrice
+    
+    # Count total records
+    total = await StockPrice.count()
+    
+    # Get unique tickers
+    tickers = await StockPrice.distinct("ticker")
+    
+    # Get date range
+    oldest = await StockPrice.find_all().sort("-timestamp").limit(1).to_list()
+    newest = await StockPrice.find_all().sort("+timestamp").limit(1).to_list()
+    
+    return {
+        "total_records": total,
+        "tickers": sorted(tickers) if tickers else [],
+        "ticker_count": len(tickers) if tickers else 0,
+        "oldest_record": oldest[0].timestamp.isoformat() if oldest else None,
+        "newest_record": newest[0].timestamp.isoformat() if newest else None
+    }
+
+@router.get("/price/collected/{ticker}")
 async def get_collected_prices(ticker: str, limit: int = 100):
     """
     Get collected price data from MongoDB for a specific ticker.
@@ -137,27 +128,134 @@ async def get_collected_prices(ticker: str, limit: int = 100):
         ]
     }
 
-@router.get("/prices/stats")
-async def get_collection_stats():
+@router.get("/price/{ticker}")
+async def get_stock_price(ticker: str):
     """
-    Get statistics about collected price data.
+    Get just the current price for a specific ticker (lightweight).
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL)
     """
-    from app.models import StockPrice
-    
-    # Count total records
-    total = await StockPrice.count()
-    
-    # Get unique tickers
-    tickers = await StockPrice.distinct("ticker")
-    
-    # Get date range
-    oldest = await StockPrice.find_all().sort("-timestamp").limit(1).to_list()
-    newest = await StockPrice.find_all().sort("+timestamp").limit(1).to_list()
-    
+    price = await stock_service.get_stock_price(ticker.upper())
+    if not price:
+        raise HTTPException(status_code=404, detail=f"Price not found for {ticker}")
+    return price
+
+# Ticker Management Endpoints
+@router.get("/tickers/")
+async def list_all_tickers():
+    """
+    List all configured tickers (enabled and disabled).
+    Shows full ticker configuration with status and timestamps.
+    """
+    configs = await ticker_config_repository.get_all_tickers()
     return {
-        "total_records": total,
-        "tickers": sorted(tickers) if tickers else [],
-        "ticker_count": len(tickers) if tickers else 0,
-        "oldest_record": oldest[0].timestamp.isoformat() if oldest else None,
-        "newest_record": newest[0].timestamp.isoformat() if newest else None
+        "tickers": [
+            {
+                "ticker": c.ticker,
+                "enabled": c.enabled,
+                "added_at": c.added_at.isoformat(),
+                "updated_at": c.updated_at.isoformat()
+            }
+            for c in configs
+        ]
     }
+
+@router.get("/tickers/active/")
+async def list_active_tickers():
+    """
+    Get list of active (enabled) tickers only.
+    """
+    tickers = await config_loader.get_tickers()
+    return {
+        "tickers": tickers,
+        "count": len(tickers)
+    }
+
+@router.post("/tickers/add/{ticker}")
+async def add_ticker(ticker: str, enabled: bool = True):
+    """
+    Add a new ticker to the configuration.
+    
+    Args:
+        ticker: Stock ticker symbol
+        enabled: Whether to enable polling for this ticker (default: True)
+    
+    Raises:
+        HTTPException 400: If ticker already exists
+    """
+    try:
+        config = await ticker_config_repository.add_ticker(ticker, enabled)
+        return {
+            "message": f"Ticker {ticker} added successfully",
+            "ticker": config.ticker,
+            "enabled": config.enabled
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+@router.delete("/tickers/remove/{ticker}")
+async def remove_ticker(ticker: str):
+    """
+    Remove a ticker from configuration.
+    
+    Args:
+        ticker: Stock ticker symbol to remove
+    
+    Raises:
+        HTTPException 404: If ticker does not exist
+    """
+    try:
+        await ticker_config_repository.remove_ticker(ticker)
+        return {"message": f"Ticker {ticker} removed successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+@router.put("/tickers/{ticker}/enable")
+async def enable_ticker(ticker: str):
+    """
+    Enable polling for a ticker.
+    
+    Args:
+        ticker: Stock ticker symbol
+    """
+    config = await ticker_config_repository.enable_ticker(ticker)
+    if not config:
+        raise HTTPException(status_code=404, detail=f"Ticker {ticker} not found")
+    return {
+        "message": f"Ticker {ticker} enabled",
+        "ticker": config.ticker,
+        "enabled": config.enabled
+    }
+
+@router.put("/tickers/{ticker}/disable")
+async def disable_ticker(ticker: str):
+    """
+    Disable polling for a ticker (keeps in database).
+    
+    Args:
+        ticker: Stock ticker symbol
+    """
+    config = await ticker_config_repository.disable_ticker(ticker)
+    if not config:
+        raise HTTPException(status_code=404, detail=f"Ticker {ticker} not found")
+    return {
+        "message": f"Ticker {ticker} disabled",
+        "ticker": config.ticker,
+        "enabled": config.enabled
+    }
+
+# Stock info endpoints (with {ticker} at the end)
+@router.get("/{ticker}")
+async def get_stock(ticker: str):
+    """
+    Get current stock information for a specific ticker.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL)
+    """
+    stock = await stock_service.get_stock_info(ticker.upper())
+    if not stock:
+        raise HTTPException(status_code=404, detail=f"Stock data not found for {ticker}")
+    return stock
+

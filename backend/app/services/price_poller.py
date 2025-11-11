@@ -31,8 +31,8 @@ class PricePollerService:
             
             print(f"[{current_time.strftime('%Y-%m-%d %H:%M:%S EST')}] Polling stock prices...")
             
-            # Get tickers from config
-            tickers = config_loader.get_tickers()
+            # Get tickers from config (now async)
+            tickers = await config_loader.get_tickers()
             if not tickers:
                 print("No tickers configured for polling")
                 return
@@ -127,7 +127,7 @@ class PricePollerService:
         current_time = datetime.now(est)
         print(f"✓ Price poller started at {current_time.strftime('%Y-%m-%d %H:%M:%S EST')}")
         print(f"  Polling every 60 seconds during market hours (9 AM - 5 PM EST, Mon-Fri)")
-        print(f"  Monitoring tickers: {', '.join(config_loader.get_tickers())}")
+        print(f"  Monitoring tickers will be loaded from MongoDB")
     
     def stop(self):
         """Stop the price polling scheduler."""

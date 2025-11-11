@@ -5,7 +5,7 @@ from app.routers import root, public, profile, stocks
 from app.users import get_user_by_username, verify_password
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.models import User, StockMetadata, StockPrice, UserWatchlist
+from app.models import User, StockMetadata, StockPrice, UserWatchlist, TickerConfig
 from app.auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.services.price_poller import price_poller
 
@@ -17,7 +17,7 @@ async def app_init():
     client = AsyncIOMotorClient("mongodb://mongodb:27017")
     await init_beanie(
         database=client.kuberan, 
-        document_models=[User, StockMetadata, StockPrice, UserWatchlist]
+        document_models=[User, StockMetadata, StockPrice, UserWatchlist, TickerConfig]
     )
     
     # Start price polling service
