@@ -70,6 +70,24 @@ async def trigger_price_poll():
         "tickers": await config_loader.get_tickers()
     }
 
+@router.get("/market/status")
+async def get_market_status():
+    """
+    Check if the NYSE market is open today.
+    """
+    is_open = price_poller.is_market_open_today()
+    from datetime import datetime
+    import pytz
+    
+    est = pytz.timezone('US/Eastern')
+    today = datetime.now(est).date()
+    
+    return {
+        "date": today.isoformat(),
+        "is_market_open": is_open,
+        "message": "Market is open for trading" if is_open else "Market is closed (holiday or weekend)"
+    }
+
 # Price-related endpoints
 @router.get("/price/stats")
 async def get_collection_stats():

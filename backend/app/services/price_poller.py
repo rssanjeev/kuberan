@@ -1,12 +1,14 @@
 """
 Background service to poll stock prices during market hours.
 Fetches prices for configured tickers every 60 seconds from 9 AM to 5 PM EST.
+Respects NYSE market holidays and trading calendar.
 """
 import asyncio
-from datetime import datetime
+from datetime import datetime, date
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import pytz
+import pandas_market_calendars as mcal
 from app.config_loader import config_loader
 from app.services.stock_service import stock_service
 from app.repositories.stock_repository import stock_repository
@@ -18,13 +20,46 @@ class PricePollerService:
     def __init__(self):
         self.scheduler = AsyncIOScheduler(timezone=pytz.timezone('US/Eastern'))
         self.is_running = False
+        self.nyse_calendar = mcal.get_calendar('NYSE')
+        
+    def is_market_open_today(self) -> bool:
+        """
+        Check if the NYSE is open today.
+        
+        Returns:
+            True if market is open, False if closed (holiday/weekend)
+        """
+        try:
+            est = pytz.timezone('US/Eastern')
+            today = datetime.now(est).date()
+            
+            # Get NYSE schedule for today
+            schedule = self.nyse_calendar.schedule(start_date=today, end_date=today)
+            
+            # If schedule is empty, market is closed
+            is_open = len(schedule) > 0
+            
+            if not is_open:
+                print(f"[{today}] NYSE is closed today (holiday or weekend)")
+            
+            return is_open
+            
+        except Exception as e:
+            print(f"Error checking market calendar: {e}")
+            # Default to allowing polling if calendar check fails
+            return True
         
     async def poll_prices(self):
         """
         Poll prices for all configured tickers and save to MongoDB.
         This runs every 60 seconds during market hours.
+        Skips polling if NYSE is closed (holidays/weekends).
         """
         try:
+            # Check if market is open today
+            if not self.is_market_open_today():
+                return  # Skip polling on market holidays
+            
             # Get current time in EST
             est = pytz.timezone('US/Eastern')
             current_time = datetime.now(est)
@@ -126,8 +161,9 @@ class PricePollerService:
         est = pytz.timezone('US/Eastern')
         current_time = datetime.now(est)
         print(f"✓ Price poller started at {current_time.strftime('%Y-%m-%d %H:%M:%S EST')}")
-        print(f"  Polling every 60 seconds during market hours (9 AM - 5 PM EST, Mon-Fri)")
-        print(f"  Monitoring tickers will be loaded from MongoDB")
+        print("  Polling every 60 seconds during market hours (9 AM - 5 PM EST, Mon-Fri)")
+        print("  Monitoring tickers will be loaded from MongoDB")
+        print("  NYSE market holiday calendar integrated - polling skipped on holidays")
     
     def stop(self):
         """Stop the price polling scheduler."""
