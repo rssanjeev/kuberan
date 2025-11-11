@@ -1,5 +1,5 @@
 """
-Financial Document Processing Service
+Financier - Financial Document Processing Service
 
 Security: PDFs are processed in-memory only, never stored.
 Only transaction data is persisted to database.
@@ -18,7 +18,7 @@ from app.repositories.financial_repository import (
 )
 
 
-class FinancialDocumentService:
+class FinancierService:
     """Service for processing financial documents."""
     
     async def process_credit_card_statement(
@@ -237,4 +237,4 @@ class FinancialDocumentService:
 
 
 # Singleton instance
-financial_service = FinancialDocumentService()
+financier = FinancierService()

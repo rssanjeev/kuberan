@@ -8,9 +8,9 @@ No account information is exposed or stored.
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from typing import Optional
 
-from app.services.financial_service import financial_service
+from app.services.financial_service import financier
 
-router = APIRouter(prefix="/documents", tags=["Financial Documents"])
+router = APIRouter(prefix="/documents", tags=["Financier"])
 
 
 @router.post("/upload")
@@ -39,7 +39,7 @@ async def upload_financial_document(
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
     
     try:
-        result = await financial_service.process_credit_card_statement(
+        result = await financier.process_credit_card_statement(
             file=file,
             bank=bank
         )
@@ -77,7 +77,7 @@ async def get_transactions(
         List of transactions
     """
     try:
-        result = await financial_service.get_transactions(
+        result = await financier.get_transactions(
             year=year,
             month=month,
             category=category,
@@ -108,7 +108,7 @@ async def get_spending_summary(
         Spending breakdown by category with percentages
     """
     try:
-        result = await financial_service.get_spending_summary(
+        result = await financier.get_spending_summary(
             year=year,
             month=month
         )

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
-from app.routers import root, public, profile, stocks, documents
+from app.routers import root, public, profile, stocks, financier
 from app.users import get_user_by_username, verify_password
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -42,7 +42,7 @@ app.include_router(root.router)
 app.include_router(public.router)
 app.include_router(profile.router)
 app.include_router(stocks.router)
-app.include_router(documents.router)
+app.include_router(financier.router)
 
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
