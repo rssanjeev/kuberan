@@ -612,6 +612,183 @@
 			"response": []
 		},
 		{
+			"name": "Get Comprehensive Financial Analysis",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/analytics/comprehensive",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"analytics",
+						"comprehensive"
+					]
+				},
+				"description": "Get comprehensive financial analysis including: cash flow, monthly trends, category breakdown, outlier detection, spending spikes, trend analysis, recurring payments, and financial health indicators."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Comprehensive Analysis - By Year",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/analytics/comprehensive?year=2025",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"analytics",
+						"comprehensive"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025",
+							"description": "Filter by year"
+						}
+					]
+				},
+				"description": "Get comprehensive analysis for a specific year with monthly breakdowns and trends."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Comprehensive Analysis - By Month",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/analytics/comprehensive?year=2025&month=7",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"analytics",
+						"comprehensive"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025",
+							"description": "Filter by year"
+						},
+						{
+							"key": "month",
+							"value": "7",
+							"description": "Filter by month (1-12)"
+						}
+					]
+				},
+				"description": "Get comprehensive analysis for a specific month with daily breakdowns."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Comprehensive Analysis - By Category",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/analytics/comprehensive?category=Restaurants%20%26%20Dining",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"analytics",
+						"comprehensive"
+					],
+					"query": [
+						{
+							"key": "category",
+							"value": "Restaurants%20%26%20Dining",
+							"description": "Filter by category"
+						}
+					]
+				},
+				"description": "Get comprehensive analysis for a specific category across all time."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Financial Visualizations",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/analytics/visualizations?format=png",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"analytics",
+						"visualizations"
+					],
+					"query": [
+						{
+							"key": "format",
+							"value": "png",
+							"description": "Output format: png or svg"
+						}
+					]
+				},
+				"description": "Generate financial visualizations (income vs expenses chart, category pie chart, spending trend, outlier detection) as base64-encoded images."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Visualizations - By Year",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/financier/analytics/visualizations?year=2025&format=png",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"financier",
+						"analytics",
+						"visualizations"
+					],
+					"query": [
+						{
+							"key": "year",
+							"value": "2025",
+							"description": "Filter by year"
+						},
+						{
+							"key": "format",
+							"value": "png",
+							"description": "Output format: png or svg"
+						}
+					]
+				},
+				"description": "Generate visualizations for a specific year."
+			},
+			"response": []
+		},
+		{
 			"name": "Get All Categories",
 			"request": {
 				"method": "GET",

@@ -6,9 +6,11 @@ No account information is exposed or stored.
 """
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi.responses import JSONResponse
 from typing import Optional, List
 
 from app.services.financial_service import financier
+from app.services.analytics_service import analytics_service
 
 router = APIRouter(prefix="/financier", tags=["Financier"])
 
@@ -348,5 +350,98 @@ async def add_custom_category(
         raise HTTPException(
             status_code=500,
             detail=f"Error adding category: {str(e)}"
+        )
+
+
+# ============================================================================
+# ANALYTICS ENDPOINTS - Deep Financial Analysis
+# ============================================================================
+
+@router.get("/analytics/comprehensive")
+async def get_comprehensive_analysis(
+    year: Optional[int] = Query(None, description="Filter by year"),
+    month: Optional[int] = Query(None, description="Filter by month (1-12)"),
+    category: Optional[str] = Query(None, description="Filter by category")
+):
+    """
+    Get comprehensive financial analysis including:
+    - Cash flow analysis (income, expenses, net flow)
+    - Monthly cash flow trends
+    - Category spending breakdown
+    - Outlier detection (unusual transactions)
+    - Spending spike detection
+    - Trend analysis (increasing/decreasing expenses)
+    - Recurring payment detection
+    - Financial health indicators
+    
+    Args:
+        year: Filter by year
+        month: Filter by month (1-12)
+        category: Filter by category
+        
+    Returns:
+        Complete financial analysis with all metrics
+    """
+    try:
+        result = await analytics_service.get_comprehensive_analysis(
+            year=year,
+            month=month,
+            category=category
+        )
+        return result
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error performing analysis: {str(e)}"
+        )
+
+
+@router.get("/analytics/visualizations")
+async def get_visualizations(
+    year: Optional[int] = Query(None, description="Filter by year"),
+    month: Optional[int] = Query(None, description="Filter by month (1-12)"),
+    format: str = Query("png", description="Output format: png or svg")
+):
+    """
+    Generate financial visualizations as base64-encoded images for frontend display.
+    
+    IMPORTANT: This endpoint is for FRONTEND CONSUMPTION ONLY. Images are returned
+    as base64 strings in JSON format for React components to display. Do NOT use
+    this for file downloads, PDF exports, or email attachments.
+    
+    Visualizations generated:
+    - Monthly income vs expenses bar chart
+    - Spending by category pie chart
+    - Spending trend over time line chart
+    - Outlier detection scatter plot
+    
+    Args:
+        year: Filter by year
+        month: Filter by month (1-12)
+        format: Output format ('png' or 'svg')
+        
+    Returns:
+        Dict of visualization names to base64 encoded images
+        Frontend usage: <img src="data:image/png;base64,{encoded_data}" />
+        
+    Note:
+        Images are generated server-side and NOT saved to disk or database.
+    """
+    if format not in ["png", "svg"]:
+        raise HTTPException(status_code=400, detail="Format must be 'png' or 'svg'")
+    
+    try:
+        result = await analytics_service.get_visualizations(
+            year=year,
+            month=month,
+            format=format
+        )
+        return result
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating visualizations: {str(e)}"
         )
 

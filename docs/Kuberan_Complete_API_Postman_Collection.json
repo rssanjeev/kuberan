@@ -849,6 +849,133 @@
 					]
 				},
 				{
+					"name": "GET - Analytics",
+					"item": [
+						{
+							"name": "Get Comprehensive Analysis - All Time",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/analytics/comprehensive",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "analytics", "comprehensive"]
+								},
+								"description": "Get comprehensive financial analysis including: cash flow, monthly trends, category breakdown, outlier detection, spending spikes, trend analysis, recurring payments, and financial health indicators"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Comprehensive Analysis - By Year",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/analytics/comprehensive?year=2025",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "analytics", "comprehensive"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025"
+										}
+									]
+								},
+								"description": "Get comprehensive analysis for a specific year with monthly breakdowns and trends"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Comprehensive Analysis - By Month",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/analytics/comprehensive?year=2025&month=7",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "analytics", "comprehensive"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025"
+										},
+										{
+											"key": "month",
+											"value": "7"
+										}
+									]
+								},
+								"description": "Get comprehensive analysis for a specific month with daily breakdowns"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Comprehensive Analysis - By Category",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/analytics/comprehensive?category=Restaurants%20%26%20Dining",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "analytics", "comprehensive"],
+									"query": [
+										{
+											"key": "category",
+											"value": "Restaurants & Dining"
+										}
+									]
+								},
+								"description": "Get comprehensive analysis for a specific category across all time"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Financial Visualizations",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/analytics/visualizations?format=png",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "analytics", "visualizations"],
+									"query": [
+										{
+											"key": "format",
+											"value": "png"
+										}
+									]
+								},
+								"description": "Generate financial visualizations (income vs expenses chart, category pie chart, spending trend, outlier detection) as base64-encoded images"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Visualizations - By Year",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/financier/analytics/visualizations?year=2025&format=png",
+									"host": ["{{baseUrl}}"],
+									"path": ["financier", "analytics", "visualizations"],
+									"query": [
+										{
+											"key": "year",
+											"value": "2025"
+										},
+										{
+											"key": "format",
+											"value": "png"
+										}
+									]
+								},
+								"description": "Generate visualizations for a specific year"
+							},
+							"response": []
+						}
+					]
+				},
+				{
 					"name": "GET - Categories",
 					"item": [
 						{
