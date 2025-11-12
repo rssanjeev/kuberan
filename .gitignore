@@ -45,6 +45,6 @@ build/
 category_mapping.json
 backend/*.pdf
 backend/**/*.pdf
-backend/*_extracted.json
+backend/*_extracted.json        
 
-.github/copilot-instructions.md
+.github/
