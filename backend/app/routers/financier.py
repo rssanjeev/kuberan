@@ -9,7 +9,9 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from fastapi.responses import JSONResponse
 from typing import Optional, List
 
-from app.services.financial_service import financier
+from app.services.document_processor_service import document_processor
+from app.services.transaction_service import transaction_service
+from app.services.merchant_service import merchant_service
 from app.services.analytics_service import analytics_service
 
 router = APIRouter(prefix="/financier", tags=["Financier"])
@@ -41,7 +43,7 @@ async def upload_financial_document(
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
     
     try:
-        result = await financier.process_credit_card_statement(
+        result = await document_processor.process_credit_card_statement(
             file=file,
             bank=bank
         )
@@ -94,7 +96,7 @@ async def upload_multiple_financial_documents(
             continue
         
         try:
-            result = await financier.process_credit_card_statement(
+            result = await document_processor.process_credit_card_statement(
                 file=file,
                 bank=bank
             )
@@ -147,7 +149,7 @@ async def get_transactions(
         List of transactions
     """
     try:
-        result = await financier.get_transactions(
+        result = await transaction_service.get_transactions(
             year=year,
             month=month,
             category=category,
@@ -178,7 +180,7 @@ async def get_spending_summary(
         Spending breakdown by category with percentages
     """
     try:
-        result = await financier.get_spending_summary(
+        result = await transaction_service.get_spending_summary(
             year=year,
             month=month
         )
@@ -263,7 +265,7 @@ async def get_all_merchants():
         List of merchants with categories, source, confidence, and last update time
     """
     try:
-        result = await financier.get_all_merchants()
+        result = await merchant_service.get_all_merchants()
         return result
     
     except Exception as e:
@@ -285,7 +287,7 @@ async def get_merchants_by_category(category: str):
         List of merchants in that category
     """
     try:
-        result = await financier.get_merchants_by_category(category)
+        result = await merchant_service.get_merchants_by_category(category)
         return result
     
     except Exception as e:
@@ -312,7 +314,7 @@ async def update_merchant_category(
         Update result with old and new category
     """
     try:
-        result = await financier.update_merchant_category(
+        result = await merchant_service.update_merchant_category(
             merchant_name=merchant_name,
             new_category=new_category
         )
@@ -343,7 +345,7 @@ async def add_custom_category(
         Status of category creation
     """
     try:
-        result = await financier.add_custom_category(category_name)
+        result = await merchant_service.add_custom_category(category_name)
         return result
     
     except Exception as e:

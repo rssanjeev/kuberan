@@ -1,5 +1,5 @@
 """
-Financier - Financial Document Processing Service
+Document Processor Service - Credit Card Statement PDF Processing
 
 Security: PDFs are processed in-memory only, never stored.
 Only transaction data is persisted to database.
@@ -7,7 +7,7 @@ Only transaction data is persisted to database.
 
 import os
 import tempfile
-from typing import Dict, Any, BinaryIO
+from typing import Dict, Any
 from fastapi import UploadFile
 from datetime import datetime
 
@@ -18,8 +18,8 @@ from app.repositories.financial_repository import (
 )
 
 
-class FinancierService:
-    """Service for processing financial documents."""
+class DocumentProcessorService:
+    """Service for processing financial document PDFs."""
     
     async def process_credit_card_statement(
         self,
@@ -151,184 +151,7 @@ class FinancierService:
             # CRITICAL: Delete temporary PDF file
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
-    
-    async def get_transactions(
-        self,
-        year: int = None,
-        month: int = None,
-        category: str = None,
-        limit: int = 100
-    ) -> Dict[str, Any]:
-        """
-        Get transactions with filters.
-        
-        Args:
-            year: Filter by year
-            month: Filter by month
-            category: Filter by category
-            limit: Maximum results
-            
-        Returns:
-            Transactions list
-        """
-        transactions = await financial_repository.get_transactions(
-            year=year,
-            month=month,
-            category=category,
-            limit=limit
-        )
-        
-        return {
-            "count": len(transactions),
-            "transactions": [
-                {
-                    "date": f"{txn.statement_year}/{txn.statement_month:02d}/{txn.transaction_date}",
-                    "merchant": txn.merchant_name,
-                    "location": txn.merchant_location,
-                    "amount": txn.amount,
-                    "type": txn.transaction_type,
-                    "category": txn.category,
-                    "bank": txn.bank
-                }
-                for txn in transactions
-            ]
-        }
-    
-    async def get_spending_summary(
-        self,
-        year: int = None,
-        month: int = None
-    ) -> Dict[str, Any]:
-        """
-        Get spending summary by category.
-        
-        Args:
-            year: Filter by year
-            month: Filter by month
-            
-        Returns:
-            Spending breakdown by category
-        """
-        category_totals = await financial_repository.get_spending_by_category(
-            year=year,
-            month=month
-        )
-        
-        # Sort by amount descending
-        sorted_categories = sorted(
-            category_totals.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
-        
-        total_spending = sum(category_totals.values())
-        
-        return {
-            "total_spending": round(total_spending, 2),
-            "category_breakdown": [
-                {
-                    "category": cat,
-                    "amount": round(amt, 2),
-                    "percentage": round((amt / total_spending * 100) if total_spending > 0 else 0, 1)
-                }
-                for cat, amt in sorted_categories
-            ]
-        }
-    
-    async def get_all_merchants(self) -> Dict[str, Any]:
-        """
-        Get all merchants with their category mappings.
-        
-        Returns:
-            List of merchants with categories
-        """
-        mappings = await merchant_category_repository.get_all_merchants()
-        
-        return {
-            "count": len(mappings),
-            "merchants": [
-                {
-                    "merchant": m.merchant_name,
-                    "category": m.category,
-                    "source": m.source,
-                    "confidence": m.confidence,
-                    "last_updated": m.updated_at.isoformat()
-                }
-                for m in mappings
-            ]
-        }
-    
-    async def get_merchants_by_category(self, category: str) -> Dict[str, Any]:
-        """
-        Get all merchants in a specific category.
-        
-        Args:
-            category: Category name
-            
-        Returns:
-            List of merchants in that category
-        """
-        mappings = await merchant_category_repository.get_merchants_by_category(category)
-        
-        return {
-            "category": category,
-            "count": len(mappings),
-            "merchants": [
-                {
-                    "merchant": m.merchant_name,
-                    "source": m.source,
-                    "confidence": m.confidence,
-                    "last_updated": m.updated_at.isoformat()
-                }
-                for m in mappings
-            ]
-        }
-    
-    async def update_merchant_category(
-        self,
-        merchant_name: str,
-        new_category: str
-    ) -> Dict[str, Any]:
-        """
-        Reassign a merchant to a different category.
-        Updates both the merchant mapping and all related transactions.
-        
-        Args:
-            merchant_name: Merchant name
-            new_category: New category to assign
-            
-        Returns:
-            Update result
-        """
-        mapping = await merchant_category_repository.update_merchant_category(
-            merchant_name=merchant_name,
-            new_category=new_category,
-            source="manual"
-        )
-        
-        if not mapping:
-            raise ValueError(f"Merchant '{merchant_name}' not found")
-        
-        return {
-            "status": "success",
-            "message": f"Merchant '{merchant_name}' reassigned to '{new_category}'",
-            "merchant": merchant_name,
-            "old_category": mapping.category if mapping else None,
-            "new_category": new_category
-        }
-    
-    async def add_custom_category(self, category_name: str) -> Dict[str, Any]:
-        """
-        Add a new custom category.
-        
-        Args:
-            category_name: Name of the new category
-            
-        Returns:
-            Status result
-        """
-        return await merchant_category_repository.add_custom_category(category_name)
 
 
 # Singleton instance
-financier = FinancierService()
+document_processor = DocumentProcessorService()
