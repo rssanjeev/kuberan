@@ -10,6 +10,9 @@ from app.core.market_calendar import is_market_open
 from app.services.stock.fetcher import stock_fetcher
 from app.repositories.stock_repository import stock_repository
 from app.config_loader import config_loader
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 # ============================================================================
@@ -32,16 +35,23 @@ async def fetch_and_save_price(ticker: str) -> bool:
         price_data = await stock_fetcher.get_stock_price(ticker)
         
         if not price_data:
-            print(f"Failed to fetch price for {ticker}")
+            logger.warning(f"Failed to fetch price for {ticker}", extra={"ticker": ticker})
             return False
         
         # Save to MongoDB
         await stock_repository.save_stock_price(price_data)
-        print(f"✓ Saved price for {ticker}: ${price_data['current_price']}")
+        logger.info(
+            f"Saved price for {ticker}: ${price_data['current_price']}",
+            extra={"ticker": ticker, "price": price_data['current_price']}
+        )
         return True
         
     except Exception as e:
-        print(f"Error fetching/saving price for {ticker}: {e}")
+        logger.error(
+            f"Error fetching/saving price for {ticker}: {e}",
+            extra={"ticker": ticker, "error": str(e)},
+            exc_info=True
+        )
         return False
 
 
@@ -95,7 +105,7 @@ class PriceCollectorJob:
         """
         # Prevent concurrent runs
         if self.is_running:
-            print("⚠️  Price collection already in progress, skipping...")
+            logger.warning("Price collection already in progress, skipping...")
             return
         
         self.is_running = True
@@ -109,12 +119,15 @@ class PriceCollectorJob:
             est = pytz.timezone('US/Eastern')
             current_time = datetime.now(est)
             
-            print(f"[{current_time.strftime('%Y-%m-%d %H:%M:%S EST')}] Polling stock prices...")
+            logger.info(
+                f"Polling stock prices...",
+                extra={"timestamp": current_time.strftime('%Y-%m-%d %H:%M:%S EST')}
+            )
             
             # Get tickers from config
             tickers = await config_loader.get_tickers()
             if not tickers:
-                print("No tickers configured for polling")
+                logger.warning("No tickers configured for polling")
                 return
             
             # Fetch and save prices (pure function)
@@ -126,7 +139,14 @@ class PriceCollectorJob:
             self.total_collected += results["success"]
             self.total_failed += results["failed"]
             
-            print(f"Poll complete: {results['success']} successful, {results['failed']} failed")
+            logger.info(
+                f"Poll complete: {results['success']} successful, {results['failed']} failed",
+                extra={
+                    "success_count": results['success'],
+                    "failed_count": results['failed'],
+                    "total_tickers": results['total']
+                }
+            )
             
         finally:
             self.is_running = False
@@ -136,15 +156,18 @@ class PriceCollectorJob:
         Manually trigger price collection (bypasses market check).
         Useful for testing and manual data collection.
         """
-        print("Manual price poll triggered...")
+        logger.info("Manual price poll triggered...")
         
         est = pytz.timezone('US/Eastern')
         current_time = datetime.now(est)
-        print(f"[{current_time.strftime('%Y-%m-%d %H:%M:%S EST')}] Manual price collection...")
+        logger.debug(
+            f"Manual price collection...",
+            extra={"timestamp": current_time.strftime('%Y-%m-%d %H:%M:%S EST')}
+        )
         
         tickers = await config_loader.get_tickers()
         if not tickers:
-            print("No tickers configured")
+            logger.warning("No tickers configured")
             return {"error": "No tickers configured"}
         
         results = await fetch_and_save_prices_batch(tickers)
@@ -152,6 +175,15 @@ class PriceCollectorJob:
         # Update stats
         self.total_collected += results["success"]
         self.total_failed += results["failed"]
+        
+        logger.info(
+            "Manual poll complete",
+            extra={
+                "success_count": results['success'],
+                "failed_count": results['failed'],
+                "total_tickers": results['total']
+            }
+        )
         
         return {
             "message": "Manual poll complete",

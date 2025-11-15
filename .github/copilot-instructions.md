@@ -304,14 +304,157 @@ python test_script.py
 
 ---
 
-## Error Handling
+## Project Structure
 
-### Logging
-- Use structured logging with context
-- Log format: `[timestamp] Message: details`
-- Success: `✓ Action completed`
-- Errors: `✗ Action failed: reason`
-- Info: `ℹ Status update`
+```
+kuberan/
+├── backend/
+│   ├── app/
+│   │   ├── core/              # Shared utilities and helpers
+│   │   │   ├── market_calendar.py
+│   │   │   ├── chase_parser.py
+│   │   │   └── ...
+│   │   ├── models.py          # Beanie ODM models
+│   │   ├── repositories/      # Database access layer
+│   │   │   ├── stock_repository.py
+│   │   │   ├── financial_repository.py
+│   │   │   └── ...
+│   │   ├── routers/           # API endpoint definitions
+│   │   │   ├── stocks.py
+│   │   │   ├── financier.py
+│   │   │   └── ...
+│   │   ├── services/          # Business logic and external APIs
+│   │   │   ├── analytics_service.py
+│   │   │   ├── financial_service.py
+│   │   │   ├── stock/         # Stock-related services
+│   │   │   ├── jobs/          # Background job implementations
+│   │   │   └── scheduler/     # Job scheduling infrastructure
+│   │   ├── auth.py            # Authentication logic
+│   │   ├── users.py           # User management
+│   │   └── main.py            # FastAPI application entry point
+│   ├── config/                # YAML configuration files
+│   ├── requirements.txt       # Python dependencies
+│   └── Dockerfile             # Backend container definition
+├── docs/                      # API documentation
+│   ├── API.md
+│   ├── Financier_Postman_Collection.json
+│   └── Kuberan_Complete_API_Postman_Collection.json
+├── scripts/                   # Utility scripts
+├── frontend/                  # React frontend (future)
+├── docker-compose.yml         # Container orchestration
+└── .github/
+    └── copilot-instructions.md
+```
+
+---
+
+## Error Handling & Logging
+
+### Logging System
+**Status**: Using Python's `logging` module with structured logging and colored console output
+
+**Architecture**:
+- **Location**: `backend/app/core/logging_config.py`
+- **Formatters**: 
+  - `ColoredFormatter`: ANSI colors + emoji prefixes for development
+  - `JSONFormatter`: Structured JSON output for production
+- **Configuration**: Environment variables (LOG_LEVEL, LOG_FORMAT, LOG_FILE)
+- **Output**: stdout/stderr (Docker-compatible)
+
+### Log Levels
+- **DEBUG** 🔍: Detailed diagnostic information (disabled by default)
+- **INFO** ✓: General informational messages (success operations)
+- **WARNING** ⚠️: Warning messages (non-critical issues)
+- **ERROR** ✗: Error messages (failures that need attention)
+- **CRITICAL** 🔥: Critical failures (system-level issues)
+
+### Using Loggers
+Always import and create module-level loggers:
+
+```python
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+# Log with appropriate levels
+logger.debug("Connecting to database...")
+logger.info("Application started successfully")
+logger.warning("Configuration value missing, using default")
+logger.error("Failed to fetch data", extra={"ticker": "AAPL"}, exc_info=True)
+logger.critical("Database connection lost")
+```
+
+### Structured Logging with Context
+Use `extra` parameter to add contextual information:
+
+```python
+# Good - adds structured context
+logger.info(
+    "Saved price for ticker",
+    extra={"ticker": ticker, "price": price, "timestamp": timestamp}
+)
+
+logger.error(
+    "Failed to process transaction",
+    extra={"transaction_id": txn_id, "amount": amount, "error": str(e)},
+    exc_info=True  # Include full traceback
+)
+
+# Avoid - loses structure
+logger.info(f"Saved price for {ticker}: ${price}")
+```
+
+### Emoji Conventions (ColoredFormatter)
+Emojis are automatically added by `ColoredFormatter`:
+- 🔍 DEBUG (cyan)
+- ✓ INFO (green)
+- ⚠️ WARNING (yellow)
+- ✗ ERROR (red)
+- 🔥 CRITICAL (magenta)
+
+### Configuration
+Set environment variables in `docker-compose.yml` or `.env`:
+
+```yaml
+environment:
+  LOG_LEVEL: INFO           # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  LOG_FORMAT: colored       # colored (dev) or json (prod)
+  LOG_FILE: /logs/app.log   # Optional: file output
+```
+
+### Viewing Logs
+Docker captures all logs (stdout/stderr):
+
+```bash
+# View recent logs
+docker logs kuberan-backend-1 --tail 50
+
+# Follow logs in real-time
+docker logs -f kuberan-backend-1
+
+# View with timestamps
+docker logs -t kuberan-backend-1
+
+# Save logs to file for analysis
+docker logs kuberan-backend-1 > backend-logs.txt
+```
+
+### Third-Party Logger Suppression
+Configured in `logging_config.py` to reduce noise:
+- `urllib3`: WARNING level (hides HTTP debug messages)
+- `asyncio`: WARNING level (hides event loop details)
+- `motor`: INFO level (MongoDB driver)
+- `beanie`: INFO level (ODM operations)
+
+### Best Practices
+- ✅ Use `logger.info()` for successful operations
+- ✅ Use `logger.error()` with `exc_info=True` for exceptions
+- ✅ Add structured context via `extra` parameter
+- ✅ Use appropriate log levels (don't use ERROR for warnings)
+- ✅ Keep log messages concise but informative
+- ❌ Don't use `print()` (use logger instead)
+- ❌ Don't log sensitive data (account numbers, passwords)
+- ❌ Don't log large payloads (summarize instead)
 
 ### HTTP Error Responses
 - `400 Bad Request`: Invalid input
@@ -403,7 +546,40 @@ python test_script.py
 ### Container Management
 - Backend: `docker-compose restart backend` after code changes
 - View logs: `docker logs kuberan-backend-1 --tail N`
+- Follow logs: `docker logs -f kuberan-backend-1`
 - Rebuild: `docker-compose build backend` (if dependencies change)
+
+### Log Management
+**Current Approach**: Logs output to stdout/stderr, captured by Docker
+
+**Viewing Logs:**
+```bash
+# View last 50 lines
+docker logs kuberan-backend-1 --tail 50
+
+# Follow logs in real-time
+docker logs -f kuberan-backend-1
+
+# View logs with timestamps
+docker logs -t kuberan-backend-1
+
+# Save logs to file for analysis
+docker logs kuberan-backend-1 > backend-logs.txt
+```
+
+**Log Retention**: Docker stores logs per container. To clear:
+```bash
+# Restart container (clears logs)
+docker-compose restart backend
+
+# Or rebuild container
+docker-compose down && docker-compose up -d
+```
+
+**Future Considerations**:
+- When scaling: Implement centralized logging (ELK stack, CloudWatch)
+- When needed: Add log rotation for long-running containers
+- For production: Use structured JSON logging with log levels
 
 ### MongoDB Access
 ```bash

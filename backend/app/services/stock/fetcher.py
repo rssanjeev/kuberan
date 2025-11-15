@@ -6,8 +6,14 @@ import yfinance as yf
 from typing import List, Dict, Optional
 from datetime import datetime
 import asyncio
+import pytz
 from app.repositories.stock_repository import stock_repository
+from app.core.logging_config import get_logger
 
+logger = get_logger(__name__)
+
+# US/Eastern timezone for stock market
+EST = pytz.timezone('US/Eastern')
 
 class StockFetcher:
     """Service for fetching stock data from Yahoo Finance and managing persistence."""
@@ -36,10 +42,14 @@ class StockFetcher:
             return {
                 "ticker": ticker,
                 "current_price": fast_info.get("lastPrice"),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(EST).isoformat()
             }
         except Exception as e:
-            print(f"Error fetching price for {ticker}: {e}")
+            logger.error(
+                f"Error fetching price for {ticker}: {e}",
+                extra={"ticker": ticker, "error": str(e)},
+                exc_info=True
+            )
             return None
     
     async def get_stock_metadata(self, ticker: str) -> Optional[Dict]:
@@ -70,10 +80,14 @@ class StockFetcher:
                 "country": info.get("country"),
                 "website": info.get("website"),
                 "description": info.get("longBusinessSummary"),
-                "updated_at": datetime.utcnow().isoformat()
+                "updated_at": datetime.now(EST).isoformat()
             }
         except Exception as e:
-            print(f"Error fetching metadata for {ticker}: {e}")
+            logger.error(
+                f"Error fetching metadata for {ticker}: {e}",
+                extra={"ticker": ticker, "error": str(e)},
+                exc_info=True
+            )
             return None
     
     async def get_stock_info(self, ticker: str) -> Optional[Dict]:
@@ -190,7 +204,11 @@ class StockFetcher:
                 "data": history.to_dict('records') if not history.empty else []
             }
         except Exception as e:
-            print(f"Error fetching history for {ticker}: {e}")
+            logger.error(
+                f"Error fetching history for {ticker}: {e}",
+                extra={"ticker": ticker, "period": period, "error": str(e)},
+                exc_info=True
+            )
             return None
 
 

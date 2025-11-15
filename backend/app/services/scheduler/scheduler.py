@@ -7,6 +7,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.base import BaseTrigger
 import pytz
 from datetime import datetime
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class JobScheduler:
@@ -24,7 +27,7 @@ class JobScheduler:
     def start(self):
         """Start the scheduler."""
         if self._is_running:
-            print("⚠️  Job scheduler is already running")
+            logger.warning("Job scheduler is already running")
             return
         
         self.scheduler.start()
@@ -32,10 +35,13 @@ class JobScheduler:
         
         est = pytz.timezone('US/Eastern')
         current_time = datetime.now(est)
-        print(f"✓ Job scheduler started at {current_time.strftime('%Y-%m-%d %H:%M:%S EST')}")
-        print(f"  Registered jobs: {len(self.jobs)}")
+        logger.info(
+            f"Job scheduler started at {current_time.strftime('%Y-%m-%d %H:%M:%S EST')}",
+            extra={"job_count": len(self.jobs)}
+        )
+        
         for job_id, job_name in self.jobs.items():
-            print(f"    - {job_name} (id: {job_id})")
+            logger.debug(f"Registered job: {job_name}", extra={"job_id": job_id})
     
     def stop(self):
         """Stop the scheduler and all jobs."""
@@ -44,7 +50,7 @@ class JobScheduler:
         
         self.scheduler.shutdown()
         self._is_running = False
-        print("✓ Job scheduler stopped")
+        logger.info("Job scheduler stopped")
     
     def add_job(
         self,

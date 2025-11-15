@@ -3,6 +3,9 @@ Job registry - registers all scheduled jobs with the centralized scheduler.
 """
 from apscheduler.triggers.cron import CronTrigger
 from app.services.scheduler.scheduler import job_scheduler
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def register_all_jobs():
@@ -41,7 +44,10 @@ def register_all_jobs():
         name='Market Close Price Poll'
     )
     
-    print(f"✓ Registered {len(job_scheduler.jobs)} scheduled jobs")
+    logger.info(
+        f"Registered {len(job_scheduler.jobs)} scheduled jobs",
+        extra={"job_count": len(job_scheduler.jobs)}
+    )
 
 
 def unregister_all_jobs():

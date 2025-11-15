@@ -12,12 +12,19 @@ from app.models import (
 from app.auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.services.scheduler import job_scheduler
 from app.services.scheduler.registry import register_all_jobs
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 app = FastAPI()
 
 @app.on_event("startup")
 async def app_init():
+    """Initialize application on startup."""
+    logger.info("Starting Kuberan application...")
+    
     # Initialize MongoDB
+    logger.debug("Connecting to MongoDB...")
     client = AsyncIOMotorClient("mongodb://mongodb:27017")
     await init_beanie(
         database=client.kuberan, 
@@ -26,17 +33,24 @@ async def app_init():
             CreditCardTransaction, MerchantCategory, FinancialDocumentMetadata
         ]
     )
+    logger.info("MongoDB connection established")
     
     # Register and start all scheduled jobs
+    logger.debug("Registering scheduled jobs...")
     register_all_jobs()
     job_scheduler.start()
-    print("✓ Application started successfully")
+    
+    logger.info("Application started successfully")
 
 @app.on_event("shutdown")
 async def app_shutdown():
+    """Cleanup on application shutdown."""
+    logger.info("Shutting down Kuberan application...")
+    
     # Stop all scheduled jobs
     job_scheduler.stop()
-    print("✓ Application shutdown complete")
+    
+    logger.info("Application shutdown complete")
 
 app.include_router(root.router)
 app.include_router(public.router)

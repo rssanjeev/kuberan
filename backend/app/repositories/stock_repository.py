@@ -1,6 +1,10 @@
 from typing import Optional, List
 from datetime import datetime, timedelta
+import pytz
 from app.models import StockMetadata, StockPrice, UserWatchlist
+
+# US/Eastern timezone for stock market
+EST = pytz.timezone('US/Eastern')
 
 class StockRepository:
     """Repository for stock data persistence in MongoDB."""
@@ -25,7 +29,7 @@ class StockRepository:
             for key, value in metadata.items():
                 if key != "ticker" and value is not None:
                     setattr(existing, key, value)
-            existing.updated_at = datetime.utcnow()
+            existing.updated_at = datetime.now(EST)
             await existing.save()
             return existing
         else:
@@ -42,7 +46,7 @@ class StockRepository:
                 country=metadata.get("country"),
                 website=metadata.get("website"),
                 description=metadata.get("description"),
-                updated_at=datetime.utcnow()
+                updated_at=datetime.now(EST)
             )
             await stock_meta.insert()
             return stock_meta
@@ -66,7 +70,7 @@ class StockRepository:
         if not metadata:
             return True
         
-        age = datetime.utcnow() - metadata.updated_at
+        age = datetime.now(EST) - metadata.updated_at
         return age > timedelta(days=max_age_days)
     
     async def save_stock_price(self, price_data: dict) -> StockPrice:
@@ -87,7 +91,7 @@ class StockRepository:
             day_high=price_data.get("day_high"),
             day_low=price_data.get("day_low"),
             volume=price_data.get("volume"),
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(EST)
         )
         await stock_price.insert()
         return stock_price
@@ -116,7 +120,7 @@ class StockRepository:
             List of StockPrice documents
         """
         if start_time is None:
-            start_time = datetime.utcnow() - timedelta(days=1)
+            start_time = datetime.now(EST) - timedelta(days=1)
         
         return await StockPrice.find(
             StockPrice.ticker == ticker,
@@ -134,14 +138,14 @@ class StockRepository:
         if watchlist:
             if ticker not in watchlist.tickers:
                 watchlist.tickers.append(ticker)
-                watchlist.updated_at = datetime.utcnow()
+                watchlist.updated_at = datetime.now(EST)
                 await watchlist.save()
         else:
             watchlist = UserWatchlist(
                 user_id=user_id,
                 tickers=[ticker],
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(EST),
+                updated_at=datetime.now(EST)
             )
             await watchlist.insert()
         
@@ -153,7 +157,7 @@ class StockRepository:
         
         if watchlist and ticker in watchlist.tickers:
             watchlist.tickers.remove(ticker)
-            watchlist.updated_at = datetime.utcnow()
+            watchlist.updated_at = datetime.now(EST)
             await watchlist.save()
         
         return watchlist
