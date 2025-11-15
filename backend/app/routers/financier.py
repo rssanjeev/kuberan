@@ -216,7 +216,7 @@ async def analyze_transactions(
         Detailed analysis with statistics, top merchants, and trends
     """
     try:
-        result = await financier.analyze_transactions(
+        result = await analytics_service.analyze_transactions(
             year=year,
             month=month,
             category=category
