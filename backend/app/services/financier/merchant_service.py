@@ -1,4 +1,4 @@
-    """
+"""
 Merchant Service - Merchant and Category Management
 
 Provides CRUD operations for merchant-category mappings.

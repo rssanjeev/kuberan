@@ -9,9 +9,9 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from fastapi.responses import JSONResponse
 from typing import Optional, List
 
-from app.services.document_processor_service import document_processor
-from app.services.transaction_service import transaction_service
-from app.services.merchant_service import merchant_service
+from app.services.financier.document_processor_service import document_processor
+from app.services.financier.transaction_service import transaction_service
+from app.services.financier.merchant_service import merchant_service
 from app.services.analytics_service import analytics_service
 
 router = APIRouter(prefix="/financier", tags=["Financier"])
