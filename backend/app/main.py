@@ -1,13 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
-from app.routers import root, public, profile, stocks, financier
+from app.routers import root, public, profile, stocks, financier, precious_metals
 from app.users import get_user_by_username, verify_password
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.models import (
     User, StockMetadata, StockPrice, UserWatchlist, TickerConfig,
-    CreditCardTransaction, MerchantCategory, FinancialDocumentMetadata
+    CreditCardTransaction, MerchantCategory, FinancialDocumentMetadata,
+    GoldPrice, SilverPrice
 )
 from app.auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.services.scheduler import job_scheduler
@@ -30,7 +31,8 @@ async def app_init():
         database=client.kuberan, 
         document_models=[
             User, StockMetadata, StockPrice, UserWatchlist, TickerConfig,
-            CreditCardTransaction, MerchantCategory, FinancialDocumentMetadata
+            CreditCardTransaction, MerchantCategory, FinancialDocumentMetadata,
+            GoldPrice, SilverPrice
         ]
     )
     logger.info("MongoDB connection established")
@@ -57,6 +59,7 @@ app.include_router(public.router)
 app.include_router(profile.router)
 app.include_router(stocks.router)
 app.include_router(financier.router)
+app.include_router(precious_metals.router)
 
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):

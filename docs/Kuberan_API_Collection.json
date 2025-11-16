@@ -1082,6 +1082,227 @@
 			]
 		},
 		{
+			"name": "Precious Metals",
+			"description": "Gold and silver price tracking with dual timezone support (IST + EST)",
+			"item": [
+				{
+					"name": "POST - Manual Fetching",
+					"item": [
+						{
+							"name": "Fetch Gold Prices",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/precious-metals/fetch/gold",
+									"host": ["{{baseUrl}}"],
+									"path": ["precious-metals", "fetch", "gold"]
+								},
+								"description": "Manually fetch current gold prices (24K and 22K) for all cities from goodreturns.in using Brave Search. Returns prices with dual timestamps (IST + EST)."
+							},
+							"response": []
+						},
+						{
+							"name": "Fetch Silver Prices",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/precious-metals/fetch/silver",
+									"host": ["{{baseUrl}}"],
+									"path": ["precious-metals", "fetch", "silver"]
+								},
+								"description": "Manually fetch current silver prices (per gram and per kg) for all cities from goodreturns.in using Brave Search. Returns prices with dual timestamps (IST + EST)."
+							},
+							"response": []
+						},
+						{
+							"name": "Fetch All Prices",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/precious-metals/fetch/all",
+									"host": ["{{baseUrl}}"],
+									"path": ["precious-metals", "fetch", "all"]
+								},
+								"description": "Fetch both gold and silver prices in a single request. Returns combined results with dual timestamps (IST + EST)."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GET - Price Data",
+					"item": [
+						{
+							"name": "Get Latest Prices",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/precious-metals/latest?city=Chennai",
+									"host": ["{{baseUrl}}"],
+									"path": ["precious-metals", "latest"],
+									"query": [
+										{
+											"key": "city",
+											"value": "Chennai",
+											"description": "City name (e.g., Chennai, Mumbai, Delhi)"
+										}
+									]
+								},
+								"description": "Get the latest gold and silver prices for a specific city. Returns data with dual timestamps (timestamp_ist and timestamp_est)."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/precious-metals/latest?city=Chennai",
+											"host": ["{{baseUrl}}"],
+											"path": ["precious-metals", "latest"],
+											"query": [
+												{
+													"key": "city",
+													"value": "Chennai"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"gold\": {\n        \"city\": \"Chennai\",\n        \"price_24k\": 7850.00,\n        \"price_22k\": 7195.00,\n        \"timestamp_ist\": \"2025-01-15T10:00:00+05:30\",\n        \"timestamp_est\": \"2025-01-14T23:30:00-05:00\"\n    },\n    \"silver\": {\n        \"city\": \"Chennai\",\n        \"price_per_gram\": 95.50,\n        \"price_per_kg\": 95500.00,\n        \"timestamp_ist\": \"2025-01-15T10:00:00+05:30\",\n        \"timestamp_est\": \"2025-01-14T23:30:00-05:00\"\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Gold Price History",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/precious-metals/history/gold?city=Chennai&days=30",
+									"host": ["{{baseUrl}}"],
+									"path": ["precious-metals", "history", "gold"],
+									"query": [
+										{
+											"key": "city",
+											"value": "Chennai",
+											"description": "City name"
+										},
+										{
+											"key": "days",
+											"value": "30",
+											"description": "Number of days (1-365, default: 30)"
+										}
+									]
+								},
+								"description": "Get historical gold prices for a specific city over a time period (1-365 days). Returns data with dual timestamps."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Silver Price History",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/precious-metals/history/silver?city=Chennai&days=30",
+									"host": ["{{baseUrl}}"],
+									"path": ["precious-metals", "history", "silver"],
+									"query": [
+										{
+											"key": "city",
+											"value": "Chennai",
+											"description": "City name"
+										},
+										{
+											"key": "days",
+											"value": "30",
+											"description": "Number of days (1-365, default: 30)"
+										}
+									]
+								},
+								"description": "Get historical silver prices for a specific city over a time period (1-365 days). Returns data with dual timestamps."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "POST - Job Management",
+					"item": [
+						{
+							"name": "Trigger Collection Job",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/precious-metals/job/trigger",
+									"host": ["{{baseUrl}}"],
+									"path": ["precious-metals", "job", "trigger"]
+								},
+								"description": "Manually trigger the scheduled price collection job (normally runs daily at 10 AM IST). Fetches both gold and silver prices for all cities."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GET - Job Statistics",
+					"item": [
+						{
+							"name": "Get Job Statistics",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/precious-metals/job/stats",
+									"host": ["{{baseUrl}}"],
+									"path": ["precious-metals", "job", "stats"]
+								},
+								"description": "Get statistics about the scheduled collection job: earliest_run, latest_run, total_runs, success_rate, last_gold_count, last_silver_count"
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/precious-metals/job/stats",
+											"host": ["{{baseUrl}}"],
+											"path": ["precious-metals", "job", "stats"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"earliest_run\": \"2025-01-10T10:00:00.123456+05:30\",\n    \"latest_run\": \"2025-01-15T10:00:00.123456+05:30\",\n    \"total_runs\": 5,\n    \"success_count\": 4,\n    \"error_count\": 1,\n    \"success_rate\": 80.0,\n    \"last_gold_count\": 84,\n    \"last_silver_count\": 84\n}"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "General",
 			"description": "General API endpoints",
 			"item": [

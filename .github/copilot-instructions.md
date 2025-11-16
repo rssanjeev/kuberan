@@ -87,10 +87,14 @@ logger.error("Operation failed", extra={"error": str(e)}, exc_info=True)
 
 ### Adding New Endpoints
 1. Add route to router file
-2. Update `docs/API.md`
-3. Update **BOTH** Postman collections
-4. Test thoroughly
-5. Commit together
+2. Update `docs/API.md` with endpoint documentation
+3. **Update Postman collection** (REQUIRED):
+   - `docs/Kuberan_API_Collection.json` (single file for all endpoints)
+4. Test endpoint thoroughly with curl or Postman
+5. Verify collection imports correctly in Postman
+6. Commit all changes together (code + docs + collection)
+
+**Critical**: Never commit endpoint changes without updating the Postman collection!
 
 ### Making Code Changes
 ```bash

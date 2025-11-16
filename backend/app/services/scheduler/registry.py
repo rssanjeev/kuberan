@@ -15,6 +15,7 @@ def register_all_jobs():
     """
     # Import jobs here to avoid circular imports
     from app.services.jobs.price_collector import price_collector_job
+    from app.services.jobs.metals_price_collector import metals_price_collector_job
     
     # Price collection: Every 60 seconds, 9 AM - 5 PM EST, Mon-Fri
     job_scheduler.add_job(
@@ -42,6 +43,19 @@ def register_all_jobs():
         ),
         job_id='market_close_poll',
         name='Market Close Price Poll'
+    )
+    
+    # Precious metals collection: Once daily at 10:00 AM IST (all days)
+    job_scheduler.add_job(
+        func=metals_price_collector_job.run,
+        trigger=CronTrigger(
+            hour='10',              # 10 AM
+            minute='0',             # At the start of the hour
+            second='0',
+            timezone='Asia/Kolkata'  # IST timezone
+        ),
+        job_id='metals_price_collector',
+        name='Precious Metals Price Collection'
     )
     
     logger.info(
