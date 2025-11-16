@@ -10,6 +10,7 @@
 - [Security Policies](docs/SECURITY.md) - **CRITICAL** for financial data handling
 - [Logging Standards](docs/LOGGING.md) - Structured logging, best practices
 - [Development Workflows](docs/WORKFLOWS.md) - Commands, testing, deployment
+- [Web Scraping Guide](docs/WEB_SCRAPING.md) - MCP servers, data extraction, best practices
 
 ## Project Overview
 
@@ -213,6 +214,25 @@ You only need to explicitly mention files when:
 
 **80% of requests** don't need file mentions - Copilot handles it automatically!
 
+## Web Scraping & Data Extraction
+
+**ALWAYS use MCP servers for web scraping and data extraction.** Never implement custom web scraping libraries.
+
+See [WEB_SCRAPING.md](docs/WEB_SCRAPING.md) for comprehensive guidelines on:
+- Available MCP servers (mcp_fetch, mcp_brave_search, mcp_puppeteer)
+- 4-step strategy for consolidating website features
+- Implementation patterns (API calls, HTML parsing, browser automation)
+- Rules and best practices
+- Error handling and performance optimization
+- Examples and testing strategies
+
+**Quick Rules**:
+- ✅ Use `mcp_fetch` for HTML/content inspection
+- ✅ Use `mcp_brave_search` for search-based extraction (current: precious metals)
+- ✅ Use `mcp_puppeteer` for JavaScript-heavy sites
+- ❌ Never install custom scraping libraries (requests, beautifulsoup, scrapy, selenium)
+- ❌ Don't bypass rate limits or store scraped HTML
+
 ## Project Philosophy
 
 - **Security First**: Financial data protection is non-negotiable
@@ -220,6 +240,7 @@ You only need to explicitly mention files when:
 - **Clean Architecture**: Clear separation of concerns
 - **Documentation as Code**: Keep docs in sync with code
 - **Thoughtful Design**: Consider impact before implementing
+- **MCP-First Approach**: Use MCP servers for all external data fetching
 
 ## Notes for Copilot
 
@@ -228,9 +249,10 @@ You only need to explicitly mention files when:
 - Documentation is not optional - it's part of the implementation
 - When in doubt, use functional programming first, add OOP when state/lifecycle needed
 - The user values thoughtful architecture over quick hacks
+- **Always use MCP servers** for web scraping and data extraction (never custom libraries)
 
 ---
 
-**Last Updated:** November 15, 2025
+**Last Updated:** November 16, 2025
 
 **For comprehensive details, see the documentation files linked above.**
