@@ -270,6 +270,49 @@
 					]
 				},
 				{
+					"name": "GET - Provider Configuration",
+					"item": [
+						{
+							"name": "Get Provider Routing Config",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/stocks/config/routing",
+									"host": ["{{baseUrl}}"],
+									"path": ["stocks", "config", "routing"]
+								},
+								"description": "Get transparency into multi-provider data routing strategy. Shows which data type comes from which provider (YFinance, Alpha Vantage, Finnhub), including primary provider, fallback chain, reasoning, and specific data points."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/stocks/config/routing",
+											"host": ["{{baseUrl}}"],
+											"path": ["stocks", "config", "routing"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"routing_strategy\": {\n        \"quote\": {\n            \"primary\": \"yfinance\",\n            \"fallback\": [\"alpha_vantage\", \"finnhub\"],\n            \"reason\": \"YFinance free tier with good coverage, unlimited API calls\",\n            \"data_points\": [\"price\", \"open\", \"high\", \"low\", \"volume\", \"change\", \"change_percent\"]\n        },\n        \"company_overview\": {\n            \"primary\": \"alpha_vantage\",\n            \"fallback\": [\"finnhub\"],\n            \"reason\": \"AlphaVantage provides comprehensive company fundamentals\",\n            \"data_points\": [\"sector\", \"industry\", \"description\", \"market_cap\", \"pe_ratio\"]\n        }\n    },\n    \"active_providers\": [\"yfinance\", \"alpha_vantage\", \"finnhub\"],\n    \"can_switch_providers\": true,\n    \"last_updated\": \"2025-11-17T00:00:00Z\"\n}"
+								}
+							]
+						}
+					]
+				},
+				{
 					"name": "POST - Stock Operations",
 					"item": [
 						{
@@ -1295,6 +1338,775 @@
 										}
 									],
 									"body": "{\n    \"earliest_run\": \"2025-01-10T10:00:00.123456+05:30\",\n    \"latest_run\": \"2025-01-15T10:00:00.123456+05:30\",\n    \"total_runs\": 5,\n    \"success_count\": 4,\n    \"error_count\": 1,\n    \"success_rate\": 80.0,\n    \"last_gold_count\": 84,\n    \"last_silver_count\": 84\n}"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Monitoring",
+			"description": "API call monitoring and metrics tracking for multi-provider infrastructure",
+			"item": [
+				{
+					"name": "GET - Provider Summary",
+					"item": [
+						{
+							"name": "Get Providers Summary",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/monitoring/providers/summary",
+									"host": ["{{baseUrl}}"],
+									"path": ["monitoring", "providers", "summary"]
+								},
+								"description": "Get today's summary statistics for all providers including total API calls, success rates, and average response times"
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/monitoring/providers/summary",
+											"host": ["{{baseUrl}}"],
+											"path": ["monitoring", "providers", "summary"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"date\": \"2025-01-15\",\n    \"providers\": {\n        \"yfinance\": {\n            \"total_calls\": 150,\n            \"success_count\": 145,\n            \"error_count\": 5,\n            \"success_rate\": 96.67,\n            \"avg_response_time\": 0.234\n        },\n        \"alpha_vantage\": {\n            \"total_calls\": 80,\n            \"success_count\": 78,\n            \"error_count\": 2,\n            \"success_rate\": 97.5,\n            \"avg_response_time\": 0.456\n        }\n    }\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "GET - Provider Statistics",
+					"item": [
+						{
+							"name": "Get Provider Stats",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/monitoring/providers/yfinance/stats?days=7",
+									"host": ["{{baseUrl}}"],
+									"path": ["monitoring", "providers", "yfinance", "stats"],
+									"query": [
+										{
+											"key": "days",
+											"value": "7",
+											"description": "Number of days (1-90, default: 7)"
+										}
+									]
+								},
+								"description": "Get daily statistics for a specific provider over a time period. Includes breakdown by data type (quotes, historical, dividends, etc.) with call counts and response times."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/monitoring/providers/yfinance/stats?days=7",
+											"host": ["{{baseUrl}}"],
+											"path": ["monitoring", "providers", "yfinance", "stats"],
+											"query": [
+												{
+													"key": "days",
+													"value": "7"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"provider\": \"yfinance\",\n    \"period\": {\n        \"start_date\": \"2025-01-08\",\n        \"end_date\": \"2025-01-15\",\n        \"days\": 7\n    },\n    \"daily_stats\": [\n        {\n            \"date\": \"2025-01-15\",\n            \"total_calls\": 150,\n            \"success_count\": 145,\n            \"error_count\": 5,\n            \"avg_response_time\": 0.234,\n            \"by_data_type\": {\n                \"quote\": {\"count\": 80, \"avg_response_time\": 0.2},\n                \"historical\": {\"count\": 50, \"avg_response_time\": 0.3}\n            }\n        }\n    ],\n    \"totals\": {\n        \"total_calls\": 1050,\n        \"success_rate\": 96.5,\n        \"avg_response_time\": 0.245\n    }\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "GET - Recent Calls",
+					"item": [
+						{
+							"name": "Get Recent Calls",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/monitoring/providers/yfinance/recent-calls?limit=50",
+									"host": ["{{baseUrl}}"],
+									"path": ["monitoring", "providers", "yfinance", "recent-calls"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50",
+											"description": "Maximum number of calls (1-1000, default: 50)"
+										},
+										{
+											"key": "status",
+											"value": "",
+											"description": "Filter by status (success/error)",
+											"disabled": true
+										},
+										{
+											"key": "data_type",
+											"value": "",
+											"description": "Filter by data type (quote, historical, dividends, etc.)",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get recent API calls for a provider with optional filters by status and data type. Returns individual call details with timestamps, response times, and errors."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/monitoring/providers/yfinance/recent-calls?limit=50&status=success",
+											"host": ["{{baseUrl}}"],
+											"path": ["monitoring", "providers", "yfinance", "recent-calls"],
+											"query": [
+												{
+													"key": "limit",
+													"value": "50"
+												},
+												{
+													"key": "status",
+													"value": "success"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"provider\": \"yfinance\",\n    \"total_calls\": 50,\n    \"calls\": [\n        {\n            \"timestamp\": \"2025-01-15T10:30:00Z\",\n            \"data_type\": \"quote\",\n            \"ticker\": \"AAPL\",\n            \"status\": \"success\",\n            \"response_time\": 0.234,\n            \"error_message\": null\n        },\n        {\n            \"timestamp\": \"2025-01-15T10:29:00Z\",\n            \"data_type\": \"historical\",\n            \"ticker\": \"GOOGL\",\n            \"status\": \"success\",\n            \"response_time\": 0.456,\n            \"error_message\": null\n        }\n    ]\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "GET - Provider Performance",
+					"item": [
+						{
+							"name": "Get Provider Performance",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/monitoring/providers/yfinance/performance?hours=24",
+									"host": ["{{baseUrl}}"],
+									"path": ["monitoring", "providers", "yfinance", "performance"],
+									"query": [
+										{
+											"key": "hours",
+											"value": "24",
+											"description": "Number of hours (1-168, default: 24)"
+										}
+									]
+								},
+								"description": "Get performance metrics for a provider including response time percentiles (p50, p95), error breakdown by type, and data type performance analysis."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/monitoring/providers/yfinance/performance?hours=24",
+											"host": ["{{baseUrl}}"],
+											"path": ["monitoring", "providers", "yfinance", "performance"],
+											"query": [
+												{
+													"key": "hours",
+													"value": "24"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"provider\": \"yfinance\",\n    \"period\": {\n        \"hours\": 24,\n        \"start_time\": \"2025-01-14T10:30:00Z\",\n        \"end_time\": \"2025-01-15T10:30:00Z\"\n    },\n    \"response_time_percentiles\": {\n        \"p50\": 0.234,\n        \"p75\": 0.345,\n        \"p95\": 0.567,\n        \"p99\": 0.890\n    },\n    \"error_breakdown\": {\n        \"timeout\": 2,\n        \"rate_limit\": 1,\n        \"api_error\": 2\n    },\n    \"by_data_type\": {\n        \"quote\": {\n            \"count\": 80,\n            \"success_rate\": 97.5,\n            \"avg_response_time\": 0.2\n        },\n        \"historical\": {\n            \"count\": 50,\n            \"success_rate\": 96.0,\n            \"avg_response_time\": 0.3\n        }\n    }\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "GET - All Recent Calls",
+					"item": [
+						{
+							"name": "Get All Recent Calls",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/monitoring/calls/all?limit=100&hours=24",
+									"host": ["{{baseUrl}}"],
+									"path": ["monitoring", "calls", "all"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "100",
+											"description": "Maximum number of calls (1-1000, default: 100)"
+										},
+										{
+											"key": "hours",
+											"value": "24",
+											"description": "Time window in hours (1-168, default: 24)"
+										}
+									]
+								},
+								"description": "Get recent API calls across all providers. Returns cross-provider call history sorted by timestamp."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/monitoring/calls/all?limit=100&hours=24",
+											"host": ["{{baseUrl}}"],
+											"path": ["monitoring", "calls", "all"],
+											"query": [
+												{
+													"key": "limit",
+													"value": "100"
+												},
+												{
+													"key": "hours",
+													"value": "24"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"total_calls\": 100,\n    \"time_window\": {\n        \"hours\": 24,\n        \"start_time\": \"2025-01-14T10:30:00Z\",\n        \"end_time\": \"2025-01-15T10:30:00Z\"\n    },\n    \"calls\": [\n        {\n            \"timestamp\": \"2025-01-15T10:30:00Z\",\n            \"provider\": \"yfinance\",\n            \"data_type\": \"quote\",\n            \"ticker\": \"AAPL\",\n            \"status\": \"success\",\n            \"response_time\": 0.234\n        },\n        {\n            \"timestamp\": \"2025-01-15T10:29:00Z\",\n            \"provider\": \"alpha_vantage\",\n            \"data_type\": \"quote\",\n            \"ticker\": \"GOOGL\",\n            \"status\": \"success\",\n            \"response_time\": 0.456\n        }\n    ]\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "GET - Aggregate Statistics",
+					"item": [
+						{
+							"name": "Get Aggregate Stats",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/monitoring/stats/aggregate?days=7",
+									"host": ["{{baseUrl}}"],
+									"path": ["monitoring", "stats", "aggregate"],
+									"query": [
+										{
+											"key": "days",
+											"value": "7",
+											"description": "Number of days (1-90, default: 7)"
+										}
+									]
+								},
+								"description": "Get aggregated statistics across all providers for comparison. Includes per-provider breakdown and grand totals with success rates and performance metrics."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/monitoring/stats/aggregate?days=7",
+											"host": ["{{baseUrl}}"],
+											"path": ["monitoring", "stats", "aggregate"],
+											"query": [
+												{
+													"key": "days",
+													"value": "7"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"period\": {\n        \"start_date\": \"2025-01-08\",\n        \"end_date\": \"2025-01-15\",\n        \"days\": 7\n    },\n    \"by_provider\": {\n        \"yfinance\": {\n            \"total_calls\": 1050,\n            \"success_count\": 1010,\n            \"error_count\": 40,\n            \"success_rate\": 96.19,\n            \"avg_response_time\": 0.245\n        },\n        \"alpha_vantage\": {\n            \"total_calls\": 560,\n            \"success_count\": 545,\n            \"error_count\": 15,\n            \"success_rate\": 97.32,\n            \"avg_response_time\": 0.456\n        }\n    },\n    \"grand_totals\": {\n        \"total_calls\": 1610,\n        \"success_count\": 1555,\n        \"error_count\": 55,\n        \"overall_success_rate\": 96.58,\n        \"avg_response_time\": 0.321\n    }\n}"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "System Management",
+			"description": "System monitoring and scheduler management endpoints",
+			"item": [
+				{
+					"name": "GET",
+					"item": [
+						{
+							"name": "Get Scheduler Info",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/scheduler/info",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "scheduler", "info"]
+								},
+								"description": "Get comprehensive scheduler information including all registered jobs, their schedules, and next run times."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/scheduler/info",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "scheduler", "info"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"scheduler_status\": \"running\",\n    \"total_jobs\": 3,\n    \"jobs\": [\n        {\n            \"id\": \"price_collector\",\n            \"name\": \"Stock Price Collection\",\n            \"next_run\": \"2025-11-17T09:00:00-05:00\",\n            \"trigger\": \"cron[day_of_week='mon-fri', hour='9-16', minute='*', second='0']\"\n        },\n        {\n            \"id\": \"market_close_poll\",\n            \"name\": \"Market Close Price Poll\",\n            \"next_run\": \"2025-11-17T17:00:00-05:00\",\n            \"trigger\": \"cron[day_of_week='mon-fri', hour='17', minute='0', second='0']\"\n        },\n        {\n            \"id\": \"metals_price_collector\",\n            \"name\": \"Precious Metals Price Collection\",\n            \"next_run\": \"2025-11-18T10:00:00+05:30\",\n            \"trigger\": \"cron[hour='10', minute='0', second='0']\"\n        }\n    ]\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Job Info",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/scheduler/jobs/:job_id",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "scheduler", "jobs", ":job_id"],
+									"variable": [
+										{
+											"key": "job_id",
+											"value": "price_collector",
+											"description": "Job ID (e.g., price_collector, market_close_poll, metals_price_collector)"
+										}
+									]
+								},
+								"description": "Get detailed information for a specific scheduled job by its ID."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/scheduler/jobs/price_collector",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "scheduler", "jobs", "price_collector"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"id\": \"price_collector\",\n    \"name\": \"Stock Price Collection\",\n    \"next_run\": \"2025-11-17T09:00:00-05:00\",\n    \"trigger\": \"cron[day_of_week='mon-fri', hour='9-16', minute='*', second='0']\"\n}"
+								}
+							]
+						},
+						{
+							"name": "System Health Check",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/health",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "health"]
+								},
+								"description": "Check overall system health including number of active and healthy providers."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/health",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "health"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"status\": \"healthy\",\n    \"providers_active\": 3,\n    \"providers_healthy\": 2\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Provider Status",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/providers/status",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "providers", "status"]
+								},
+								"description": "Get detailed status for all providers including health, reliability, quota usage, and capabilities."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/providers/status",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "providers", "status"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"providers\": [\n        {\n            \"name\": \"YFinanceProvider\",\n            \"priority\": 1,\n            \"tier\": \"free\",\n            \"is_healthy\": true,\n            \"reliability_score\": 0.98,\n            \"consecutive_failures\": 0,\n            \"success_rate\": 0.99,\n            \"total_calls\": 1250,\n            \"successful_calls\": 1238,\n            \"failed_calls\": 12,\n            \"average_response_time_ms\": 245.6,\n            \"capabilities\": {\n                \"real_time_quote\": \"good\",\n                \"historical_prices\": \"excellent\"\n            }\n        },\n        {\n            \"name\": \"AlphaVantageProvider\",\n            \"priority\": 2,\n            \"tier\": \"free\",\n            \"is_healthy\": true,\n            \"reliability_score\": 0.96,\n            \"consecutive_failures\": 0,\n            \"success_rate\": 0.97,\n            \"total_calls\": 450,\n            \"successful_calls\": 437,\n            \"failed_calls\": 13,\n            \"average_response_time_ms\": 278.85,\n            \"capabilities\": {\n                \"real_time_quote\": \"excellent\",\n                \"historical_prices\": \"excellent\",\n                \"technical_indicator\": \"excellent\",\n                \"fundamental_data\": \"excellent\"\n            }\n        }\n    ],\n    \"total_providers\": 3,\n    \"healthy_providers\": 2\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Load Distribution",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/providers/load-distribution",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "providers", "load-distribution"]
+								},
+								"description": "Get load distribution statistics showing how requests are distributed across providers."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/providers/load-distribution",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "providers", "load-distribution"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"distribution\": {\n        \"AlphaVantageProvider\": {\n            \"total_calls\": 450,\n            \"percentage\": 36.0,\n            \"last_selected\": \"2025-11-17T10:30:00Z\"\n        },\n        \"YFinanceProvider\": {\n            \"total_calls\": 550,\n            \"percentage\": 44.0,\n            \"last_selected\": \"2025-11-17T10:29:45Z\"\n        },\n        \"FinnhubProvider\": {\n            \"total_calls\": 250,\n            \"percentage\": 20.0,\n            \"last_selected\": \"2025-11-17T10:29:30Z\"\n        }\n    },\n    \"total_calls\": 1250\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Provider Health",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/providers/:provider_name/health",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "providers", ":provider_name", "health"],
+									"variable": [
+										{
+											"key": "provider_name",
+											"value": "AlphaVantageProvider",
+											"description": "Provider name (e.g., AlphaVantageProvider, YFinanceProvider, FinnhubProvider)"
+										}
+									]
+								},
+								"description": "Get health details for a specific provider."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/providers/AlphaVantageProvider/health",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "providers", "AlphaVantageProvider", "health"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"name\": \"AlphaVantageProvider\",\n    \"is_healthy\": true,\n    \"consecutive_failures\": 0,\n    \"total_calls\": 450,\n    \"successful_calls\": 437,\n    \"failed_calls\": 13,\n    \"success_rate\": 0.97,\n    \"average_response_time_ms\": 278.85,\n    \"reliability_score\": 0.96\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Provider Capabilities",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/providers/:provider_name/capabilities",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "providers", ":provider_name", "capabilities"],
+									"variable": [
+										{
+											"key": "provider_name",
+											"value": "AlphaVantageProvider",
+											"description": "Provider name (e.g., AlphaVantageProvider, YFinanceProvider, FinnhubProvider)"
+										}
+									]
+								},
+								"description": "Get capabilities for a specific provider showing supported data types and capability levels."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/providers/AlphaVantageProvider/capabilities",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "providers", "AlphaVantageProvider", "capabilities"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"name\": \"AlphaVantageProvider\",\n    \"capabilities\": {\n        \"real_time_quote\": \"excellent\",\n        \"historical_prices\": \"excellent\",\n        \"technical_indicator\": \"excellent\",\n        \"fundamental_data\": \"excellent\",\n        \"news\": \"good\",\n        \"dividends\": \"basic\",\n        \"splits\": \"basic\",\n        \"earnings\": \"excellent\",\n        \"forex\": \"excellent\",\n        \"crypto\": \"excellent\",\n        \"commodities\": \"excellent\",\n        \"economic_indicators\": \"excellent\"\n    }\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "POST",
+					"item": [
+						{
+							"name": "Reload Providers",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/providers/reload",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "providers", "reload"]
+								},
+								"description": "Hot-reload provider configurations after updating API keys, tier, or rate limits in environment variables."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/providers/reload",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "providers", "reload"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"status\": \"success\",\n    \"message\": \"Providers reloaded successfully\",\n    \"providers_loaded\": 3,\n    \"providers\": [\"YFinanceProvider\", \"AlphaVantageProvider\", \"FinnhubProvider\"]\n}"
+								}
+							]
+						},
+						{
+							"name": "Disable Provider",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/providers/:provider_name/disable",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "providers", ":provider_name", "disable"],
+									"variable": [
+										{
+											"key": "provider_name",
+											"value": "AlphaVantageProvider",
+											"description": "Provider name to disable"
+										}
+									]
+								},
+								"description": "Temporarily disable a provider (useful for maintenance or testing failover)."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/providers/AlphaVantageProvider/disable",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "providers", "AlphaVantageProvider", "disable"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"status\": \"success\",\n    \"message\": \"Provider disabled\",\n    \"provider\": \"AlphaVantageProvider\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Enable Provider",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/providers/:provider_name/enable",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "providers", ":provider_name", "enable"],
+									"variable": [
+										{
+											"key": "provider_name",
+											"value": "AlphaVantageProvider",
+											"description": "Provider name to enable"
+										}
+									]
+								},
+								"description": "Re-enable a previously disabled provider."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/providers/AlphaVantageProvider/enable",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "providers", "AlphaVantageProvider", "enable"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"status\": \"success\",\n    \"message\": \"Provider enabled\",\n    \"provider\": \"AlphaVantageProvider\"\n}"
 								}
 							]
 						}

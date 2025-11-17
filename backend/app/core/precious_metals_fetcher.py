@@ -358,7 +358,7 @@ class PreciousMetalsFetcher:
             )
         except Exception as e:
             logger.error(
-                "Brave Search MCP call failed",
+                "Failed to call Brave Search API",
                 extra={"error": str(e)},
                 exc_info=True
             )

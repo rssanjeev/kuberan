@@ -11,6 +11,7 @@ python-multipart
 apscheduler
 pytz
 pandas-market-calendars
+httpx  # For Alpha Vantage and Finnhub providers
 
 # PDF Processing
 pdfplumber==0.10.3

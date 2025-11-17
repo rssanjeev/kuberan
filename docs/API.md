@@ -2,7 +2,7 @@
 
 **Base URL:** `http://localhost:8000`
 
-**Last Updated:** November 11, 2025
+**Last Updated:** November 17, 2025
 
 ---
 
@@ -12,7 +12,9 @@
 2. [Price Collection Endpoints](#price-collection-endpoints)
 3. [Ticker Management Endpoints](#ticker-management-endpoints)
 4. [Market Status Endpoints](#market-status-endpoints)
-5. [Financier - Financial Analytics Endpoints](#financier---financial-analytics-endpoints)
+5. [Provider Configuration Endpoints](#provider-configuration-endpoints)
+6. [System Management Endpoints](#system-management-endpoints)
+7. [Financier - Financial Analytics Endpoints](#financier---financial-analytics-endpoints)
 
 ---
 
@@ -383,6 +385,245 @@ Check if the NYSE market is open today.
 ```
 
 **Note:** Uses NYSE calendar to determine market status, accounting for holidays and weekends.
+
+---
+
+## Provider Configuration Endpoints
+
+### Get Provider Routing Configuration
+Get transparency into the multi-provider data routing strategy showing which data type comes from which provider (YFinance, Alpha Vantage, Finnhub).
+
+**Endpoint:** `GET /stocks/config/routing`
+
+**Response:**
+```json
+{
+  "routing_strategy": {
+    "quote": {
+      "primary": "yfinance",
+      "fallback": ["alpha_vantage", "finnhub"],
+      "reason": "YFinance free tier with good coverage, unlimited API calls",
+      "data_points": [
+        "price", "open", "high", "low", "volume", 
+        "change", "change_percent", "timestamp"
+      ]
+    },
+    "historical_prices": {
+      "primary": "yfinance",
+      "fallback": ["alpha_vantage"],
+      "reason": "YFinance provides comprehensive OHLCV data for free",
+      "data_points": [
+        "date", "open", "high", "low", "close", "volume"
+      ]
+    },
+    "company_overview": {
+      "primary": "alpha_vantage",
+      "fallback": ["finnhub"],
+      "reason": "AlphaVantage provides comprehensive company fundamentals",
+      "data_points": [
+        "sector", "industry", "description", "market_cap", 
+        "pe_ratio", "dividend_yield", "52_week_high", "52_week_low"
+      ]
+    },
+    "fundamentals": {
+      "primary": "alpha_vantage",
+      "fallback": [],
+      "reason": "Only AlphaVantage provides detailed financial statements via API",
+      "data_points": [
+        "income_statement", "balance_sheet", "cash_flow", 
+        "earnings", "revenue", "profit_margin"
+      ]
+    },
+    "technical_indicators": {
+      "primary": "alpha_vantage",
+      "fallback": [],
+      "reason": "AlphaVantage offers 50+ technical indicators via dedicated endpoints",
+      "data_points": [
+        "SMA", "EMA", "RSI", "MACD", "BBANDS", "ADX", "STOCH"
+      ]
+    },
+    "dividends": {
+      "primary": "yfinance",
+      "fallback": ["alpha_vantage"],
+      "reason": "YFinance provides historical dividend data for free",
+      "data_points": [
+        "ex_dividend_date", "payment_date", "amount", "frequency"
+      ]
+    },
+    "splits": {
+      "primary": "yfinance",
+      "fallback": ["alpha_vantage"],
+      "reason": "YFinance has reliable split history",
+      "data_points": [
+        "date", "split_ratio", "before", "after"
+      ]
+    },
+    "earnings": {
+      "primary": "yfinance",
+      "fallback": ["alpha_vantage"],
+      "reason": "YFinance provides earnings calendar and historical data",
+      "data_points": [
+        "earnings_date", "eps_estimate", "eps_actual", "revenue", "surprise"
+      ]
+    },
+    "news": {
+      "primary": "finnhub",
+      "fallback": ["alpha_vantage"],
+      "reason": "Finnhub provides real-time financial news with sentiment",
+      "data_points": [
+        "headline", "summary", "source", "url", "published_date", "sentiment"
+      ]
+    },
+    "analyst_ratings": {
+      "primary": "finnhub",
+      "fallback": [],
+      "reason": "Only Finnhub provides analyst ratings and recommendations via API",
+      "data_points": [
+        "rating", "target_price", "analyst_firm", "date", "recommendation"
+      ]
+    },
+    "price_targets": {
+      "primary": "finnhub",
+      "fallback": [],
+      "reason": "Finnhub aggregates analyst price targets",
+      "data_points": [
+        "target_high", "target_low", "target_mean", "target_median", "number_of_analysts"
+      ]
+    },
+    "etf_holdings": {
+      "primary": "alpha_vantage",
+      "fallback": [],
+      "reason": "Only AlphaVantage provides ETF holdings via ETF_PROFILE endpoint",
+      "data_points": [
+        "holdings", "top_10_holdings", "sector_weights", "asset_allocation"
+      ]
+    }
+  },
+  "active_providers": ["yfinance", "alpha_vantage", "finnhub"],
+  "provider_details": {
+    "yfinance": {
+      "tier": "free",
+      "rate_limit": "unlimited",
+      "cost": "$0",
+      "priority": 1
+    },
+    "alpha_vantage": {
+      "tier": "free",
+      "rate_limit": "5 calls/min, 500 calls/day",
+      "cost": "$0 (free tier)",
+      "priority": 2
+    },
+    "finnhub": {
+      "tier": "free",
+      "rate_limit": "60 calls/min",
+      "cost": "$0 (free tier)",
+      "priority": 3
+    }
+  },
+  "can_switch_providers": true,
+  "last_updated": "2025-11-17T00:00:00Z"
+}
+```
+
+**Use Cases:**
+- Understand data source for each metric
+- See fallback strategies if primary provider fails
+- Know which providers require API keys
+- Understand provider priority and rate limits
+
+**Notes:**
+- YFinance is used as primary for prices (free, unlimited calls)
+- Alpha Vantage provides fundamentals and technical indicators (requires API key)
+- Finnhub provides news and analyst data (requires API key)
+- System automatically fails over to backup providers if primary fails
+
+---
+
+## System Management Endpoints
+
+### Get Scheduler Information
+Get comprehensive information about all scheduled background jobs.
+
+**Endpoint:** `GET /system/scheduler/info`
+
+**Description:**  
+Returns the status of the job scheduler and details about all registered jobs including their schedules, next run times, and trigger configurations.
+
+**Response:**
+```json
+{
+  "scheduler_status": "running",
+  "total_jobs": 3,
+  "jobs": [
+    {
+      "id": "price_collector",
+      "name": "Stock Price Collection",
+      "next_run": "2025-11-17T09:00:00-05:00",
+      "trigger": "cron[day_of_week='mon-fri', hour='9-16', minute='*', second='0']"
+    },
+    {
+      "id": "market_close_poll",
+      "name": "Market Close Price Poll",
+      "next_run": "2025-11-17T17:00:00-05:00",
+      "trigger": "cron[day_of_week='mon-fri', hour='17', minute='0', second='0']"
+    },
+    {
+      "id": "metals_price_collector",
+      "name": "Precious Metals Price Collection",
+      "next_run": "2025-11-18T10:00:00+05:30",
+      "trigger": "cron[hour='10', minute='0', second='0']"
+    }
+  ]
+}
+```
+
+**Fields:**
+- `scheduler_status`: Current status of the scheduler (`running` or `stopped`)
+- `total_jobs`: Number of registered jobs
+- `jobs`: Array of job details
+  - `id`: Unique job identifier
+  - `name`: Human-readable job name
+  - `next_run`: ISO 8601 timestamp of next scheduled execution
+  - `trigger`: Cron expression defining the schedule
+
+**Use Cases:**
+- Monitor which jobs are scheduled
+- View upcoming job execution times
+- Verify scheduler is running
+- Debug scheduling issues
+
+**Example:**
+```bash
+curl http://localhost:8000/system/scheduler/info
+```
+
+---
+
+### Get Individual Job Information
+Get detailed information for a specific scheduled job.
+
+**Endpoint:** `GET /system/scheduler/jobs/{job_id}`
+
+**Path Parameters:**
+- `job_id` (string, required): Job identifier (e.g., `price_collector`, `market_close_poll`, `metals_price_collector`)
+
+**Response:**
+```json
+{
+  "id": "price_collector",
+  "name": "Stock Price Collection",
+  "next_run": "2025-11-17T09:00:00-05:00",
+  "trigger": "cron[day_of_week='mon-fri', hour='9-16', minute='*', second='0']"
+}
+```
+
+**Error Responses:**
+- `404 Not Found`: Job with specified ID doesn't exist
+
+**Example:**
+```bash
+curl http://localhost:8000/system/scheduler/jobs/price_collector
+```
 
 ---
 

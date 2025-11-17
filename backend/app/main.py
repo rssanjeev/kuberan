@@ -1,18 +1,15 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
-from app.routers import root, public, profile, stocks, financier, precious_metals
+from app.routers import root, public, profile, stocks, financier, precious_metals, monitoring, system
 from app.users import get_user_by_username, verify_password
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.models import (
-    User, StockMetadata, StockPrice, UserWatchlist, TickerConfig,
-    CreditCardTransaction, MerchantCategory, FinancialDocumentMetadata,
-    GoldPrice, SilverPrice
-)
+from app.models import DOCUMENT_MODELS
 from app.auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.services.scheduler import job_scheduler
 from app.services.scheduler.registry import register_all_jobs
+from app.services.providers import provider_manager
 from app.core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -29,13 +26,14 @@ async def app_init():
     client = AsyncIOMotorClient("mongodb://mongodb:27017")
     await init_beanie(
         database=client.kuberan, 
-        document_models=[
-            User, StockMetadata, StockPrice, UserWatchlist, TickerConfig,
-            CreditCardTransaction, MerchantCategory, FinancialDocumentMetadata,
-            GoldPrice, SilverPrice
-        ]
+        document_models=DOCUMENT_MODELS  # All 26 models (10 existing + 16 provider models)
     )
-    logger.info("MongoDB connection established")
+    logger.info("MongoDB connection established with 26 document models")
+    
+    # Initialize provider manager
+    logger.debug("Initializing provider manager...")
+    await provider_manager.initialize()
+    logger.info("Provider manager initialized successfully")
     
     # Register and start all scheduled jobs
     logger.debug("Registering scheduled jobs...")
@@ -60,6 +58,8 @@ app.include_router(profile.router)
 app.include_router(stocks.router)
 app.include_router(financier.router)
 app.include_router(precious_metals.router)
+app.include_router(monitoring.router)
+app.include_router(system.router)
 
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):

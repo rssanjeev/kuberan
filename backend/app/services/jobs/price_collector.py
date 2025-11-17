@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Dict, Optional
 import pytz
 from app.core.market_calendar import is_market_open
-from app.services.stock.fetcher import stock_fetcher
+from app.services.providers import provider_manager
 from app.repositories.stock_repository import stock_repository
 from app.config_loader import config_loader
 from app.core.logging_config import get_logger
@@ -24,6 +24,9 @@ async def fetch_and_save_price(ticker: str) -> bool:
     Fetch price for a single ticker and save to MongoDB.
     Pure business logic - no state dependencies.
     
+    Uses multi-provider system with YFinance as preferred provider.
+    Automatically falls back to Alpha Vantage or Finnhub if YFinance fails.
+    
     Args:
         ticker: Stock ticker symbol
         
@@ -31,18 +34,33 @@ async def fetch_and_save_price(ticker: str) -> bool:
         True if successful, False otherwise
     """
     try:
-        # Fetch just the price (lightweight)
-        price_data = await stock_fetcher.get_stock_price(ticker)
+        # Fetch price using provider manager (with YFinance preference)
+        quote_data = await provider_manager.get_quote(
+            ticker=ticker,
+            preferred_provider="yfinance",
+            priority=1  # High priority for price collection
+        )
         
-        if not price_data:
+        if not quote_data:
             logger.warning(f"Failed to fetch price for {ticker}", extra={"ticker": ticker})
             return False
+        
+        # Convert to legacy format for stock_repository compatibility
+        price_data = {
+            "ticker": quote_data.get("symbol", ticker),
+            "current_price": quote_data.get("price"),
+            "timestamp": quote_data.get("timestamp", datetime.now(pytz.timezone('US/Eastern')).isoformat())
+        }
         
         # Save to MongoDB
         await stock_repository.save_stock_price(price_data)
         logger.info(
             f"Saved price for {ticker}: ${price_data['current_price']}",
-            extra={"ticker": ticker, "price": price_data['current_price']}
+            extra={
+                "ticker": ticker,
+                "price": price_data['current_price'],
+                "source": quote_data.get("source", "yfinance")
+            }
         )
         return True
         
