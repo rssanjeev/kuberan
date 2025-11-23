@@ -627,6 +627,299 @@ curl http://localhost:8000/system/scheduler/jobs/price_collector
 
 ---
 
+## Metadata Management Endpoints
+
+### Trigger Incremental Batch Collection
+Manually trigger incremental batch collection of stock metadata.
+
+**Endpoint:** `POST /system/metadata/collection/batch`
+
+**Description:**  
+Processes 30 tickers per batch in priority order (by market cap, descending). Failed tickers are automatically moved to the next run. Runs automatically 24 times/day (every hour, 00:00-23:00 EST) for a total of 720 tickers/day.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "processed": 30,
+  "success": 28,
+  "failure": 2,
+  "elapsed_seconds": 45.2
+}
+```
+
+**Fields:**
+- `status`: Operation status (`success` or `error`)
+- `processed`: Total number of tickers attempted
+- `success`: Number of successful collections
+- `failure`: Number of failed collections
+- `elapsed_seconds`: Time taken to process batch
+
+**Use Cases:**
+- Manually trigger collection outside scheduled hours
+- Test batch collection functionality
+- Recover from failed scheduled runs
+
+**Example:**
+```bash
+curl -X POST http://localhost:8000/system/metadata/collection/batch
+```
+
+---
+
+### Trigger Full Discovery
+Manually trigger one-off metadata discovery for all tickers.
+
+**Endpoint:** `POST /system/metadata/discovery/trigger`
+
+**Query Parameters:**
+- `limit` (integer, optional): Limit number of tickers to process
+- `test_mode` (boolean, optional): If `true`, only process first 20 tickers for testing
+
+**Description:**  
+Discovers all available tickers from Alpha Vantage LISTING_STATUS API and collects base metadata from YFinance in bulk. Queues high-priority tickers (ETFs and large caps) for Alpha Vantage enrichment.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "discovered_tickers": 12443,
+  "processed_tickers": 12443,
+  "collection_stats": {
+    "success": 769,
+    "failure": 11674,
+    "total": 12443
+  },
+  "priority_enrichment_queued": 236,
+  "elapsed_seconds": 215.24,
+  "asset_type_breakdown": {
+    "Stock": 7813,
+    "ETF": 4630
+  }
+}
+```
+
+**Fields:**
+- `discovered_tickers`: Total tickers found from Alpha Vantage
+- `processed_tickers`: Number of tickers attempted for collection
+- `collection_stats`: Breakdown of success/failure counts
+- `priority_enrichment_queued`: ETFs and large caps queued for enrichment
+- `elapsed_seconds`: Total execution time
+- `asset_type_breakdown`: Distribution by asset type
+
+**Example:**
+```bash
+# Test mode (20 tickers)
+curl -X POST "http://localhost:8000/system/metadata/discovery/trigger?test_mode=true"
+
+# Full discovery
+curl -X POST http://localhost:8000/system/metadata/discovery/trigger
+
+# Limited to 1000 tickers
+curl -X POST "http://localhost:8000/system/metadata/discovery/trigger?limit=1000"
+```
+
+---
+
+### Enrich Single Ticker
+Manually trigger Alpha Vantage enrichment for a specific ticker.
+
+**Endpoint:** `POST /system/metadata/enrich/{ticker}`
+
+**Path Parameters:**
+- `ticker` (string, required): Stock ticker symbol (e.g., `AAPL`, `MSFT`, `VOO`)
+
+**Description:**  
+Enriches existing ticker metadata with premium data from Alpha Vantage including P/E ratio, PEG ratio, dividend yield, revenue, profit margins, and more.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "ticker": "AAPL",
+  "enrichment_status": "enriched",
+  "message": "Metadata enriched successfully"
+}
+```
+
+**Error Responses:**
+- `404 Not Found`: Ticker not found in database (must collect base metadata first)
+- `500 Internal Server Error`: Enrichment failed
+
+**Use Cases:**
+- Immediate enrichment for high-priority tickers
+- Manual enrichment outside scheduled cycle
+- Refresh stale data for specific ticker
+
+**Example:**
+```bash
+curl -X POST http://localhost:8000/system/metadata/enrich/AAPL
+```
+
+---
+
+### Get Metadata Collection Statistics
+Get comprehensive statistics about metadata collection progress.
+
+**Endpoint:** `GET /system/metadata/stats`
+
+**Description:**  
+Returns detailed statistics about ticker collection, enrichment status, asset type distribution, priority queue, and job execution status.
+
+**Response:**
+```json
+{
+  "total_tickers": 797,
+  "by_enrichment_status": {
+    "base": 797,
+    "enriched": 0,
+    "failed": 0
+  },
+  "by_asset_type": {
+    "Stock": 625,
+    "ETF": 172,
+    "Other": 0
+  },
+  "enrichment_queue": {
+    "etfs_pending": 172,
+    "large_caps_pending": 70,
+    "total_pending": 797
+  },
+  "job_status": {
+    "is_running": false,
+    "last_discovery_run": "2025-11-22T21:42:06.766407",
+    "last_enrichment_run": null,
+    "discovery_count": 797,
+    "enrichment_count": 0
+  }
+}
+```
+
+**Fields:**
+- `total_tickers`: Total tickers in database
+- `by_enrichment_status`: Breakdown by enrichment level
+  - `base`: YFinance metadata only
+  - `enriched`: Alpha Vantage enrichment applied
+  - `failed`: Enrichment failed
+- `by_asset_type`: Distribution by asset type (Stock, ETF, Other)
+- `enrichment_queue`: High-priority tickers pending enrichment
+  - `etfs_pending`: ETFs awaiting enrichment
+  - `large_caps_pending`: Large cap stocks (>$10B) awaiting enrichment
+  - `total_pending`: Total tickers needing enrichment
+- `job_status`: Current job execution state
+  - `is_running`: Whether collection job is currently running
+  - `last_discovery_run`: Last full discovery timestamp
+  - `last_enrichment_run`: Last enrichment cycle timestamp
+  - `discovery_count`: Total tickers collected (base metadata)
+  - `enrichment_count`: Total tickers enriched (Alpha Vantage)
+
+**Use Cases:**
+- Monitor collection progress
+- Track enrichment queue size
+- Verify job execution
+- Assess data coverage
+
+**Example:**
+```bash
+curl http://localhost:8000/system/metadata/stats
+```
+
+---
+
+### Get Failed Tickers
+Get list of tickers that have exhausted retry attempts.
+
+**Endpoint:** `GET /system/metadata/failed`
+
+**Query Parameters:**
+- `limit` (integer, optional, default: 100): Maximum number of failed tickers to return
+- `skip` (integer, optional, default: 0): Number of failed tickers to skip for pagination
+
+**Description:**  
+Returns list of tickers with `collection_attempts >= 3` that have exhausted retry attempts and will not be retried automatically. Shows whether metadata was eventually collected and any error messages.
+
+**Response:**
+```json
+{
+  "total_failed": 28,
+  "returned": 5,
+  "skip": 0,
+  "limit": 5,
+  "failed_tickers": [
+    {
+      "ticker": "ZM",
+      "collection_attempts": 4,
+      "last_collection_attempt": "2025-11-23T13:32:46.104000",
+      "collection_error": null,
+      "has_metadata": true,
+      "market_cap": 23789318144.0,
+      "enrichment_status": "base"
+    }
+  ]
+}
+```
+
+**Fields:**
+- `total_failed`: Total number of tickers that exhausted retries
+- `returned`: Number of tickers in current response
+- `skip`: Pagination offset used
+- `limit`: Maximum results per page
+- `failed_tickers`: Array of failed ticker objects
+  - `ticker`: Stock ticker symbol
+  - `collection_attempts`: Number of collection attempts (3+)
+  - `last_collection_attempt`: Timestamp of last attempt
+  - `collection_error`: Error message if collection failed (null if eventually succeeded)
+  - `has_metadata`: Whether metadata was eventually collected
+  - `market_cap`: Market capitalization
+  - `enrichment_status`: Current enrichment level
+
+**Use Cases:**
+- Identify tickers that need manual investigation
+- Find tickers that failed but eventually succeeded
+- Monitor retry exhaustion rate
+- Debug collection issues
+
+**Example:**
+```bash
+# Get first 50 failed tickers
+curl "http://localhost:8000/system/metadata/failed?limit=50"
+
+# Get next page
+curl "http://localhost:8000/system/metadata/failed?limit=50&skip=50"
+```
+
+---
+
+## Metadata Collection Strategy
+
+### Two-Stage Enrichment
+1. **Stage 1 - Base Collection (YFinance)**
+   - Fast bulk collection
+   - Basic metadata: name, sector, market cap, exchange
+   - No API key required
+   - Scheduled: 24 times/day (every hour), 30 tickers/batch = 720/day
+
+2. **Stage 2 - Premium Enrichment (Alpha Vantage)**
+   - Selective enrichment for high-priority tickers
+   - Premium data: P/E ratio, PEG ratio, dividend yield, financials
+   - API key required (free tier: 25 calls/day)
+   - Scheduled: Daily at 2:00 AM EST, 5 tickers/cycle
+
+### Priority Queue
+Enrichment prioritized by:
+1. **ETFs** - Always enriched (Alpha Vantage superior for ETF data)
+2. **Large Cap Stocks** - Market cap > $10B
+3. **Mid Cap Stocks** - Market cap $2B-$10B
+4. **Small Cap Stocks** - Market cap < $2B (on-demand only)
+
+### Batch Collection Features
+- **Market cap ordering**: Large caps processed first
+- **Failure tracking**: Failed tickers automatically retried next day
+- **Retry logic**: Tracks collection attempts and errors
+- **Incremental progress**: ~16 days to complete full universe (12,443 tickers)
+
+---
+
 ## Background Jobs
 
 The system runs two scheduled jobs:

@@ -379,6 +379,19 @@ class CompanyOverview(Document):
     ipo_date: Optional[str] = None
     fiscal_year_end: Optional[str] = None
     
+    # Asset classification (Stock, ETF, Fund, etc.)
+    asset_type: Optional[str] = "Stock"  # Default to Stock
+    
+    # Enrichment tracking
+    enrichment_status: str = "base"  # "base", "enriched", "failed"
+    enriched_at: Optional[datetime] = None  # When Alpha Vantage enrichment was applied
+    
+    # Batch collection tracking (incremental collection strategy)
+    batch_priority: Optional[float] = None  # Market cap used for priority ordering (desc)
+    collection_attempts: int = 0  # Number of times collection was attempted
+    last_collection_attempt: Optional[datetime] = None  # When last collection was attempted
+    collection_error: Optional[str] = None  # Last error message if collection failed
+    
     # Extended data (provider-specific)
     extended_data: Dict[str, Any] = Field(default_factory=dict)
     
@@ -393,6 +406,10 @@ class CompanyOverview(Document):
             "sector",
             "industry",
             "source_provider",
+            "asset_type",  # Index for filtering by asset type
+            "enrichment_status",  # Index for finding tickers needing enrichment
+            "batch_priority",  # Index for priority-ordered batch processing
+            "last_collection_attempt",  # Index for finding tickers needing retry
         ]
         # TTL: Keep company data for 90 days
         timeseries_options = {

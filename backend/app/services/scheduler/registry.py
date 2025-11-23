@@ -16,6 +16,7 @@ def register_all_jobs():
     # Import jobs here to avoid circular imports
     from app.services.jobs.price_collector import price_collector_job
     from app.services.jobs.metals_price_collector import metals_price_collector_job
+    from app.services.jobs.metadata_collector import metadata_collector_job
     
     # Price collection: Every 60 seconds, 9 AM - 5 PM EST, Mon-Fri
     job_scheduler.add_job(
@@ -57,6 +58,36 @@ def register_all_jobs():
         job_id='metals_price_collector',
         name='Precious Metals Price Collection'
     )
+    
+    # Metadata enrichment: Daily at 2:00 AM EST (Alpha Vantage free tier: 25 calls/day)
+    # Processes 5 tickers per run to stay within limits
+    job_scheduler.add_job(
+        func=metadata_collector_job.run_enrichment_cycle,
+        trigger=CronTrigger(
+            hour='2',               # 2 AM
+            minute='0',             # At the start of the hour
+            second='0',
+            timezone='US/Eastern'   # EST timezone
+        ),
+        job_id='metadata_enrichment',
+        name='Stock Metadata Enrichment (Alpha Vantage)'
+    )
+    
+    # Incremental metadata collection: 24 times daily (every hour)
+    # 30 tickers per batch, 1 hour gap between batches = 720 tickers/day
+    # Failed batches are retried the next day, ordered by market cap (desc)
+    for hour in range(24):  # Every hour (0-23)
+        job_scheduler.add_job(
+            func=metadata_collector_job.run_incremental_batch_collection,
+            trigger=CronTrigger(
+                hour=str(hour),
+                minute='0',
+                second='0',
+                timezone='US/Eastern'
+            ),
+            job_id=f'incremental_collection_{hour:02d}',
+            name=f'Incremental Metadata Collection ({hour:02d}:00)'
+        )
     
     logger.info(
         f"Registered {len(job_scheduler.jobs)} scheduled jobs",

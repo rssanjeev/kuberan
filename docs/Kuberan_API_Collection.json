@@ -2115,6 +2115,199 @@
 			]
 		},
 		{
+			"name": "Metadata Management",
+			"description": "Stock metadata collection and enrichment endpoints",
+			"item": [
+				{
+					"name": "POST",
+					"item": [
+						{
+							"name": "Trigger Incremental Batch Collection",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/metadata/collection/batch",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "metadata", "collection", "batch"]
+								},
+								"description": "Manually trigger incremental batch collection of stock metadata. Collects 30 tickers per batch, ordered by market cap (descending). Failed tickers are moved to next run. Runs automatically 24 times/day (every hour). Total: 720 tickers/day."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/metadata/collection/batch",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "metadata", "collection", "batch"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"status\": \"success\",\n    \"processed\": 30,\n    \"success\": 28,\n    \"failure\": 2,\n    \"elapsed_seconds\": 45.2\n}"
+								}
+							]
+						},
+						{
+							"name": "Trigger Full Discovery",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/metadata/discovery/trigger?test_mode=false",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "metadata", "discovery", "trigger"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "",
+											"description": "Limit number of tickers to process (optional)",
+											"disabled": true
+										},
+										{
+											"key": "test_mode",
+											"value": "false",
+											"description": "If true, only process first 20 tickers for testing"
+										}
+									]
+								},
+								"description": "Manually trigger one-off metadata discovery. Fetches all tickers from Alpha Vantage LISTING_STATUS and collects base metadata from YFinance."
+							},
+							"response": []
+						},
+						{
+							"name": "Enrich Single Ticker",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/metadata/enrich/:ticker",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "metadata", "enrich", ":ticker"],
+									"variable": [
+										{
+											"key": "ticker",
+											"value": "AAPL",
+											"description": "Stock ticker symbol to enrich"
+										}
+									]
+								},
+								"description": "Manually trigger Alpha Vantage enrichment for specific ticker. Useful for high-priority tickers that need immediate enrichment."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GET",
+					"item": [
+						{
+							"name": "Get Metadata Stats",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/metadata/stats",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "metadata", "stats"]
+								},
+								"description": "Get comprehensive collection statistics including total tickers, enrichment status breakdown, asset type breakdown, enrichment queue, and job status."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/metadata/stats",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "metadata", "stats"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"total_tickers\": 797,\n    \"by_enrichment_status\": {\n        \"base\": 797,\n        \"enriched\": 0,\n        \"failed\": 0\n    },\n    \"by_asset_type\": {\n        \"Stock\": 625,\n        \"ETF\": 172,\n        \"Other\": 0\n    },\n    \"enrichment_queue\": {\n        \"etfs_pending\": 172,\n        \"large_caps_pending\": 70,\n        \"total_pending\": 797\n    },\n    \"job_status\": {\n        \"is_running\": false,\n        \"last_discovery_run\": null,\n        \"last_enrichment_run\": null,\n        \"discovery_count\": 28,\n        \"enrichment_count\": 0\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Failed Tickers",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/system/metadata/failed?limit=50&skip=0",
+									"host": ["{{baseUrl}}"],
+									"path": ["system", "metadata", "failed"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50",
+											"description": "Maximum number of failed tickers to return (default: 100)"
+										},
+										{
+											"key": "skip",
+											"value": "0",
+											"description": "Number of results to skip for pagination (default: 0)"
+										}
+									]
+								},
+								"description": "Get list of tickers that have exhausted retry attempts (collection_attempts >= 3). Shows whether metadata was eventually collected and any error messages."
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/system/metadata/failed?limit=5",
+											"host": ["{{baseUrl}}"],
+											"path": ["system", "metadata", "failed"],
+											"query": [
+												{
+													"key": "limit",
+													"value": "5"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n    \"total_failed\": 28,\n    \"returned\": 5,\n    \"skip\": 0,\n    \"limit\": 5,\n    \"failed_tickers\": [\n        {\n            \"ticker\": \"ZM\",\n            \"collection_attempts\": 4,\n            \"last_collection_attempt\": \"2025-11-23T13:32:46.104000\",\n            \"collection_error\": null,\n            \"has_metadata\": true,\n            \"market_cap\": 23789318144.0,\n            \"enrichment_status\": \"base\"\n        },\n        {\n            \"ticker\": \"ZLAB\",\n            \"collection_attempts\": 4,\n            \"last_collection_attempt\": \"2025-11-23T13:32:46.078000\",\n            \"collection_error\": null,\n            \"has_metadata\": true,\n            \"market_cap\": 2214087168.0,\n            \"enrichment_status\": \"base\"\n        }\n    ]\n}"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "General",
 			"description": "General API endpoints",
 			"item": [

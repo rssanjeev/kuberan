@@ -8,8 +8,8 @@ Provides APIs for:
 - Health checks
 """
 
-from fastapi import APIRouter, HTTPException
-from typing import Dict, List
+from fastapi import APIRouter, HTTPException, Query
+from typing import Dict, List, Optional
 
 from app.services.providers import (
     provider_manager,
@@ -17,6 +17,9 @@ from app.services.providers import (
     load_balancer
 )
 from app.services.scheduler.scheduler import job_scheduler
+from app.services.jobs.metadata_collector import metadata_collector_job
+from app.services.stock.metadata_enrichment_service import metadata_enrichment_service
+from app.models.provider import CompanyOverview
 
 router = APIRouter(prefix="/system", tags=["System Management"])
 
@@ -442,4 +445,350 @@ async def get_job_info(job_id: str):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get job info: {str(e)}"
+        )
+
+
+# ============================================================================
+# Metadata Management Endpoints
+# ============================================================================
+
+@router.post("/metadata/discovery/trigger")
+async def trigger_metadata_discovery(
+    limit: Optional[int] = None,
+    test_mode: bool = False
+):
+    """
+    Manually trigger one-off metadata discovery.
+    
+    Process:
+    1. Fetch all tickers from Alpha Vantage LISTING_STATUS
+    2. Collect base metadata from YFinance (batch processing)
+    3. Queue high-priority tickers for enrichment
+    
+    Args:
+        limit: Limit number of tickers to process (optional)
+        test_mode: If True, only process first 20 tickers for testing
+    
+    Returns:
+        {
+            "status": "success",
+            "discovered_tickers": 10000,
+            "processed_tickers": 10000,
+            "collection_stats": {
+                "success": 9500,
+                "failure": 500,
+                "total": 10000
+            },
+            "priority_enrichment_queued": 200,
+            "elapsed_seconds": 3000.5,
+            "asset_type_breakdown": {
+                "Stock": 8500,
+                "ETF": 1500
+            }
+        }
+    
+    Example:
+        # Test with 20 tickers
+        curl -X POST "http://localhost:8000/system/metadata/discovery/trigger?test_mode=true"
+        
+        # Full discovery
+        curl -X POST http://localhost:8000/system/metadata/discovery/trigger
+        
+        # Limited to 1000 tickers
+        curl -X POST "http://localhost:8000/system/metadata/discovery/trigger?limit=1000"
+    """
+    try:
+        result = await metadata_collector_job.run_one_off_discovery(
+            limit=limit,
+            test_mode=test_mode
+        )
+        return result
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to trigger discovery: {str(e)}"
+        )
+
+
+@router.post("/metadata/collection/batch")
+async def trigger_incremental_batch_collection():
+    """
+    Manually trigger incremental batch collection.
+    
+    Process:
+    - Collects 30 tickers per batch
+    - Ordered by market cap (descending)
+    - Failed tickers moved to next run
+    - Runs 24 times/day automatically (every hour, 00:00 - 23:00)
+    - Total: 720 tickers/day
+    
+    Returns:
+        {
+            "status": "success",
+            "processed": 30,
+            "success": 28,
+            "failure": 2,
+            "elapsed_seconds": 45.2
+        }
+    
+    Example:
+        curl -X POST http://localhost:8000/system/metadata/collection/batch
+    """
+    try:
+        result = await metadata_collector_job.run_incremental_batch_collection()
+        return result
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to trigger batch collection: {str(e)}"
+        )
+
+
+@router.post("/metadata/enrich/{ticker}")
+async def enrich_ticker_metadata(ticker: str):
+    """
+    Manually trigger Alpha Vantage enrichment for specific ticker.
+    
+    Useful for high-priority tickers that need immediate enrichment.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL, VOO)
+    
+    Returns:
+        {
+            "status": "success",
+            "ticker": "AAPL",
+            "enrichment_status": "enriched",
+            "message": "Metadata enriched successfully"
+        }
+    
+    Example:
+        curl -X POST http://localhost:8000/system/metadata/enrich/AAPL
+        curl -X POST http://localhost:8000/system/metadata/enrich/VOO
+    """
+    try:
+        # Get existing metadata
+        existing = await CompanyOverview.find_one(CompanyOverview.ticker == ticker.upper())
+        
+        if not existing:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No metadata found for ticker {ticker}. Run discovery first."
+            )
+        
+        # Enrich with Alpha Vantage
+        enriched = await metadata_enrichment_service.enrich_with_alpha_vantage(
+            ticker=ticker.upper(),
+            existing_metadata=existing
+        )
+        
+        if not enriched:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to enrich metadata for {ticker}"
+            )
+        
+        # Save enriched metadata
+        saved = await metadata_enrichment_service.save_metadata(enriched)
+        
+        return {
+            "status": "success",
+            "ticker": ticker.upper(),
+            "enrichment_status": saved.enrichment_status,
+            "message": "Metadata enriched successfully"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to enrich ticker: {str(e)}"
+        )
+
+
+@router.get("/metadata/stats")
+async def get_metadata_statistics():
+    """
+    Get metadata collection statistics.
+    
+    Returns:
+        {
+            "total_tickers": 10000,
+            "by_enrichment_status": {
+                "base": 9500,
+                "enriched": 450,
+                "failed": 50
+            },
+            "by_asset_type": {
+                "Stock": 8500,
+                "ETF": 1500
+            },
+            "by_exchange": {
+                "NASDAQ": 4000,
+                "NYSE": 3500,
+                "Other": 2500
+            },
+            "enrichment_queue": {
+                "etfs_pending": 150,
+                "large_caps_pending": 300,
+                "total_pending": 9500
+            },
+            "job_status": {
+                "is_running": false,
+                "last_discovery_run": "2025-11-22T10:30:00Z",
+                "last_enrichment_run": "2025-11-22T02:00:00Z",
+                "discovery_count": 9500,
+                "enrichment_count": 450
+            }
+        }
+    
+    Example:
+        curl http://localhost:8000/system/metadata/stats
+    """
+    try:
+        # Get total count
+        total = await CompanyOverview.count()
+        
+        # Count by enrichment status
+        base_count = await CompanyOverview.find(
+            CompanyOverview.enrichment_status == "base"
+        ).count()
+        
+        enriched_count = await CompanyOverview.find(
+            CompanyOverview.enrichment_status == "enriched"
+        ).count()
+        
+        failed_count = await CompanyOverview.find(
+            CompanyOverview.enrichment_status == "failed"
+        ).count()
+        
+        # Count by asset type
+        stocks = await CompanyOverview.find(
+            CompanyOverview.asset_type == "Stock"
+        ).count()
+        
+        etfs = await CompanyOverview.find(
+            CompanyOverview.asset_type == "ETF"
+        ).count()
+        
+        # Count ETFs pending enrichment
+        etfs_pending = await CompanyOverview.find(
+            CompanyOverview.asset_type == "ETF",
+            CompanyOverview.enrichment_status == "base"
+        ).count()
+        
+        # Count large caps pending enrichment
+        large_caps_pending = await CompanyOverview.find(
+            CompanyOverview.asset_type == "Stock",
+            CompanyOverview.enrichment_status == "base",
+            CompanyOverview.market_cap > 10_000_000_000
+        ).count()
+        
+        # Get job status
+        job_status = metadata_collector_job.get_job_status()
+        
+        return {
+            "total_tickers": total,
+            "by_enrichment_status": {
+                "base": base_count,
+                "enriched": enriched_count,
+                "failed": failed_count
+            },
+            "by_asset_type": {
+                "Stock": stocks,
+                "ETF": etfs,
+                "Other": total - stocks - etfs
+            },
+            "enrichment_queue": {
+                "etfs_pending": etfs_pending,
+                "large_caps_pending": large_caps_pending,
+                "total_pending": base_count
+            },
+            "job_status": job_status
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get metadata stats: {str(e)}"
+        )
+
+
+@router.get("/metadata/failed")
+async def get_failed_tickers(
+    limit: int = Query(100, description="Maximum number of failed tickers to return"),
+    skip: int = Query(0, description="Number of failed tickers to skip for pagination")
+):
+    """
+    Get list of tickers that have exhausted retry attempts.
+    
+    A ticker is considered "failed" if it has collection_attempts >= 3.
+    These tickers will not be retried automatically.
+    
+    Query Parameters:
+        - limit: Maximum number of results (default: 100)
+        - skip: Number of results to skip for pagination (default: 0)
+    
+    Returns:
+        {
+            "total_failed": 28,
+            "returned": 28,
+            "failed_tickers": [
+                {
+                    "ticker": "ZYXI",
+                    "collection_attempts": 4,
+                    "last_collection_attempt": "2025-11-23T13:32:46Z",
+                    "collection_error": "YFinance rate limit exceeded",
+                    "has_metadata": true,
+                    "market_cap": 18777138
+                },
+                ...
+            ]
+        }
+    
+    Example:
+        curl http://localhost:8000/system/metadata/failed?limit=50
+    """
+    try:
+        # Count total failed tickers
+        total_failed = await CompanyOverview.find(
+            CompanyOverview.collection_attempts >= 3
+        ).count()
+        
+        # Get failed tickers with details
+        failed_docs = await CompanyOverview.find(
+            CompanyOverview.collection_attempts >= 3
+        ).sort([
+            ("collection_attempts", -1),  # Most attempts first
+            ("ticker", 1)  # Then alphabetically
+        ]).skip(skip).limit(limit).to_list()
+        
+        # Format response
+        failed_tickers = []
+        for doc in failed_docs:
+            failed_tickers.append({
+                "ticker": doc.ticker,
+                "collection_attempts": doc.collection_attempts,
+                "last_collection_attempt": doc.last_collection_attempt.isoformat() if doc.last_collection_attempt else None,
+                "collection_error": doc.collection_error,
+                "has_metadata": bool(doc.name or doc.market_cap),  # Check if metadata exists
+                "market_cap": doc.market_cap,
+                "enrichment_status": doc.enrichment_status
+            })
+        
+        return {
+            "total_failed": total_failed,
+            "returned": len(failed_tickers),
+            "skip": skip,
+            "limit": limit,
+            "failed_tickers": failed_tickers
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get failed tickers: {str(e)}"
         )
