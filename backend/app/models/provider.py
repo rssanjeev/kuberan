@@ -782,6 +782,164 @@ class CommodityPrice(Document):
         }
 
 
+# ==================== ETF Models ====================
+
+class ETFHolding(Document):
+    """
+    Individual holding within an ETF.
+    
+    Embedded document for ETF holdings data.
+    """
+    # Security identification
+    symbol: str  # Ticker symbol
+    description: str  # Company name
+    
+    # Weight in fund
+    weight: float  # Decimal (e.g., 0.0783 = 7.83%)
+    weight_pct: Optional[float] = None  # Percentage for display (7.83)
+    
+    # Additional data (if available)
+    shares: Optional[int] = None
+    market_value: Optional[float] = None
+    sector: Optional[str] = None
+    asset_type: Optional[str] = None
+    
+    class Settings:
+        # This is an embedded document, not a collection
+        is_root = False
+
+
+class ETFSectorAllocation(Document):
+    """
+    Sector allocation for an ETF.
+    
+    Embedded document for sector breakdown.
+    """
+    sector: str  # Sector name (e.g., "INFORMATION TECHNOLOGY")
+    weight: float  # Decimal (e.g., 0.348 = 34.8%)
+    weight_pct: Optional[float] = None  # Percentage for display (34.8)
+    
+    class Settings:
+        # This is an embedded document, not a collection
+        is_root = False
+
+
+class ETFProfile(Document):
+    """
+    Complete ETF profile with holdings and sector allocations.
+    
+    TTL: 30 days (ETF holdings change quarterly)
+    Source providers: Alpha Vantage (ETF_PROFILE)
+    
+    Used for:
+    - ETF comparison and overlap analysis
+    - Portfolio construction
+    - Sector exposure analysis
+    """
+    # ETF identification
+    ticker: str  # Unique identifier (e.g., "SPY", "QQQ")
+    name: Optional[str] = None  # Full ETF name
+    
+    # Fund fundamentals
+    net_assets: Optional[float] = None  # Total assets in USD
+    net_expense_ratio: Optional[float] = None  # Expense ratio as decimal
+    portfolio_turnover: Optional[float] = None  # Turnover as decimal
+    dividend_yield: Optional[float] = None  # Dividend yield as decimal
+    inception_date: Optional[str] = None  # YYYY-MM-DD
+    leveraged: Optional[str] = None  # "YES" or "NO"
+    
+    # Holdings (complete list)
+    holdings: List[Dict[str, Any]] = Field(default_factory=list)  # List of ETFHolding dicts
+    total_holdings: int = 0  # Count of holdings
+    
+    # Sector allocations
+    sector_allocations: List[Dict[str, Any]] = Field(default_factory=list)  # List of ETFSectorAllocation dicts
+    
+    # Top holdings summary (for quick access)
+    top_10_holdings: List[Dict[str, Any]] = Field(default_factory=list)
+    
+    # Metadata
+    source_provider: DataSource = DataSource.ALPHA_VANTAGE
+    fetched_at: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: Optional[datetime] = None  # When holdings were last updated
+    
+    # Extended data (provider-specific)
+    extended_data: Dict[str, Any] = Field(default_factory=dict)
+    
+    class Settings:
+        name = "etf_profiles"
+        indexes = [
+            "ticker",  # Unique - one profile per ETF
+            "source_provider",
+            "fetched_at",
+            "last_updated",
+        ]
+        # TTL: Keep ETF data for 30 days (holdings change quarterly)
+        timeseries_options = {
+            "timeField": "fetched_at",
+            "granularity": "hours",
+            "expireAfterSeconds": 2592000  # 30 days
+        }
+
+
+class ETFComparison(Document):
+    """
+    Cached ETF comparison results.
+    
+    TTL: 7 days (recalculate weekly)
+    
+    Stores pre-calculated overlap metrics between two ETFs
+    for faster retrieval and to reduce API calls.
+    """
+    # ETFs being compared
+    ticker1: str
+    ticker2: str
+    comparison_key: str  # Sorted combination: "QQQ_SPY" (alphabetical)
+    
+    # Comparison date
+    comparison_date: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Overlap metrics
+    overlap_by_weight: float  # Total overlap percentage
+    overlapping_holdings_count: int  # Number of common holdings
+    ticker1_in_ticker2_pct: float  # % of ticker1 holdings also in ticker2
+    ticker2_in_ticker1_pct: float  # % of ticker2 holdings also in ticker1
+    
+    # Sector drift (ticker1 - ticker2)
+    sector_drift: Dict[str, float] = Field(default_factory=dict)
+    
+    # Overlapping holdings details
+    overlapping_holdings: List[Dict[str, Any]] = Field(default_factory=list)
+    
+    # Overweight holdings (ticker1 has more exposure than ticker2)
+    overweight_holdings: List[Dict[str, Any]] = Field(default_factory=list)
+    
+    # Underweight holdings (ticker1 has less exposure than ticker2)
+    underweight_holdings: List[Dict[str, Any]] = Field(default_factory=list)
+    
+    # Fund statistics
+    ticker1_stats: Dict[str, Any] = Field(default_factory=dict)
+    ticker2_stats: Dict[str, Any] = Field(default_factory=dict)
+    
+    # Metadata
+    fetched_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    class Settings:
+        name = "etf_comparisons"
+        indexes = [
+            "comparison_key",  # Unique key for cached comparisons
+            [("ticker1", 1), ("ticker2", 1)],
+            "comparison_date",
+            "fetched_at",
+        ]
+        # TTL: Keep comparisons for 7 days
+        timeseries_options = {
+            "timeField": "fetched_at",
+            "granularity": "hours",
+            "expireAfterSeconds": 604800  # 7 days
+        }
+
+
 # ==================== Economic Indicator Models ====================
 
 class EconomicIndicator(Document):

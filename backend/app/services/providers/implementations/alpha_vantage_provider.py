@@ -131,50 +131,113 @@ class AlphaVantageProvider(BaseProvider):
         if self.rate_limiter:
             await self.rate_limiter.acquire(priority)
     
-    async def _make_api_call(self, params: Dict) -> Dict:
+    async def _make_api_call(self, params: Dict, max_retries: int = 3) -> Dict:
         """
-        Make API call to Alpha Vantage REST API.
+        Make API call to Alpha Vantage REST API with retry logic.
         
         Args:
             params: Query parameters for the API call
+            max_retries: Maximum number of retry attempts (default: 3)
             
         Returns:
             JSON response from API
             
         Raises:
-            ProviderException: If API call fails
+            ProviderException: If API call fails after all retries
             RateLimitException: If rate limit is hit
         """
+        # Validate inputs
+        if not params:
+            raise ProviderException("API call parameters cannot be empty")
+        
+        if "function" not in params:
+            raise ProviderException("API function not specified in parameters")
+        
         # Add API key to params
         params["apikey"] = self.api_key
         
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(self.base_url, params=params)
-                response.raise_for_status()
-                
-                data = response.json()
-                
-                # Check for Alpha Vantage error messages
-                if "Error Message" in data:
-                    raise ProviderException(f"Alpha Vantage API error: {data['Error Message']}")
-                
-                if "Note" in data:
-                    note = data["Note"]
-                    if "API call frequency" in note or "premium subscription" in note:
-                        logger.warning("Alpha Vantage rate limit warning", extra={"note": note})
-                        raise RateLimitException(f"Rate limit hit: {note}")
-                
-                return data
-                
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 429:
-                raise RateLimitException("Rate limit exceeded")
-            raise ProviderException(f"HTTP error: {e.response.status_code}")
-        except httpx.TimeoutException:
-            raise ProviderException("Request timeout")
-        except Exception as e:
-            raise ProviderException(f"API call failed: {str(e)}")
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.get(self.base_url, params=params)
+                    response.raise_for_status()
+                    
+                    data = response.json()
+                    
+                    # Check for Alpha Vantage error messages
+                    if "Error Message" in data:
+                        error_msg = data['Error Message']
+                        logger.error(
+                            "Alpha Vantage API error",
+                            extra={"function": params.get('function'), "error": error_msg}
+                        )
+                        raise ProviderException(f"Alpha Vantage API error: {error_msg}")
+                    
+                    # Check for rate limit messages
+                    if "Note" in data:
+                        note = data["Note"]
+                        if "API call frequency" in note or "premium subscription" in note:
+                            logger.warning(
+                                "Alpha Vantage rate limit warning",
+                                extra={"note": note, "tier": self.tier}
+                            )
+                            raise RateLimitException(f"Rate limit hit: {note}")
+                    
+                    # Check for empty response
+                    if not data or (isinstance(data, dict) and len(data) == 0):
+                        raise ProviderException("Empty response from Alpha Vantage API")
+                    
+                    logger.debug(
+                        "Alpha Vantage API call successful",
+                        extra={"function": params.get('function'), "attempt": attempt + 1}
+                    )
+                    
+                    return data
+                    
+            except RateLimitException:
+                # Don't retry rate limit errors
+                raise
+            
+            except httpx.HTTPStatusError as e:
+                last_error = e
+                if e.response.status_code == 429:
+                    raise RateLimitException("Rate limit exceeded (HTTP 429)")
+                elif e.response.status_code == 404:
+                    raise ProviderException(f"Invalid ticker or endpoint not found (HTTP 404)")
+                elif e.response.status_code >= 500:
+                    # Server errors - retry
+                    if attempt < max_retries - 1:
+                        logger.warning(
+                            "Alpha Vantage server error, retrying",
+                            extra={"status_code": e.response.status_code, "attempt": attempt + 1}
+                        )
+                        continue
+                raise ProviderException(f"HTTP error {e.response.status_code}: {e.response.text[:200]}")
+            
+            except httpx.TimeoutException as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        "Alpha Vantage request timeout, retrying",
+                        extra={"attempt": attempt + 1, "timeout": 30.0}
+                    )
+                    continue
+                raise ProviderException(f"Request timeout after {max_retries} attempts")
+            
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        "Alpha Vantage API call failed, retrying",
+                        extra={"error": str(e), "attempt": attempt + 1}
+                    )
+                    continue
+                raise ProviderException(f"API call failed after {max_retries} attempts: {str(e)}")
+        
+        # If we get here, all retries failed
+        raise ProviderException(f"API call failed after {max_retries} attempts: {str(last_error)}")
     
     def _update_rate_limits_from_response(self, response: Dict):
         """Update rate limits from API response headers."""
@@ -367,6 +430,81 @@ class AlphaVantageProvider(BaseProvider):
             raise
         except Exception as e:
             raise ProviderException(f"Failed to fetch historical data from Alpha Vantage: {str(e)}") from e
+    
+    @api_metrics.track_api_call(provider="alpha_vantage", data_type="daily_prices")
+    async def fetch_etf_daily_prices(
+        self,
+        ticker: str,
+        outputsize: str = "compact"
+    ) -> Dict[str, Dict]:
+        """
+        Fetch daily historical prices for ETF using TIME_SERIES_DAILY.
+        
+        Args:
+            ticker: ETF ticker symbol
+            outputsize: 'compact' (last 100 data points) or 'full' (20+ years)
+        
+        Returns:
+            Dictionary with date strings as keys, each containing:
+            {
+                "2025-11-23": {
+                    "1. open": "450.12",
+                    "2. high": "452.34",
+                    "3. low": "449.67",
+                    "4. close": "451.89",
+                    "5. volume": "12345678"
+                },
+                ...
+            }
+        
+        API: https://www.alphavantage.co/query?function=TIME_SERIES_DAILY
+        """
+        try:
+            await self._acquire_rate_limit(priority=0)
+            
+            # Validate outputsize
+            if outputsize not in ["compact", "full"]:
+                raise ValueError(f"Invalid outputsize: {outputsize}. Must be 'compact' or 'full'.")
+            
+            # Make API call
+            response = await self._make_api_call({
+                "function": "TIME_SERIES_DAILY",
+                "symbol": ticker,
+                "outputsize": outputsize
+            })
+            
+            self._update_rate_limits_from_response(response)
+            
+            # Check for time series data
+            if "Time Series (Daily)" not in response:
+                logger.error(
+                    "No daily price data found in response",
+                    extra={
+                        "ticker": ticker,
+                        "outputsize": outputsize,
+                        "response_keys": list(response.keys()) if isinstance(response, dict) else "not_a_dict",
+                        "response_sample": str(response)[:500] if response else "empty"
+                    }
+                )
+                raise ProviderException(f"No daily price data available for {ticker}")
+            
+            time_series = response["Time Series (Daily)"]
+            
+            logger.info(
+                "Daily prices fetched successfully",
+                extra={
+                    "ticker": ticker,
+                    "outputsize": outputsize,
+                    "data_points": len(time_series)
+                }
+            )
+            
+            return time_series
+        
+        except RateLimitException:
+            raise
+        except Exception as e:
+            raise ProviderException(f"Failed to fetch daily prices from Alpha Vantage: {str(e)}") from e
     
     @api_metrics.track_api_call(provider="alpha_vantage", data_type="technical_indicator")
     async def get_technical_indicator(
@@ -656,6 +794,128 @@ class AlphaVantageProvider(BaseProvider):
             raise
         except Exception as e:
             raise ProviderException(f"Failed to fetch earnings: {str(e)}") from e
+    
+    # ==================== ETF Data Methods ====================
+    
+    @api_metrics.track_api_call(provider="alpha_vantage", data_type="etf_profile")
+    async def fetch_etf_profile(self, ticker: str) -> Dict:
+        """
+        Fetch complete ETF profile including holdings and sectors.
+        
+        Uses ETF_PROFILE function from Alpha Vantage API.
+        
+        Args:
+            ticker: ETF ticker symbol (e.g., "SPY", "VOO")
+            
+        Returns:
+            Complete ETF data including:
+            - Fund fundamentals (expense ratio, AUM, etc.)
+            - Complete holdings list with weights
+            - Sector allocations
+            
+        Raises:
+            RateLimitException: If rate limit is exceeded
+            ProviderException: If API call fails
+            
+        API Endpoint: https://www.alphavantage.co/query?function=ETF_PROFILE
+        """
+        ticker = ticker.upper().strip()
+        
+        logger.info("Fetching ETF profile from Alpha Vantage", extra={"ticker": ticker})
+        
+        try:
+            # Acquire rate limit permission
+            await self._acquire_rate_limit()
+            
+            # Make API call
+            params = {
+                "function": "ETF_PROFILE",
+                "symbol": ticker
+            }
+            
+            response = await self._make_api_call(params)
+            
+            # Parse response
+            if not response:
+                raise ProviderException(f"Empty response for ticker: {ticker}")
+            
+            # Alpha Vantage ETF_PROFILE structure
+            # Response contains root-level fields: net_assets, net_expense_ratio, 
+            #                    portfolio_turnover, dividend_yield, inception_date, leveraged
+            # Plus arrays: holdings[], sectors[]
+            
+            etf_data = {
+                "name": response.get("name"),
+                "net_assets": self._parse_float(response.get("net_assets")),
+                "net_expense_ratio": self._parse_float(response.get("net_expense_ratio")),
+                "portfolio_turnover": self._parse_float(response.get("portfolio_turnover")),
+                "dividend_yield": self._parse_float(response.get("dividend_yield")),
+                "inception_date": response.get("inception_date"),
+                "leveraged": response.get("leveraged"),
+                "holdings": [],
+                "sectors": []
+            }
+            
+            # Parse holdings (Alpha Vantage provides "holdings" array)
+            raw_holdings = response.get("holdings", [])
+            for holding in raw_holdings:
+                etf_data["holdings"].append({
+                    "symbol": holding.get("symbol"),
+                    "description": holding.get("description", holding.get("name")),
+                    "weight": self._parse_float(holding.get("weight"))
+                })
+            
+            # Parse sectors (Alpha Vantage provides "sectors" array, NOT "sectorWeights" object)
+            raw_sectors = response.get("sectors", [])
+            for sector_data in raw_sectors:
+                etf_data["sectors"].append({
+                    "sector": sector_data.get("sector"),
+                    "weight": self._parse_float(sector_data.get("weight"))
+                })
+            
+            self._update_rate_limits_from_response(response)
+            
+            logger.info(
+                "ETF profile fetched successfully",
+                extra={
+                    "ticker": ticker,
+                    "holdings": len(etf_data["holdings"]),
+                    "sectors": len(etf_data["sectors"])
+                }
+            )
+            
+            return etf_data
+        
+        except RateLimitException:
+            raise
+        except Exception as e:
+            logger.error(
+                "Failed to fetch ETF profile",
+                extra={"ticker": ticker, "error": str(e)},
+                exc_info=True
+            )
+            raise ProviderException(f"Failed to fetch ETF profile: {str(e)}") from e
+    
+    def _parse_float(self, value) -> Optional[float]:
+        """
+        Safely parse float value from API response.
+        
+        Args:
+            value: Value to parse (can be string, number, or None)
+            
+        Returns:
+            Float value or None if parsing fails
+        """
+        if value is None:
+            return None
+        
+        try:
+            # Remove percentage signs and commas
+            if isinstance(value, str):
+                value = value.replace("%", "").replace(",", "")
+            return float(value)
+        except (ValueError, TypeError):
+            return None
     
     # ==================== Metadata Methods ====================
     

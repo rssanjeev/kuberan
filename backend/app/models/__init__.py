@@ -41,7 +41,12 @@ from app.models.precious_metals import (
     SilverPrice,
 )
 
-# Multi-Provider models (enums and 17 data models)
+# Investor models
+from app.models.investor import (
+    FamousInvestorPortfolio,
+)
+
+# Multi-Provider models (enums and 20 data models)
 from app.models.provider import (
     # Enums
     DataSource,
@@ -70,6 +75,12 @@ from app.models.provider import (
     ForexRate,
     CryptoPrice,
     CommodityPrice,
+    
+    # ETF models
+    ETFHolding,
+    ETFSectorAllocation,
+    ETFProfile,
+    ETFComparison,
     
     # Economic Indicator model
     EconomicIndicator,
@@ -132,6 +143,12 @@ __all__ = [
     "CryptoPrice",
     "CommodityPrice",
     
+    # Provider ETF Models
+    "ETFHolding",
+    "ETFSectorAllocation",
+    "ETFProfile",
+    "ETFComparison",
+    
     # Provider Economic
     "EconomicIndicator",
     
@@ -165,6 +182,9 @@ DOCUMENT_MODELS = [
     GoldPrice,
     SilverPrice,
     
+    # Investor
+    FamousInvestorPortfolio,
+    
     # Provider Models
     StockQuote,
     StockHistoricalPrice,
@@ -180,6 +200,8 @@ DOCUMENT_MODELS = [
     ForexRate,
     CryptoPrice,
     CommodityPrice,
+    ETFProfile,
+    ETFComparison,
     EconomicIndicator,
     
     # Monitoring Models

@@ -2308,6 +2308,213 @@
 			]
 		},
 		{
+			"name": "ETF",
+			"description": "ETF platform endpoints for data management and administration",
+			"item": [
+				{
+					"name": "POST",
+					"item": [
+						{
+							"name": "Bulk Data Refresh",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"tickers\": [\"VOO\", \"BND\", \"VTI\", \"AGG\"],\n  \"data_types\": [\"profile\", \"holdings\", \"performance\"],\n  \"force_refresh\": false\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/etf/admin/bulk-refresh",
+									"host": ["{{baseUrl}}"],
+									"path": ["etf", "admin", "bulk-refresh"]
+								},
+								"description": "Refresh ETF data in bulk for multiple tickers. Efficiently updates data for multiple ETFs in a single operation.\n\n**Parameters:**\n- `tickers` (required): List of ETF tickers to refresh (max 50)\n- `data_types` (optional): Types of data to refresh (profile, holdings, performance, dividends, risk_metrics)\n- `force_refresh` (optional): Force refresh even if data is recent (default: false)\n\n**Use Cases:**\n- Update all portfolio ETFs after market close\n- Refresh stale data for analysis\n- Pre-load data for batch operations"
+							},
+							"response": [
+								{
+									"name": "Success Example",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"tickers\": [\"VOO\", \"BND\", \"VTI\", \"AGG\"],\n  \"data_types\": [\"profile\", \"holdings\", \"performance\"],\n  \"force_refresh\": false\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/etf/admin/bulk-refresh",
+											"host": ["{{baseUrl}}"],
+											"path": ["etf", "admin", "bulk-refresh"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n  \"summary\": {\n    \"total_tickers\": 4,\n    \"successful\": 4,\n    \"failed\": 0,\n    \"skipped\": 0,\n    \"duration_seconds\": 0.41,\n    \"tickers_per_second\": 9.79\n  },\n  \"results\": {\n    \"success\": [\n      {\n        \"ticker\": \"VOO\",\n        \"data_types_refreshed\": [\"profile\", \"holdings\", \"performance\"],\n        \"records_updated\": {\"profile\": 1, \"holdings\": 50, \"performance\": 1}\n      },\n      {\n        \"ticker\": \"BND\",\n        \"data_types_refreshed\": [\"profile\", \"holdings\", \"performance\"],\n        \"records_updated\": {\"profile\": 1, \"holdings\": 50, \"performance\": 1}\n      }\n    ],\n    \"failed\": [],\n    \"skipped\": []\n  },\n  \"data_types_refreshed\": [\"profile\", \"holdings\", \"performance\"],\n  \"force_refresh\": false,\n  \"timestamp\": \"2025-11-23T22:00:45.657630\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Cache Management",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"operation\": \"stats\",\n  \"cache_types\": [\"quotes\", \"profiles\", \"holdings\"]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/etf/admin/cache",
+									"host": ["{{baseUrl}}"],
+									"path": ["etf", "admin", "cache"]
+								},
+								"description": "Manage cache operations for ETF data. Provides cache clearing, statistics, and optimization operations.\n\n**Parameters:**\n- `operation` (required): Cache operation (clear, stats, optimize, evict_old)\n- `cache_types` (optional): Types of cache to manage (quotes, profiles, holdings, performance, dividends, risk_metrics, comparisons, screening)\n- `max_age_hours` (optional): Maximum age for cache entries (for evict_old operation)\n\n**Operations:**\n- `clear`: Remove all entries from specified caches\n- `stats`: Get cache statistics (size, hit rate, age)\n- `optimize`: Compress cache (15% reduction)\n- `evict_old`: Remove entries older than max_age_hours\n\n**Use Cases:**\n- Clear cache before updates\n- Monitor cache performance\n- Free memory when needed\n- Optimize cache hit rates"
+							},
+							"response": [
+								{
+									"name": "Stats Example",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"operation\": \"stats\",\n  \"cache_types\": [\"quotes\", \"profiles\", \"holdings\"]\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/etf/admin/cache",
+											"host": ["{{baseUrl}}"],
+											"path": ["etf", "admin", "cache"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n  \"operation\": \"stats\",\n  \"cache_types\": [\"quotes\", \"profiles\", \"holdings\"],\n  \"result\": {\n    \"cache_stats\": {\n      \"quotes\": {\n        \"entries\": 5000,\n        \"size_mb\": 5.0,\n        \"hit_rate_pct\": 92.5,\n        \"avg_age_hours\": 13.5,\n        \"oldest_entry_hours\": 59.0\n      },\n      \"profiles\": {\n        \"entries\": 2000,\n        \"size_mb\": 2.0,\n        \"hit_rate_pct\": 88.3,\n        \"avg_age_hours\": 16.5,\n        \"oldest_entry_hours\": 62.0\n      },\n      \"holdings\": {\n        \"entries\": 8000,\n        \"size_mb\": 8.0,\n        \"hit_rate_pct\": 85.7,\n        \"avg_age_hours\": 17.5,\n        \"oldest_entry_hours\": 63.0\n      }\n    },\n    \"summary\": {\n      \"total_entries\": 15000,\n      \"total_size_mb\": 15.0,\n      \"avg_hit_rate_pct\": 88.83,\n      \"cache_types_monitored\": 3\n    }\n  },\n  \"timestamp\": \"2025-11-23T22:00:58.354605\"\n}"
+								},
+								{
+									"name": "Clear Example",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"operation\": \"clear\",\n  \"cache_types\": [\"quotes\", \"profiles\"]\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/etf/admin/cache",
+											"host": ["{{baseUrl}}"],
+											"path": ["etf", "admin", "cache"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n  \"operation\": \"clear\",\n  \"cache_types\": [\"quotes\", \"profiles\"],\n  \"result\": {\n    \"caches_cleared\": {\n      \"quotes\": {\n        \"entries_cleared\": 5000,\n        \"memory_freed_mb\": 5.0\n      },\n      \"profiles\": {\n        \"entries_cleared\": 2000,\n        \"memory_freed_mb\": 2.0\n      }\n    },\n    \"summary\": {\n      \"total_entries_cleared\": 7000,\n      \"total_memory_freed_mb\": 7.0,\n      \"cache_types_cleared\": 2\n    }\n  },\n  \"timestamp\": \"2025-11-23T22:01:32.833562\"\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "GET",
+					"item": [
+						{
+							"name": "System Health Check",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/etf/admin/health?include_details=true",
+									"host": ["{{baseUrl}}"],
+									"path": ["etf", "admin", "health"],
+									"query": [
+										{
+											"key": "include_details",
+											"value": "true",
+											"description": "Include detailed metrics for each component"
+										}
+									]
+								},
+								"description": "Get comprehensive system health status. Monitors data freshness, API health, cache performance, and overall system metrics.\n\n**Parameters:**\n- `include_details` (optional): Include detailed metrics (default: true)\n\n**Components Monitored:**\n- Data Layer: Freshness and completeness\n- API Layer: Response time and error rate\n- Cache Layer: Hit rate and memory usage\n- Database: Connection pool and query performance\n\n**Health Levels:**\n- healthy: 90-100 (✅)\n- degraded: 70-89 (⚠️)\n- warning: 50-69 (🔶)\n- critical: <50 (🔴)\n\n**Use Cases:**\n- Continuous monitoring\n- Performance troubleshooting\n- Capacity planning\n- Automated health checks"
+							},
+							"response": [
+								{
+									"name": "Healthy System Example",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/etf/admin/health?include_details=true",
+											"host": ["{{baseUrl}}"],
+											"path": ["etf", "admin", "health"],
+											"query": [
+												{
+													"key": "include_details",
+													"value": "true"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"body": "{\n  \"overall_status\": \"healthy\",\n  \"overall_health_score\": 100.0,\n  \"timestamp\": \"2025-11-23T22:01:13.933993\",\n  \"components\": {\n    \"data_layer\": {\n      \"status\": \"healthy\",\n      \"health_score\": 100.0\n    },\n    \"api_layer\": {\n      \"status\": \"healthy\",\n      \"health_score\": 100.0\n    },\n    \"cache_layer\": {\n      \"status\": \"healthy\",\n      \"health_score\": 100.0\n    },\n    \"database\": {\n      \"status\": \"healthy\",\n      \"health_score\": 100.0\n    }\n  },\n  \"issues\": [],\n  \"recommendations\": [\n    \"System is healthy - continue monitoring\"\n  ],\n  \"details\": {\n    \"data_layer\": {\n      \"data_freshness_hours\": 2.5,\n      \"data_completeness_pct\": 98.5,\n      \"sources\": {\n        \"etf_profiles\": {\"freshness_hours\": 2.5, \"completeness_pct\": 98.5},\n        \"holdings_data\": {\"freshness_hours\": 2.5, \"completeness_pct\": 98.5},\n        \"price_data\": {\"freshness_hours\": 2.5, \"completeness_pct\": 98.5},\n        \"dividend_data\": {\"freshness_hours\": 2.5, \"completeness_pct\": 98.5}\n      }\n    },\n    \"api_layer\": {\n      \"avg_response_time_ms\": 145.3,\n      \"error_rate_pct\": 0.8,\n      \"rate_limit_remaining_pct\": 78.5,\n      \"active_requests\": 12\n    },\n    \"cache_layer\": {\n      \"hit_rate_pct\": 87.5,\n      \"memory_used_mb\": 245.8,\n      \"memory_total_mb\": 512.0,\n      \"memory_usage_pct\": 48.01,\n      \"eviction_rate_per_min\": 3.2\n    },\n    \"database\": {\n      \"connection_pool_usage_pct\": 45.2,\n      \"avg_query_time_ms\": 28.5,\n      \"storage_used_gb\": 12.8,\n      \"storage_total_gb\": 50.0,\n      \"storage_usage_pct\": 25.6\n    }\n  }\n}"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "General",
 			"description": "General API endpoints",
 			"item": [

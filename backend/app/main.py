@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
-from app.routers import root, public, profile, stocks, financier, precious_metals, monitoring, system
+from app.routers import root, public, profile, stocks, financier, precious_metals, monitoring, system, etf
 from app.users import get_user_by_username, verify_password
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -60,6 +60,7 @@ app.include_router(financier.router)
 app.include_router(precious_metals.router)
 app.include_router(monitoring.router)
 app.include_router(system.router)
+app.include_router(etf.router)  # ETF Analysis endpoints
 
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
