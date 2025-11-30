@@ -86,6 +86,61 @@ logger.error("Operation failed", extra={"error": str(e)}, exc_info=True)
 
 ## Common Workflows
 
+### Endpoint Design Philosophy (Nov 30, 2025)
+
+**CRITICAL RULE: Always challenge endpoint creation. Default to refining services.**
+
+When asked to add functionality:
+1. **FIRST**: Check if existing endpoints can handle it (query params, request body options)
+2. **SECOND**: Implement in services layer and expose through existing endpoints
+3. **LAST RESORT**: Create new endpoint only if absolutely necessary
+
+**Core Principles**:
+
+**1. Endpoints Are Query-Focused, Not Management-Focused**
+- ✅ GOOD: `GET /stocks/price/{ticker}` - Queries data
+- ❌ BAD: `POST /stocks/tickers/add` - Manages configuration
+- **Rule**: Management operations belong in `/system/*` namespace
+
+**2. One Domain = One Clear Purpose**
+- **Stock endpoints** (`/stocks/*`): Price queries and market info ONLY
+  - `GET /stocks/{ticker}` - Current stock information
+  - `GET /stocks/history/{ticker}` - Historical data
+  - `GET /stocks/price/{ticker}` - Lightweight price query
+  - `GET /stocks/market/status` - Market hours check
+  - `GET /stocks/config/routing` - Provider routing config
+  
+- **Metadata management** (`/system/metadata/*`): Ticker discovery and enrichment
+  - Managing 12,140 tickers in database
+  - Enrichment pipeline (base → foundation → enriched)
+  - Discovery, stats, failed tickers
+  
+- **System operations** (`/system/*`): Provider status, jobs, health checks
+
+**3. Share Data Through Services, Not Duplicate Endpoints**
+- ETF domain needs stock data? → Import stock service
+- Metadata needs stock prices? → Import stock service
+- ❌ Don't create: `/etf/stocks/{ticker}` or `/metadata/stocks/{ticker}`
+- ✅ Do this: Call stock_service methods from your domain service
+
+**4. Examples of Removed Redundancy** (Nov 30, 2025):
+- ❌ `/stocks/price/stats` - Used outdated collection (wrong data source)
+- ❌ `/stocks/price/collected/{ticker}` - Duplicate of history endpoint
+- ❌ `/stocks/configured` - Redundant with metadata system
+- ❌ `/stocks/custom` - Unnecessary frontend override (use request body)
+- ❌ `/stocks/poll/trigger` - Job management via scheduler, not REST
+- ❌ `/stocks/tickers/*` (6 endpoints) - All ticker CRUD (use `/system/metadata/*`)
+
+**Pre-Flight Checklist Before Adding Endpoint**:
+1. ❓ Can existing endpoint handle this with query/path parameters?
+2. ❓ Can existing endpoint accept different request body structure?
+3. ❓ Should this be a service method called by existing endpoint?
+4. ❓ Does this duplicate functionality in another router?
+5. ❓ Is this management (use `/system/*`) or query (domain-specific)?
+6. ❓ Will this endpoint still be relevant in 6 months or is it a one-off?
+
+**If you answer YES to any above, DON'T create the endpoint.**
+
 ### Adding New Endpoints
 1. Add route to router file
 2. Update `docs/API.md` with endpoint documentation

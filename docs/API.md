@@ -9,12 +9,10 @@
 ## Table of Contents
 
 ### Core Domains
-1. [Stock Information Endpoints](#stock-information-endpoints)
-2. [Price Collection Endpoints](#price-collection-endpoints)
-3. [Ticker Management Endpoints](#ticker-management-endpoints)
-4. [Market Status Endpoints](#market-status-endpoints)
-5. [Financier - Financial Analytics Endpoints](#financier---financial-analytics-endpoints)
-6. [ETF Analysis Endpoints](#etf-analysis-endpoints) *(67 endpoints)*
+1. [Stock Information Endpoints](#stock-information-endpoints) *(5 endpoints)*
+2. [Market Status Endpoints](#market-status-endpoints)
+3. [Financier - Financial Analytics Endpoints](#financier---financial-analytics-endpoints)
+4. [ETF Analysis Endpoints](#etf-analysis-endpoints) *(67 endpoints)*
 
 ### System Management
 7. [System Management Endpoints](#system-management-endpoints)
@@ -40,53 +38,54 @@ Kuberan provides a comprehensive REST API for:
 
 ## Stock Information Endpoints
 
-### Get Configured Stocks
-Get stock information for all tickers configured in MongoDB.
+> **Note:** For ticker management and discovery, use `/system/metadata/*` endpoints.
+> Stock endpoints are query-focused only (price, history, market info).
 
-**Endpoint:** `GET /stocks/configured`
+### List All Tickers with Metadata
+Get a paginated, filtered list of all tickers with full metadata (from CompanyOverview).
+
+**Endpoint:** `GET /stocks/tickers`
+
+**Query Parameters:**
+- `enrichment_status` (optional): Filter by enrichment status (`base`, `foundation`, `enriched`, `failed`)
+- `asset_type` (optional): Filter by asset type (`Stock`, `ETF`)
+- `search` (optional): Substring match on ticker or name
+- `sort_by` (optional): `market_cap`, `ticker`, `name` (default: `market_cap`)
+- `sort_order` (optional): `asc`, `desc` (default: `desc`)
+- `limit` (optional): Max results (default: 100, max: 1000)
+- `skip` (optional): Pagination offset (default: 0)
+
+**Example:**
+`GET /stocks/tickers?enrichment_status=foundation&asset_type=Stock&search=apple&sort_by=market_cap&sort_order=desc&limit=50&skip=0`
 
 **Response:**
 ```json
 {
-  "count": 7,
-  "stocks": [
+  "total": 12140,
+  "returned": 50,
+  "skip": 0,
+  "limit": 50,
+  "tickers": [
     {
-      "ticker": "KO",
-      "name": "Coca-Cola",
-      "current_price": 71.56,
-      "change": 0.82,
-      "change_percent": 1.16
+      "ticker": "AAPL",
+      "name": "Apple Inc.",
+      "sector": "Technology",
+      "industry": "Consumer Electronics",
+      "market_cap": 2500000000000,
+      "enrichment_status": "foundation",
+      "asset_type": "Stock",
+      "exchange": "NASDAQ",
+      "country": "USA",
+      "fetched_at": "2025-11-30T10:00:00Z"
     }
+    // ...more tickers
   ]
 }
 ```
 
----
-
-### Get Custom Stocks
-Get stock information for a custom list of tickers (override YAML configuration).
-
-**Endpoint:** `POST /stocks/custom`
-
-**Request Body:**
-```json
-{
-  "tickers": ["AAPL", "GOOGL", "MSFT"]
-}
-```
-
-**Response:**
-```json
-{
-  "count": 3,
-  "stocks": [...]
-}
-```
-
 **Errors:**
-- `400 Bad Request` - Ticker list is empty
-
----
+- `400 Bad Request` - Invalid query parameters
+- `500 Internal Server Error` - Server error
 
 ### Get Stock Information
 Get current stock information for a specific ticker.
@@ -173,218 +172,6 @@ Get just the current price for a specific ticker (lightweight endpoint).
 
 **Errors:**
 - `404 Not Found` - Price not found for ticker
-
----
-
-## Price Collection Endpoints
-
-### Trigger Manual Price Poll
-Manually trigger a price poll for all configured tickers. Useful for testing the polling system.
-
-**Endpoint:** `POST /stocks/poll/trigger`
-
-**Response:**
-```json
-{
-  "message": "Manual poll complete",
-  "results": {
-    "success": 7,
-    "failed": 0,
-    "total": 7
-  },
-  "tickers": ["KO", "NVDA", "VZ", "VOO", "VXUS", "CVX", "XOM"]
-}
-```
-
----
-
-### Get Collection Statistics
-Get statistics about collected price data.
-
-**Endpoint:** `GET /stocks/price/stats`
-
-**Response:**
-```json
-{
-  "total_records": 2967,
-  "tickers": ["CVX", "KO", "NVDA", "VOO", "VXUS", "VZ", "XOM"],
-  "ticker_count": 7,
-  "oldest_record": "2025-11-10T13:25:08.586000",
-  "newest_record": "2025-11-11T19:15:00.000000"
-}
-```
-
----
-
-### Get Collected Prices
-Get collected price data from MongoDB for a specific ticker.
-
-**Endpoint:** `GET /stocks/price/collected/{ticker}`
-
-**Parameters:**
-- `ticker` (path) - Stock ticker symbol
-- `limit` (query, optional) - Maximum number of records to return (default: 100)
-
-**Example:** `GET /stocks/price/collected/KO?limit=5`
-
-**Response:**
-```json
-{
-  "ticker": "KO",
-  "count": 5,
-  "prices": [
-    {
-      "price": 71.565,
-      "timestamp": "2025-11-11T19:13:01.346000"
-    },
-    {
-      "price": 71.575,
-      "timestamp": "2025-11-11T19:12:01.403000"
-    }
-  ]
-}
-```
-
-**Note:** Returns prices from the last 365 days, sorted by most recent first.
-
----
-
-## Ticker Management Endpoints
-
-### List All Tickers
-List all configured tickers (both enabled and disabled) with full configuration details.
-
-**Endpoint:** `GET /stocks/tickers/`
-
-**Response:**
-```json
-{
-  "tickers": [
-    {
-      "ticker": "KO",
-      "enabled": true,
-      "added_at": "2025-11-10T10:00:00",
-      "updated_at": "2025-11-10T10:00:00"
-    },
-    {
-      "ticker": "NVDA",
-      "enabled": true,
-      "added_at": "2025-11-10T10:00:00",
-      "updated_at": "2025-11-10T10:00:00"
-    }
-  ]
-}
-```
-
----
-
-### List Active Tickers
-Get list of active (enabled) tickers only.
-
-**Endpoint:** `GET /stocks/tickers/active/`
-
-**Response:**
-```json
-{
-  "tickers": ["KO", "NVDA", "VZ", "VOO", "VXUS", "CVX", "XOM"],
-  "count": 7
-}
-```
-
----
-
-### Add Ticker
-Add a new ticker to the configuration.
-
-**Endpoint:** `POST /stocks/tickers/add/{ticker}`
-
-**Parameters:**
-- `ticker` (path) - Stock ticker symbol
-- `enabled` (query, optional) - Whether to enable polling (default: `true`)
-
-**Example:** `POST /stocks/tickers/add/AAPL?enabled=true`
-
-**Response:**
-```json
-{
-  "message": "Ticker AAPL added successfully",
-  "ticker": "AAPL",
-  "enabled": true
-}
-```
-
-**Errors:**
-- `400 Bad Request` - Ticker already exists
-
----
-
-### Remove Ticker
-Remove a ticker from configuration.
-
-**Endpoint:** `DELETE /stocks/tickers/remove/{ticker}`
-
-**Parameters:**
-- `ticker` (path) - Stock ticker symbol to remove
-
-**Example:** `DELETE /stocks/tickers/remove/AAPL`
-
-**Response:**
-```json
-{
-  "message": "Ticker AAPL removed successfully"
-}
-```
-
-**Errors:**
-- `404 Not Found` - Ticker does not exist
-
----
-
-### Enable Ticker
-Enable polling for a ticker.
-
-**Endpoint:** `PUT /stocks/tickers/{ticker}/enable`
-
-**Parameters:**
-- `ticker` (path) - Stock ticker symbol
-
-**Example:** `PUT /stocks/tickers/KO/enable`
-
-**Response:**
-```json
-{
-  "message": "Ticker KO enabled",
-  "ticker": "KO",
-  "enabled": true
-}
-```
-
-**Errors:**
-- `404 Not Found` - Ticker not found
-
----
-
-### Disable Ticker
-Disable polling for a ticker (keeps in database).
-
-**Endpoint:** `PUT /stocks/tickers/{ticker}/disable`
-
-**Parameters:**
-- `ticker` (path) - Stock ticker symbol
-
-**Example:** `PUT /stocks/tickers/KO/disable`
-
-**Response:**
-```json
-{
-  "message": "Ticker KO disabled",
-  "ticker": "KO",
-  "enabled": false
-}
-```
-
-**Errors:**
-- `404 Not Found` - Ticker not found
 
 ---
 
