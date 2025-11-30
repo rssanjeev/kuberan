@@ -526,19 +526,17 @@ class MetadataCollectorJob:
     
     async def run_incremental_batch_collection(self) -> Dict:
         """
-        Incremental batch collection: Process 30 tickers per run.
+        Incremental batch collection: Process 100 tickers per run.
         
         Strategy:
-        - 30 tickers per batch
-        - 1 hour gap between batches (10 batches/day)
-        - Process by decreasing market cap order
-        - Failed tickers moved to next day
+        - 100 tickers per batch
+        - 15 minute gap between batches (96 batches/day)
+        - Process by priority: Placeholders > Failed > New
         
         Process:
-        1. Discover all tickers (if not in database)
-        2. Get next batch of 30 tickers (ordered by market cap desc)
-        3. Collect base metadata from YFinance
-        4. Track failures for retry
+        1. Get next batch of 100 tickers
+        2. Collect base metadata from YFinance
+        3. Track failures for retry
         
         Returns:
             Statistics dictionary with results
@@ -554,7 +552,7 @@ class MetadataCollectorJob:
             logger.info("Starting incremental batch collection")
             
             # Step 1: Get next batch of tickers to process
-            tickers_to_process = await self._get_next_collection_batch(batch_size=30)
+            tickers_to_process = await self._get_next_collection_batch(batch_size=100)
             
             if not tickers_to_process:
                 logger.info("No tickers need collection")
@@ -617,13 +615,14 @@ class MetadataCollectorJob:
         finally:
             self.is_running = False
     
-    async def _get_next_collection_batch(self, batch_size: int = 30) -> List[str]:
+    async def _get_next_collection_batch(self, batch_size: int = 100) -> List[str]:
         """
-        Get next batch of tickers for collection, ordered by market cap (desc).
+        Get next batch of tickers for collection.
         
         Priority:
-        1. Tickers not yet in database (from Alpha Vantage discovery)
+        1. Tickers with enrichment_status=None (placeholders from MASSIVE discovery)
         2. Failed tickers needing retry (ordered by batch_priority/market_cap)
+        3. Tickers not yet in database (from Alpha Vantage discovery - fallback)
         
         Args:
             batch_size: Number of tickers to return
@@ -634,32 +633,19 @@ class MetadataCollectorJob:
         tickers = []
         
         try:
-            # Step 1: Check if we need to discover tickers first
-            existing_count = await CompanyOverview.count()
+            # Step 1: Check for placeholders (enrichment_status=None)
+            # These are tickers created by massive_ticker_discovery.py
+            placeholders = await CompanyOverview.find(
+                CompanyOverview.enrichment_status == None
+            ).limit(batch_size).to_list()
             
-            if existing_count == 0:
-                logger.info("No tickers in database, running initial discovery")
-                # Discover all tickers from Alpha Vantage
-                all_tickers = await ticker_discovery.discover_all_tickers(status="active")
-                
-                if not all_tickers:
-                    logger.error("Failed to discover tickers")
-                    return []
-                
-                # Sort by market cap (largest first) - estimate based on exchange priority
-                # NYSE/NASDAQ tickers are typically larger
-                priority_tickers = sorted(
-                    all_tickers,
-                    key=lambda t: (
-                        t.get("exchange") in ["NYSE", "NASDAQ", "AMEX"],
-                        t.get("symbol")
-                    ),
-                    reverse=True
+            if placeholders:
+                logger.info(
+                    f"Found {len(placeholders)} placeholder tickers for collection",
+                    extra={"count": len(placeholders)}
                 )
-                
-                # Return first batch
-                return [t["symbol"] for t in priority_tickers[:batch_size]]
-            
+                return [t.ticker for t in placeholders]
+
             # Step 2: Get existing tickers that need collection/retry
             # Find tickers with failed collection attempts (oldest first)
             # Max 3 retry attempts before giving up (< 3 means attempts 1 and 2 only)
@@ -680,6 +666,7 @@ class MetadataCollectorJob:
                 return [ticker.ticker for ticker in failed_tickers]
             
             # Step 3: Get new tickers from discovery that haven't been added yet
+            # Only run this if we have no placeholders and no retries
             logger.info("Checking for new tickers from Alpha Vantage")
             all_tickers = await ticker_discovery.discover_all_tickers(status="active")
             

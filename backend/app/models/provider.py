@@ -383,7 +383,7 @@ class CompanyOverview(Document):
     asset_type: Optional[str] = "Stock"  # Default to Stock
     
     # Enrichment tracking
-    enrichment_status: str = "base"  # "base", "enriched", "failed"
+    enrichment_status: Optional[str] = None  # "base", "foundation", "enriched", "failed"
     enriched_at: Optional[datetime] = None  # When Alpha Vantage enrichment was applied
     
     # Batch collection tracking (incremental collection strategy)

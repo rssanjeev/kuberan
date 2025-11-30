@@ -18,6 +18,7 @@ from app.services.providers import (
 )
 from app.services.scheduler.scheduler import job_scheduler
 from app.services.jobs.metadata_collector import metadata_collector_job
+from app.services.jobs.massive_ticker_discovery import massive_ticker_discovery
 from app.services.stock.metadata_enrichment_service import metadata_enrichment_service
 from app.models.provider import CompanyOverview
 
@@ -546,8 +547,75 @@ async def trigger_incremental_batch_collection():
         )
 
 
+@router.post("/metadata/discovery/massive")
+async def trigger_massive_discovery(
+    max_batches: Optional[int] = Query(None, description="Max batches to process (None = all)"),
+    test_mode: bool = Query(False, description="Test mode: process only 1 batch (1,000 tickers)")
+):
+    """
+    Bulk ticker discovery using MASSIVE/Polygon.io.
+    
+    Process:
+    1. Paginate through Polygon.io ticker list (1,000 tickers per call)
+    2. Save minimal placeholders to database for base collection
+    3. Respect 5 calls/minute rate limit (12 seconds between calls)
+    
+    Timeline:
+    - 10,000 tickers ÷ 1,000 per call = 10 API calls
+    - 5 calls/minute = 2 minutes total
+    - Concurrent saves: ~30 seconds
+    - Total: ~2.5 minutes for full discovery
+    
+    Args:
+        max_batches: Limit batches to process (1 batch = 1,000 tickers)
+        test_mode: If True, process only 1 batch for testing
+    
+    Returns:
+        {
+            "status": "success",
+            "batches_processed": 10,
+            "tickers_discovered": 10000,
+            "placeholders_created": 9950,
+            "failures": 50,
+            "elapsed_seconds": 150.5,
+            "database_stats": {
+                "total_tickers": 11066,
+                "needs_base_metadata": 8934
+            },
+            "rate_info": {
+                "tickers_per_minute": 4000,
+                "api_calls": 10,
+                "rate_limit": "5 calls/minute"
+            }
+        }
+    
+    Example:
+        # Test with 1,000 tickers (1 batch)
+        curl -X POST "http://localhost:8000/system/metadata/discovery/massive?test_mode=true"
+        
+        # Process 3 batches (3,000 tickers)
+        curl -X POST "http://localhost:8000/system/metadata/discovery/massive?max_batches=3"
+        
+        # Full discovery (~10,000 tickers)
+        curl -X POST http://localhost:8000/system/metadata/discovery/massive
+    """
+    try:
+        result = await massive_ticker_discovery.run(
+            limit_per_batch=1000,
+            max_batches=max_batches,
+            test_mode=test_mode
+        )
+        return result
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to trigger MASSIVE discovery: {str(e)}"
+        )
+
+
 @router.post("/metadata/enrich/{ticker}")
-async def enrich_ticker_metadata(ticker: str):
+async def trigger_ticker_enrichment(ticker: str):
     """
     Manually trigger Alpha Vantage enrichment for specific ticker.
     
@@ -654,15 +722,19 @@ async def get_metadata_statistics():
         
         # Count by enrichment status
         base_count = await CompanyOverview.find(
-            CompanyOverview.enrichment_status == "base"
+            {"enrichment_status": "base"}
+        ).count()
+        
+        foundation_count = await CompanyOverview.find(
+            {"enrichment_status": "foundation"}
         ).count()
         
         enriched_count = await CompanyOverview.find(
-            CompanyOverview.enrichment_status == "enriched"
+            {"enrichment_status": "enriched"}
         ).count()
         
         failed_count = await CompanyOverview.find(
-            CompanyOverview.enrichment_status == "failed"
+            {"enrichment_status": "failed"}
         ).count()
         
         # Count by asset type
@@ -694,6 +766,7 @@ async def get_metadata_statistics():
             "total_tickers": total,
             "by_enrichment_status": {
                 "base": base_count,
+                "foundation": foundation_count,
                 "enriched": enriched_count,
                 "failed": failed_count
             },
@@ -705,6 +778,7 @@ async def get_metadata_statistics():
             "enrichment_queue": {
                 "etfs_pending": etfs_pending,
                 "large_caps_pending": large_caps_pending,
+                "needs_foundation": base_count,
                 "total_pending": base_count
             },
             "job_status": job_status

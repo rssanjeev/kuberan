@@ -121,6 +121,12 @@ curl http://localhost:8000/endpoint
 - **Timezone**: Always use US/Eastern (EST/EDT) for timestamps
 - **Market Hours**: 9:00 AM - 5:00 PM EST, Monday-Friday
 - **Services**: Located in `backend/app/services/stock/`
+- **Metadata Enrichment**: MASSIVE provider (Polygon.io) collects foundation metadata
+  - **Rate Limits**: 5 calls/min, 300/hour, 7,200/day
+  - **Enrichment Status**: base → foundation → enriched → failed
+  - **Progress**: 1,418/12,140 tickers processed (11.7%)
+  - **404 Handling**: Gracefully mark as "failed" to prevent retries
+  - **Monitoring**: `/system/metadata/stats`, `/system/metadata/failed`
 - See [DOMAINS.md](docs/DOMAINS.md#stock-tracker-domain) for details
 
 ### Financier
@@ -130,6 +136,13 @@ curl http://localhost:8000/endpoint
   - `transaction_service.py` - Read-only queries
   - `merchant_service.py` - Merchant/category management
 - See [DOMAINS.md](docs/DOMAINS.md#financier-domain) for details
+
+### ETF Analysis
+- **67 Endpoints**: Comprehensive ETF research and portfolio management
+- **Services**: 16 specialized services in `backend/app/services/etf/`
+- **Data Provider**: Alpha Vantage with 30-day caching
+- **Features**: Profile, comparison, screening, portfolio, risk, tax, backtesting
+- See [DOMAINS.md](docs/DOMAINS.md#etf-analysis-domain) for details
 
 ## When Working on This Project
 
@@ -155,6 +168,40 @@ curl http://localhost:8000/endpoint
 4. **Verify logs** - Structured context, appropriate levels
 
 ## Common Patterns
+
+### Error Handling Best Practices
+
+**404 Handling** (Metadata Collection):
+```python
+# Check status code before raise_for_status()
+if response.status_code == 404:
+    logger.warning("Resource not found", extra={"ticker": ticker})
+    return None  # Graceful handling
+
+response.raise_for_status()  # Raise for other errors
+```
+
+**Failed Ticker Marking**:
+```python
+# Mark ticker as failed to prevent endless retries
+await metadata_service._mark_ticker_as_failed(
+    ticker=ticker,
+    error_message="404 Not Found"
+)
+# Creates/updates CompanyOverview with enrichment_status="failed"
+```
+
+**Rate Limit Handling**:
+```python
+try:
+    data = await provider.fetch_data(ticker)
+except ProviderException as e:
+    if "rate limit" in str(e).lower():
+        logger.warning("Rate limit hit", extra={"ticker": ticker})
+        await asyncio.sleep(60)  # Back off
+    else:
+        raise
+```
 
 ### ✅ DO
 - Use centralized job scheduler
@@ -253,6 +300,6 @@ See [WEB_SCRAPING.md](docs/WEB_SCRAPING.md) for comprehensive guidelines on:
 
 ---
 
-**Last Updated:** November 16, 2025
+**Last Updated:** November 30, 2025
 
 **For comprehensive details, see the documentation files linked above.**

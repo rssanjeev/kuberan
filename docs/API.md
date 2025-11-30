@@ -2,19 +2,39 @@
 
 **Base URL:** `http://localhost:8000`
 
-**Last Updated:** November 17, 2025
+**Last Updated:** November 30, 2025
 
 ---
 
 ## Table of Contents
 
+### Core Domains
 1. [Stock Information Endpoints](#stock-information-endpoints)
 2. [Price Collection Endpoints](#price-collection-endpoints)
 3. [Ticker Management Endpoints](#ticker-management-endpoints)
 4. [Market Status Endpoints](#market-status-endpoints)
-5. [Provider Configuration Endpoints](#provider-configuration-endpoints)
-6. [System Management Endpoints](#system-management-endpoints)
-7. [Financier - Financial Analytics Endpoints](#financier---financial-analytics-endpoints)
+5. [Financier - Financial Analytics Endpoints](#financier---financial-analytics-endpoints)
+6. [ETF Analysis Endpoints](#etf-analysis-endpoints) *(67 endpoints)*
+
+### System Management
+7. [System Management Endpoints](#system-management-endpoints)
+8. [Monitoring Endpoints](#monitoring-endpoints)
+9. [Metadata Enrichment Endpoints](#metadata-enrichment-endpoints)
+10. [Precious Metals Endpoints](#precious-metals-endpoints)
+
+### Authentication
+11. [Authentication Endpoints](#authentication-endpoints)
+
+---
+
+## Overview
+
+Kuberan provides a comprehensive REST API for:
+- **Stock Tracker**: Real-time price monitoring and metadata enrichment (12,140 tickers)
+- **Financier**: Credit card statement processing and transaction analytics
+- **ETF Analysis**: Comprehensive ETF research and portfolio management (67 endpoints)
+- **System Management**: Provider status, job scheduling, and monitoring
+- **Metadata Enrichment**: Multi-provider ticker metadata collection (MASSIVE/Polygon.io)
 
 ---
 

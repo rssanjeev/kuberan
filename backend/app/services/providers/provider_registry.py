@@ -47,6 +47,7 @@ class ProviderRegistry:
         "ALPHA_VANTAGE": "implementations.alpha_vantage_provider.AlphaVantageProvider",
         "FINNHUB": "implementations.finnhub_provider.FinnhubProvider",
         "YFINANCE": "implementations.yfinance_provider.YFinanceProvider",
+        "MASSIVE": "implementations.massive_provider.MassiveProvider",
         # Easy to add new providers:
         # "POLYGON": "implementations.polygon_provider.PolygonProvider",
         # "IEX": "implementations.iex_provider.IEXCloudProvider",

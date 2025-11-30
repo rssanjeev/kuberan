@@ -1,19 +1,21 @@
 """
-Metadata Enrichment Service - Two-stage metadata collection and enhancement.
+Metadata Enrichment Service - Provider-based metadata collection and enhancement.
 
-Stage 1: YFinance bulk collection (fast, comprehensive, no rate limits)
-Stage 2: Alpha Vantage enrichment (detailed, rate-limited, prioritized)
+Strategy: MASSIVE-first approach for foundational data
+- MASSIVE: Primary source for company reference data (detailed, structured)
+- YFinance: Fallback and historical enrichment (unlimited quota)
+- Alpha Vantage: Financial statements only (rate-limited)
 
 SECURITY: Only stores public company information, no sensitive data.
 """
 
-import asyncio
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from datetime import datetime, timedelta
-import yfinance as yf
 
 from app.core.logging_config import get_logger
 from app.services.providers import provider_registry
+from app.services.providers.base_provider import DataType
+from app.services.providers.load_balancer import load_balancer
 from app.repositories.provider_repository import provider_repository
 from app.models.provider import CompanyOverview, DataSource
 
@@ -22,17 +24,31 @@ logger = get_logger(__name__)
 
 class MetadataEnrichmentService:
     """
-    Two-stage metadata collection and enrichment service.
+    Provider-based metadata collection and enrichment service.
+    
+    Strategy: MASSIVE-first for foundational data
     
     Pipeline:
-    1. YFinance: Fast bulk collection of basic metadata (all tickers)
-    2. Alpha Vantage: Selective enrichment with premium data (prioritized)
+    1. MASSIVE: Collect detailed reference data (company info, IDs, logos)
+       - 7,200 calls/day limit
+       - Most detailed foundational data
+       - Includes CIK, FIGI, official identifiers
+       - Logo/branding URLs
+       
+    2. YFinance: Fallback and historical enrichment
+       - Unlimited quota
+       - 20+ years historical data
+       - Used when MASSIVE quota exhausted
+       
+    3. Alpha Vantage: Financial statements only
+       - Rate-limited (5 calls/day free tier)
+       - Income statement, balance sheet, cash flow
+       - Use sparingly for detailed fundamentals
     
-    Prioritization:
-    - ETFs: ALWAYS enrich (Alpha Vantage has better ETF data)
-    - Large cap (market_cap > $10B): High priority
-    - Mid cap ($2B - $10B): Medium priority  
-    - Small cap (< $2B): Low priority
+    LoadBalancer will automatically select best provider based on:
+    - Data type requested
+    - Provider quota availability
+    - Provider reliability
     """
     
     def __init__(self):
@@ -44,11 +60,15 @@ class MetadataEnrichmentService:
             "Critical": 1   # High-priority watchlist tickers
         }
     
-    async def collect_base_metadata(self, ticker: str) -> Optional[Dict]:
+    async def collect_foundation_metadata(self, ticker: str) -> Optional[Dict]:
         """
-        Stage 1: Collect base metadata from YFinance.
+        Collect foundational company metadata using MASSIVE (Polygon.io) exclusively.
         
-        This is fast and has no rate limits. Use for bulk collection.
+        MASSIVE provides:
+        - CIK, FIGI identifiers
+        - Company logos and branding
+        - SIC codes, list dates
+        - Employee counts, locale data
         
         Args:
             ticker: Stock ticker symbol
@@ -57,47 +77,50 @@ class MetadataEnrichmentService:
             Metadata dictionary or None if failed
         """
         try:
-            logger.info("Collecting base metadata", extra={"ticker": ticker})
+            logger.info("Collecting foundation metadata via MASSIVE", extra={"ticker": ticker})
             
-            # Fetch from yfinance (synchronous, run in executor)
-            loop = asyncio.get_event_loop()
-            stock = await loop.run_in_executor(None, yf.Ticker, ticker)
-            info = await loop.run_in_executor(None, lambda: stock.info)
+            # Get MASSIVE provider directly (avoid re-initializing all providers)
+            provider = provider_registry.get_provider_by_name("MassiveProvider")  # Use full name, not prefix
             
-            if not info or len(info) < 3:
-                logger.warning(
-                    "YFinance returned insufficient data",
-                    extra={"ticker": ticker}
-                )
+            if not provider:
+                logger.error("MASSIVE provider not available", extra={"ticker": ticker})
                 return None
             
-            # Classify asset type
-            asset_type = self._classify_asset_type(info)
+            logger.info(
+                "Using MASSIVE provider for foundation data",
+                extra={"ticker": ticker, "provider": "MassiveProvider"}
+            )
             
-            # Extract metadata
-            metadata = {
-                "ticker": ticker,
-                "name": info.get("longName") or info.get("shortName") or ticker,
-                "description": info.get("longBusinessSummary"),
-                "sector": info.get("sector"),
-                "industry": info.get("industry"),
-                "market_cap": info.get("marketCap"),
-                "website": info.get("website"),
-                "country": info.get("country"),
-                "exchange": info.get("exchange"),
-                "currency": info.get("currency", "USD"),
-                "asset_type": asset_type,
-                "source_provider": DataSource.YFINANCE,
-                "enrichment_status": "base",
-                "fetched_at": datetime.utcnow()
-            }
+            # Use MASSIVE ticker details endpoint for comprehensive metadata
+            if not hasattr(provider, 'fetch_ticker_details'):
+                logger.error("MASSIVE provider missing fetch_ticker_details method", extra={"ticker": ticker})
+                return None
+                
+            logger.info("Fetching ticker details from MASSIVE", extra={"ticker": ticker})
+            details = await provider.fetch_ticker_details(ticker)
+            
+            if not details:
+                logger.warning(
+                    "MASSIVE returned no ticker details (ticker may be delisted or invalid)",
+                    extra={"ticker": ticker}
+                )
+                # Mark this ticker as failed so we don't retry it
+                await self._mark_ticker_as_failed(ticker, "not_found_in_massive")
+                return None
+            
+            # Map MASSIVE response to our metadata structure
+            metadata = self._map_massive_to_metadata(details)
+            metadata["source_provider"] = DataSource.POLYGON
+            metadata["enrichment_status"] = "foundation"
+            metadata["fetched_at"] = datetime.utcnow()
             
             logger.info(
-                "Base metadata collected",
+                "Foundation metadata collected via MASSIVE",
                 extra={
                     "ticker": ticker,
-                    "asset_type": asset_type,
-                    "has_description": bool(metadata.get("description"))
+                    "enrichment_status": metadata["enrichment_status"],  # DEBUG: Verify status before return
+                    "has_logo": bool(details.get("branding", {}).get("logo_url")),
+                    "has_cik": bool(details.get("cik"))
                 }
             )
             
@@ -105,11 +128,154 @@ class MetadataEnrichmentService:
         
         except Exception as e:
             logger.error(
-                "Failed to collect base metadata",
+                "Failed to collect foundation metadata via MASSIVE",
                 extra={"ticker": ticker, "error": str(e)},
                 exc_info=True
             )
             return None
+    
+    def _map_massive_to_metadata(self, massive_details: Dict) -> Dict:
+        """
+        Map MASSIVE ticker details to our metadata structure.
+        
+        MASSIVE provides comprehensive reference data:
+        - Official identifiers (CIK, FIGI)
+        - Detailed address and contact
+        - Logo and branding assets
+        - Company structure (shares outstanding, type)
+        - Market information
+        
+        Args:
+            massive_details: Response from MASSIVE fetch_ticker_details
+            
+        Returns:
+            Mapped metadata dictionary
+        """
+        # Extract branding
+        branding = massive_details.get("branding", {})
+        logo_url = branding.get("logo_url")
+        icon_url = branding.get("icon_url")
+        
+        # Extract address
+        address = massive_details.get("address", {})
+        
+        # Build extended_data with MASSIVE-specific fields
+        extended_data = {
+            # Official identifiers
+            "cik": massive_details.get("cik"),
+            "composite_figi": massive_details.get("composite_figi"),
+            "share_class_figi": massive_details.get("share_class_figi"),
+            
+            # Branding
+            "logo_url": logo_url,
+            "icon_url": icon_url,
+            
+            # SIC classification
+            "sic_code": massive_details.get("sic_code"),
+            "sic_description": massive_details.get("sic_description"),
+            
+            # Additional details
+            "list_date": massive_details.get("list_date"),
+            "total_employees": massive_details.get("total_employees"),
+            "active": massive_details.get("active", True),
+            "locale": massive_details.get("locale", "us"),
+        }
+        
+        metadata = {
+            "ticker": massive_details.get("ticker"),
+            "name": massive_details.get("name"),
+            "description": massive_details.get("description"),
+            "exchange": massive_details.get("primary_exchange"),
+            "currency": massive_details.get("currency_name", "usd").upper(),
+            "asset_type": self._classify_massive_asset_type(massive_details.get("type")),
+            "market_cap": massive_details.get("market_cap"),
+            "website": massive_details.get("homepage_url"),
+            "country": "US",  # MASSIVE is US-only
+            
+            # Detailed address
+            "address": address.get("address1"),
+            "city": address.get("city"),
+            "state": address.get("state"),
+            "zip_code": address.get("postal_code"),
+            "phone": massive_details.get("phone_number"),
+            
+            # Company structure
+            "shares_outstanding": massive_details.get("share_class_shares_outstanding"),
+            
+            # Store MASSIVE-specific fields in extended_data
+            "extended_data": extended_data,
+        }
+        
+        return metadata
+    
+    def _classify_massive_asset_type(self, massive_type: str) -> str:
+        """
+        Classify asset type from MASSIVE type field.
+        
+        MASSIVE types: CS (Common Stock), ETF, ADRC (ADR Common), etc.
+        
+        Args:
+            massive_type: MASSIVE type field
+            
+        Returns:
+            Asset type: "Stock", "ETF", "ADR", etc.
+        """
+        if not massive_type:
+            return "Stock"
+        
+        massive_type = massive_type.upper()
+        
+        if massive_type == "ETF":
+            return "ETF"
+        elif massive_type in ["CS", "COMMON"]:
+            return "Stock"
+        elif "ADR" in massive_type:
+            return "ADR"
+        elif "PREFERRED" in massive_type:
+            return "Preferred Stock"
+        else:
+            return "Stock"  # Default
+    
+    def _get_provider_data_source(self, provider) -> DataSource:
+        """
+        Map provider class to DataSource enum.
+        
+        Args:
+            provider: Provider instance
+            
+        Returns:
+            DataSource enum value
+        """
+        provider_name = provider.__class__.__name__
+        
+        if "Massive" in provider_name:
+            return DataSource.POLYGON
+        elif "YFinance" in provider_name:
+            return DataSource.YFINANCE
+        elif "AlphaVantage" in provider_name:
+            return DataSource.ALPHA_VANTAGE
+        elif "Finnhub" in provider_name:
+            return DataSource.FINNHUB
+        else:
+            return DataSource.YFINANCE  # Default
+    
+    async def collect_base_metadata(self, ticker: str) -> Optional[Dict]:
+        """
+        Legacy method - redirects to collect_foundation_metadata.
+        
+        Maintained for backward compatibility with existing jobs.
+        
+        Args:
+            ticker: Stock ticker symbol
+            
+        Returns:
+            Metadata dictionary or None if failed
+        """
+        logger.info(
+            "collect_base_metadata called (legacy) - redirecting to collect_foundation_metadata",
+            extra={"ticker": ticker}
+        )
+        return await self.collect_foundation_metadata(ticker)
     
     async def enrich_with_alpha_vantage(
         self,
@@ -229,6 +395,16 @@ class MetadataEnrichmentService:
         """
         try:
             ticker = metadata["ticker"]
+            
+            # DEBUG: Log what status we're trying to save
+            logger.info(
+                "Attempting to save metadata",
+                extra={
+                    "ticker": ticker,
+                    "enrichment_status": metadata.get("enrichment_status"),
+                    "source_provider": metadata.get("source_provider")
+                }
+            )
             
             # Check if metadata already exists
             existing = await CompanyOverview.find_one(CompanyOverview.ticker == ticker)
@@ -361,32 +537,6 @@ class MetadataEnrichmentService:
         
         return is_stale
     
-    def _classify_asset_type(self, yfinance_info: Dict) -> str:
-        """
-        Classify asset type from YFinance data.
-        
-        Args:
-            yfinance_info: YFinance info dictionary
-            
-        Returns:
-            Asset type: "Stock", "ETF", "Fund", etc.
-        """
-        # Check quoteType field
-        quote_type = yfinance_info.get("quoteType", "").upper()
-        if quote_type == "ETF":
-            return "ETF"
-        if quote_type in ["MUTUALFUND", "FUND"]:
-            return "Fund"
-        
-        # Check for fund-specific fields
-        if yfinance_info.get("fundFamily"):
-            return "ETF"
-        if yfinance_info.get("category"):
-            return "Fund"
-        
-        # Default to Stock
-        return "Stock"
-    
     def _safe_float(self, value) -> Optional[float]:
         """Safely convert value to float."""
         try:
@@ -400,6 +550,62 @@ class MetadataEnrichmentService:
             return int(float(value)) if value not in [None, "", "None", "N/A"] else None
         except (ValueError, TypeError):
             return None
+    
+    async def _mark_ticker_as_failed(self, ticker: str, reason: str) -> None:
+        """
+        Mark a ticker as failed in the database.
+        
+        This prevents endless retries for tickers that don't exist or are delisted.
+        
+        Args:
+            ticker: Stock ticker symbol
+            reason: Reason for failure (e.g., "not_found_in_massive", "delisted")
+        """
+        try:
+            # Check if ticker exists in database
+            existing = await CompanyOverview.find_one(CompanyOverview.ticker == ticker)
+            
+            if existing:
+                # Update to mark as failed
+                existing.enrichment_status = "failed"
+                existing.collection_error = reason
+                existing.last_collection_attempt = datetime.utcnow()
+                existing.collection_attempts += 1
+                await existing.save()
+                
+                logger.info(
+                    "Marked ticker as failed",
+                    extra={
+                        "ticker": ticker,
+                        "reason": reason,
+                        "attempts": existing.collection_attempts
+                    }
+                )
+            else:
+                # Create minimal entry marked as failed
+                overview = CompanyOverview(
+                    ticker=ticker,
+                    name=ticker,  # Use ticker as name since we don't have details
+                    enrichment_status="failed",
+                    collection_error=reason,
+                    last_collection_attempt=datetime.utcnow(),
+                    collection_attempts=1,
+                    source_provider=DataSource.POLYGON,
+                    fetched_at=datetime.utcnow()
+                )
+                await overview.insert()
+                
+                logger.info(
+                    "Created failed ticker entry",
+                    extra={"ticker": ticker, "reason": reason}
+                )
+        
+        except Exception as e:
+            logger.error(
+                "Failed to mark ticker as failed",
+                extra={"ticker": ticker, "reason": reason, "error": str(e)},
+                exc_info=True
+            )
 
 
 # Singleton instance
