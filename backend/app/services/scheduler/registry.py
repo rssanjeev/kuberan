@@ -39,6 +39,91 @@ def register_all_jobs():
     # from app.services.jobs.massive_foundation_builder import massive_foundation_builder_job
     
     # ============================================================================
+    # PHASE 1 JOBS: MASSIVE All Tickers Discovery (NEWLY ADDED - DISABLED)
+    # ============================================================================
+    # Three jobs for comprehensive ticker discovery and maintenance:
+    # 1. Delta Extractor: Weekly IPO detection using list_date.gte filter
+    # 2. Deactivation Detector: Weekly delisting tracking via active field
+    # 3. Bi-Annual Refresh: Failsafe full re-scan every 6 months
+    #
+    # To enable Phase 1 jobs:
+    # 1. Uncomment the import statement below
+    # 2. Uncomment desired job registrations
+    # 3. Restart backend: docker-compose restart backend
+    # ============================================================================
+    # from app.services.jobs.massive_delta_extractor import massive_delta_extractor
+    # from app.services.jobs.massive_deactivation_detector import massive_deactivation_detector
+    # from app.services.jobs.massive_biannual_refresh import massive_biannual_refresh
+    
+    # ============================================================================
+    # PHASE 1 JOBS: MASSIVE All Tickers Discovery (NEWLY ADDED - DISABLED)
+    # ============================================================================
+    # Three jobs for comprehensive ticker discovery and maintenance:
+    # 1. Delta Extractor: Weekly IPO detection using list_date.gte filter
+    # 2. Deactivation Detector: Weekly delisting tracking via active field
+    # 3. Bi-Annual Refresh: Failsafe full re-scan every 6 months
+    #
+    # To enable Phase 1 jobs:
+    # 1. Uncomment the import statement below
+    # 2. Uncomment desired job registrations
+    # 3. Restart backend: docker-compose restart backend
+    # ============================================================================
+    # from app.services.jobs.massive_delta_extractor import massive_delta_extractor
+    # from app.services.jobs.massive_deactivation_detector import massive_deactivation_detector
+    # from app.services.jobs.massive_biannual_refresh import massive_biannual_refresh
+    
+    # # DELTA EXTRACTOR: Weekly IPO detection (every Monday 2:00 AM EST)
+    # # Queries MASSIVE API with list_date.gte filter to find new listings
+    # # First run: 30-day lookback, subsequent: incremental since last run
+    # # Throughput: 5-20 new IPOs per week, 1-2 API calls, ~12-24 seconds
+    # job_scheduler.add_job(
+    #     func=massive_delta_extractor.run,
+    #     trigger=CronTrigger(
+    #         day_of_week='mon',      # Monday only
+    #         hour='2',               # 2 AM
+    #         minute='0',
+    #         second='0',
+    #         timezone='US/Eastern'
+    #     ),
+    #     job_id='massive_delta_extraction',
+    #     name='MASSIVE Delta Extraction (Weekly IPO Detection)'
+    # )
+    
+    # # DEACTIVATION DETECTOR: Weekly delisting check (every Monday 3:00 AM EST)
+    # # Checks 500 tickers per run for active=false status
+    # # Full coverage: ~24 weeks for all 12,140 tickers
+    # # Throughput: 500 API calls at 5/min = ~100 minutes (1.7 hours)
+    # job_scheduler.add_job(
+    #     func=massive_deactivation_detector.run,
+    #     trigger=CronTrigger(
+    #         day_of_week='mon',      # Monday only
+    #         hour='3',               # 3 AM (after delta extraction)
+    #         minute='0',
+    #         second='0',
+    #         timezone='US/Eastern'
+    #     ),
+    #     job_id='massive_deactivation_detection',
+    #     name='MASSIVE Deactivation Detection (Weekly Delisting Check)'
+    # )
+    
+    # # BI-ANNUAL REFRESH: Failsafe full re-scan (January 1 & July 1, 4:00 AM EST)
+    # # Re-runs bulk ticker discovery to catch anything missed by delta extraction
+    # # Throughput: ~2.5 minutes for 12,000+ tickers, 12-15 API calls
+    # job_scheduler.add_job(
+    #     func=massive_biannual_refresh.run,
+    #     trigger=CronTrigger(
+    #         month='1,7',            # January and July
+    #         day='1',                # First day of month
+    #         hour='4',               # 4 AM
+    #         minute='0',
+    #         second='0',
+    #         timezone='US/Eastern'
+    #     ),
+    #     job_id='massive_biannual_refresh',
+    #     name='MASSIVE Bi-Annual Refresh (Failsafe Full Re-Scan)'
+    # )
+    
+    # ============================================================================
     # SYSTEM 1: DISABLED - Watchlist Price Collection (7 tickers)
     # ============================================================================
     # Disabled per user request - focusing only on comprehensive NYSE collection
