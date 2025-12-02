@@ -4,7 +4,30 @@
 
 Kuberan uses a **provider-agnostic architecture** to avoid dependency on any single API. Multiple data providers are supported with automatic fallback and smart routing.
 
-**Last Updated:** November 16, 2025
+**Primary Provider:** MASSIVE API (formerly Polygon.io) - 11 free tier reference endpoints  
+**Status:** Phase 0 cleanup completed, Phase 1-16 MASSIVE integration starting  
+**Last Updated:** December 2, 2025
+
+---
+
+## Current Provider Status
+
+### Active Providers
+1. **MASSIVE API** (Primary) - Reference endpoints only (free tier)
+   - Ticker discovery and metadata
+   - Corporate actions (splits, dividends)
+   - Financial news
+   - Options contracts metadata
+   - Rate limit: 5/min, 300/hour, 7,200/day
+
+2. **YFinance** - Historical prices and real-time quotes (free, unlimited)
+
+3. **Alpha Vantage** - ETF data and analysis (25 calls/day free tier)
+
+### Phase 0 Decisions
+- **TickerConfig Model:** RETAINED (active, 27 references) - Will migrate to MASSIVE-driven discovery in Phase 1
+- **ticker_config_repository:** RETAINED (used by config_loader.py) - Will replace with MASSIVE provider in Phase 1-2
+- **tickers.yaml:** RETAINED (seeding mechanism) - Will remove after MASSIVE ticker discovery in Phase 1
 
 ---
 
@@ -32,35 +55,29 @@ Kuberan uses a **provider-agnostic architecture** to avoid dependency on any sin
 
 ## Provider Capabilities Matrix
 
-| Data Type | Alpha Vantage | Finnhub | yfinance | Polygon.io | IEX Cloud | Strategy |
-|-----------|---------------|---------|----------|------------|-----------|----------|
-| **Real-time Quotes** | ⚠️ 15-min delay | ✅ Real-time | ✅ Real-time | ✅ Real-time | ✅ Real-time | **Primary: Finnhub/yfinance, Backup: Alpha Vantage** |
-| **Historical Prices** | ✅ 20+ years | ✅ Good | ✅ Excellent | ✅ Excellent | ✅ Good | **Primary: yfinance, Backup: Alpha Vantage** |
-| **Technical Indicators** | ✅ 40+ indicators | ❌ None | ✅ Calculate locally | ❌ None | ❌ None | **Primary: Alpha Vantage, Backup: Local calculation** |
-| **Fundamental Data** | ✅ Excellent | ⚠️ Basic | ✅ Good | ✅ Good | ✅ Good | **Primary: Alpha Vantage, Backup: Finnhub/yfinance** |
-| **Income Statement** | ✅ Annual+Quarterly | ❌ None | ✅ Good | ✅ Good | ✅ Good | **Primary: Alpha Vantage, Backup: yfinance** |
-| **Balance Sheet** | ✅ Annual+Quarterly | ❌ None | ✅ Good | ✅ Good | ✅ Good | **Primary: Alpha Vantage, Backup: yfinance** |
-| **Cash Flow** | ✅ Annual+Quarterly | ❌ None | ✅ Good | ✅ Good | ✅ Good | **Primary: Alpha Vantage, Backup: yfinance** |
-| **Dividends** | ✅ Historical+Future | ⚠️ Basic | ✅ Excellent | ✅ Good | ✅ Good | **Primary: yfinance, Backup: Alpha Vantage** |
-| **Splits** | ✅ Historical | ⚠️ Basic | ✅ Excellent | ✅ Good | ✅ Good | **Primary: yfinance, Backup: Alpha Vantage** |
-| **News** | ✅ With sentiment | ✅ Excellent | ❌ None | ✅ Good | ✅ Basic | **Primary: Finnhub, Backup: Alpha Vantage** |
-| **Earnings** | ✅ With estimates | ✅ Excellent | ✅ Good | ✅ Good | ✅ Good | **Multi-source merge** |
-| **Analyst Ratings** | ❌ None | ✅ Excellent | ❌ None | ✅ Good | ✅ Basic | **Primary: Finnhub, Backup: Polygon** |
-| **Options** | ✅ Basic | ❌ None | ✅ Excellent | ✅ Excellent | ❌ None | **Primary: yfinance, Backup: Alpha Vantage** |
-| **Forex** | ✅ Excellent | ✅ Good | ✅ Basic | ✅ Good | ❌ None | **Primary: Alpha Vantage, Backup: Finnhub** |
-| **Crypto** | ✅ Good | ✅ Good | ✅ Basic | ❌ None | ❌ None | **Primary: Finnhub, Backup: Alpha Vantage** |
-| **Economic Data** | ✅ Excellent | ❌ None | ❌ None | ❌ None | ❌ None | **Primary: Alpha Vantage only** |
-| **Commodities** | ✅ Excellent | ❌ None | ❌ None | ❌ None | ❌ None | **Primary: Alpha Vantage only** |
+| Data Type | MASSIVE (Primary) | Alpha Vantage | Finnhub | yfinance | Strategy |
+|-----------|-------------------|---------------|---------|----------|----------|
+| **Ticker Discovery** | ✅ Comprehensive | ⚠️ Limited | ⚠️ Limited | ❌ None | **Primary: MASSIVE** |
+| **Ticker Metadata** | ✅ Excellent | ⚠️ Basic | ⚠️ Basic | ✅ Good | **Primary: MASSIVE, Backup: yfinance** |
+| **Real-time Quotes** | ❌ Paid tier | ⚠️ 15-min delay | ✅ Real-time | ✅ Real-time | **Primary: yfinance/Finnhub** |
+| **Historical Prices** | ❌ Paid tier | ✅ 20+ years | ✅ Good | ✅ Excellent | **Primary: yfinance, Backup: Alpha Vantage** |
+| **Corporate Actions** | ✅ Splits, Dividends | ✅ Historical | ⚠️ Basic | ✅ Excellent | **Primary: MASSIVE, Backup: yfinance** |
+| **Financial News** | ✅ With sentiment | ✅ With sentiment | ✅ Excellent | ❌ None | **Primary: MASSIVE, Backup: Finnhub** |
+| **Options Metadata** | ✅ Contract specs | ✅ Basic | ❌ None | ✅ Excellent | **Primary: MASSIVE (metadata), yfinance (pricing)** |
+| **Technical Indicators** | ❌ Paid tier | ✅ 40+ indicators | ❌ None | ✅ Calculate locally | **Primary: Alpha Vantage, Backup: Local** |
+| **Fundamental Data** | ⚠️ Deprecated API | ✅ Excellent | ⚠️ Basic | ✅ Good | **Primary: Alpha Vantage, Backup: yfinance** |
+| **ETF Data** | ❌ Limited | ✅ Excellent | ❌ None | ✅ Good | **Primary: Alpha Vantage** |
 
 ### Rate Limits Comparison
 
-| Provider | Free Tier Limit | Cost | Notes |
-|----------|----------------|------|-------|
-| **Alpha Vantage** | 5/min, 25/day | Free | Premium: 30/min, 1200/day ($49/mo) |
-| **Finnhub** | 60/min | Free | Premium: Real-time + more data ($99/mo) |
-| **yfinance** | Unlimited* | Free | *Unofficial, rate limits unknown, could break |
-| **Polygon.io** | 5/min | Free | Premium: Unlimited ($199/mo) |
-| **IEX Cloud** | 50K/month | Free | Premium: More calls ($9-$999/mo) |
+| Provider | Free Tier Limit | Cost | Kuberan Usage |
+|----------|----------------|------|---------------|
+| **MASSIVE** | 5/min, 7,200/day | Free | **Primary** - Metadata enrichment |
+| **Alpha Vantage** | 5/min, 25/day | Free | **Secondary** - ETF data only |
+| **Finnhub** | 60/min | Free | **Tertiary** - News fallback |
+| **yfinance** | Unlimited* | Free | **Primary** - Price data |
+
+*Unofficial API, rate limits unknown
 
 ---
 
