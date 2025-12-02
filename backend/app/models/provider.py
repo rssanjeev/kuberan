@@ -336,31 +336,67 @@ class CompanyOverview(Document):
     """
     Company profile and overview data.
     
+    ENHANCED for MASSIVE API (Phase 3): Now captures 30+ fields from ticker overview endpoint.
+    
     TTL: 90 days (company info changes slowly)
-    Source providers: Alpha Vantage (EXCELLENT), Finnhub (GOOD)
+    Source providers: MASSIVE (PRIMARY - 30+ fields), Alpha Vantage (FALLBACK), Finnhub (FALLBACK)
     """
-    # Company identification
-    ticker: str  # Unique identifier
+    # ==================== Core Identification ====================
+    ticker: str  # Unique identifier (e.g., "AAPL")
+    name: str  # Company name (e.g., "Apple Inc.")
     
-    # Basic info
-    name: str
-    description: Optional[str] = None
-    sector: Optional[str] = None
-    industry: Optional[str] = None
+    # ==================== MASSIVE-Specific Identifiers ====================
+    cik: Optional[str] = None  # SEC Central Index Key (e.g., "0000320193")
+    composite_figi: Optional[str] = None  # Bloomberg Global ID (e.g., "BBG000B9XRY4")
+    share_class_figi: Optional[str] = None  # Share class FIGI (e.g., "BBG001S5N8V8")
+    ticker_root: Optional[str] = None  # Root ticker symbol (e.g., "AAPL")
     
-    # Location
-    country: Optional[str] = None
-    address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zip_code: Optional[str] = None
+    # ==================== Classification ====================
+    type: Optional[str] = None  # Ticker type from MASSIVE (CS, ETF, ADRC, PFD, etc.)
+    asset_type: Optional[str] = "Stock"  # Legacy: Stock, ETF, Fund, etc. (for backwards compatibility)
+    market: Optional[str] = None  # Market type (stocks, crypto, fx, otc)
+    locale: Optional[str] = None  # Locale (us, global)
+    primary_exchange: Optional[str] = None  # Primary exchange MIC code (XNAS, XNYS, etc.)
     
-    # Contact
-    website: Optional[str] = None
-    phone: Optional[str] = None
+    # ==================== Company Information ====================
+    description: Optional[str] = None  # Company description
+    sector: Optional[str] = None  # Business sector
+    industry: Optional[str] = None  # Industry classification
+    sic_code: Optional[str] = None  # Standard Industrial Classification code
+    sic_description: Optional[str] = None  # SIC description
     
-    # Financial metrics
-    market_cap: Optional[float] = None
+    # ==================== Contact Information ====================
+    homepage_url: Optional[str] = None  # Company website
+    phone_number: Optional[str] = None  # Contact phone (e.g., "+1 408 996-1010")
+    
+    # Address (structured)
+    address1: Optional[str] = None  # Address line 1 (e.g., "One Apple Park Way")
+    city: Optional[str] = None  # City (e.g., "Cupertino")
+    state: Optional[str] = None  # State (e.g., "CA")
+    postal_code: Optional[str] = None  # Postal/ZIP code (e.g., "95014")
+    
+    # Legacy fields (for backwards compatibility with Alpha Vantage data)
+    country: Optional[str] = None  # Country
+    address: Optional[str] = None  # Full address string (legacy)
+    zip_code: Optional[str] = None  # Legacy zip code field
+    website: Optional[str] = None  # Legacy website field
+    phone: Optional[str] = None  # Legacy phone field
+    
+    # ==================== Branding ====================
+    logo_url: Optional[str] = None  # Primary logo URL
+    icon_url: Optional[str] = None  # Icon/favicon URL
+    
+    # ==================== Financial Metrics ====================
+    market_cap: Optional[float] = None  # Market capitalization
+    total_employees: Optional[int] = None  # Total number of employees
+    
+    # Share information
+    shares_outstanding: Optional[int] = None  # Legacy field
+    share_class_shares_outstanding: Optional[int] = None  # Shares outstanding for this class
+    weighted_shares_outstanding: Optional[int] = None  # Weighted shares outstanding
+    round_lot: Optional[int] = None  # Round lot size (typically 100)
+    
+    # Additional metrics (Alpha Vantage/Finnhub)
     pe_ratio: Optional[float] = None
     peg_ratio: Optional[float] = None
     price_to_book: Optional[float] = None
@@ -370,21 +406,27 @@ class CompanyOverview(Document):
     profit_margin: Optional[float] = None
     operating_margin: Optional[float] = None
     
-    # Stock info
-    exchange: Optional[str] = None
-    currency: Optional[str] = None
-    shares_outstanding: Optional[int] = None
+    # ==================== Currency ====================
+    currency: Optional[str] = None  # Legacy currency field
+    currency_name: Optional[str] = None  # Currency name (e.g., "usd")
+    currency_symbol: Optional[str] = None  # Currency symbol (e.g., "$")
     
-    # Dates
-    ipo_date: Optional[str] = None
-    fiscal_year_end: Optional[str] = None
+    # ==================== Dates & Status ====================
+    list_date: Optional[str] = None  # IPO/listing date (YYYY-MM-DD)
+    ipo_date: Optional[str] = None  # Legacy IPO date field
+    fiscal_year_end: Optional[str] = None  # Fiscal year end
     
-    # Asset classification (Stock, ETF, Fund, etc.)
-    asset_type: Optional[str] = "Stock"  # Default to Stock
+    active: Optional[bool] = None  # Is ticker actively traded
+    delisted_utc: Optional[str] = None  # Delisting date if applicable
+    last_updated_utc: Optional[str] = None  # Last update from MASSIVE
     
-    # Enrichment tracking
+    # Legacy exchange field
+    exchange: Optional[str] = None  # Legacy exchange field
+    
+    # ==================== Enrichment Tracking ====================
     enrichment_status: Optional[str] = None  # "base", "foundation", "enriched", "failed"
-    enriched_at: Optional[datetime] = None  # When Alpha Vantage enrichment was applied
+    enriched_at: Optional[datetime] = None  # When enrichment was applied
+    metadata_sources: List[str] = Field(default_factory=list)  # Sources used (e.g., ["MASSIVE", "AlphaVantage"])
     
     # Batch collection tracking (incremental collection strategy)
     batch_priority: Optional[float] = None  # Market cap used for priority ordering (desc)
@@ -392,11 +434,11 @@ class CompanyOverview(Document):
     last_collection_attempt: Optional[datetime] = None  # When last collection was attempted
     collection_error: Optional[str] = None  # Last error message if collection failed
     
-    # Extended data (provider-specific)
-    extended_data: Dict[str, Any] = Field(default_factory=dict)
+    # ==================== Extended Data ====================
+    extended_data: Dict[str, Any] = Field(default_factory=dict)  # Provider-specific extras
     
-    # Metadata
-    source_provider: DataSource
+    # ==================== Metadata ====================
+    source_provider: DataSource  # Primary data source
     fetched_at: datetime = Field(default_factory=datetime.utcnow)
     
     class Settings:

@@ -649,11 +649,13 @@ class MassiveProvider(BaseProvider):
         """
         Fetch detailed ticker information (reference data).
         
+        ENHANCED (Phase 3): Maps all 30+ MASSIVE fields to CompanyOverview model.
+        
         Args:
             ticker: Stock ticker symbol
             
         Returns:
-            Ticker details dictionary or None if failed
+            Ticker details dictionary with complete MASSIVE data or None if failed
         """
         try:
             await self.rate_limiter.acquire(priority=0)
@@ -683,34 +685,99 @@ class MassiveProvider(BaseProvider):
             if data and "results" in data:
                 result = data["results"]
                 
-                return {
+                # Extract address information
+                address_data = result.get("address", {})
+                
+                # Extract branding information
+                branding_data = result.get("branding", {})
+                
+                # Map all MASSIVE fields to CompanyOverview model structure
+                mapped_data = {
+                    # ==================== Core Identification ====================
                     "ticker": result.get("ticker", ticker),
                     "name": result.get("name", ""),
-                    "market": result.get("market", ""),
-                    "locale": result.get("locale", ""),
-                    "primary_exchange": result.get("primary_exchange", ""),
-                    "type": result.get("type", ""),
-                    "active": result.get("active", True),
-                    "currency_name": result.get("currency_name", "USD"),
-                    "cik": result.get("cik", ""),
-                    "composite_figi": result.get("composite_figi", ""),
-                    "share_class_figi": result.get("share_class_figi", ""),
-                    "market_cap": result.get("market_cap", 0),
-                    "phone_number": result.get("phone_number", ""),
-                    "address": result.get("address", {}),
-                    "description": result.get("description", ""),
-                    "sic_code": result.get("sic_code", ""),
-                    "sic_description": result.get("sic_description", ""),
-                    "ticker_root": result.get("ticker_root", ""),
-                    "homepage_url": result.get("homepage_url", ""),
-                    "total_employees": result.get("total_employees", 0),
-                    "list_date": result.get("list_date", ""),
-                    "branding": result.get("branding", {}),
-                    "share_class_shares_outstanding": result.get("share_class_shares_outstanding", 0),
-                    "weighted_shares_outstanding": result.get("weighted_shares_outstanding", 0),
-                    "round_lot": result.get("round_lot", 100),
-                    "provider": DataSource.POLYGON.value
+                    
+                    # ==================== MASSIVE-Specific Identifiers ====================
+                    "cik": result.get("cik"),
+                    "composite_figi": result.get("composite_figi"),
+                    "share_class_figi": result.get("share_class_figi"),
+                    "ticker_root": result.get("ticker_root"),
+                    
+                    # ==================== Classification ====================
+                    "type": result.get("type"),  # CS, ETF, ADRC, etc.
+                    "market": result.get("market"),  # stocks, crypto, fx, otc
+                    "locale": result.get("locale"),  # us, global
+                    "primary_exchange": result.get("primary_exchange"),  # XNAS, XNYS, etc.
+                    
+                    # ==================== Company Information ====================
+                    "description": result.get("description"),
+                    "sic_code": result.get("sic_code"),
+                    "sic_description": result.get("sic_description"),
+                    
+                    # ==================== Contact Information ====================
+                    "homepage_url": result.get("homepage_url"),
+                    "phone_number": result.get("phone_number"),
+                    
+                    # Address fields (structured from MASSIVE response)
+                    "address1": address_data.get("address1"),
+                    "city": address_data.get("city"),
+                    "state": address_data.get("state"),
+                    "postal_code": address_data.get("postal_code"),
+                    
+                    # ==================== Branding ====================
+                    "logo_url": branding_data.get("logo_url"),
+                    "icon_url": branding_data.get("icon_url"),
+                    
+                    # ==================== Financial Metrics ====================
+                    "market_cap": result.get("market_cap"),
+                    "total_employees": result.get("total_employees"),
+                    
+                    # Share information
+                    "share_class_shares_outstanding": result.get("share_class_shares_outstanding"),
+                    "weighted_shares_outstanding": result.get("weighted_shares_outstanding"),
+                    "round_lot": result.get("round_lot", 100),  # Default 100
+                    
+                    # ==================== Currency ====================
+                    "currency_name": result.get("currency_name"),
+                    "currency_symbol": result.get("currency_symbol"),
+                    
+                    # ==================== Dates & Status ====================
+                    "list_date": result.get("list_date"),
+                    "active": result.get("active"),
+                    "delisted_utc": result.get("delisted_utc"),
+                    "last_updated_utc": result.get("last_updated_utc"),
+                    
+                    # ==================== Metadata ====================
+                    "provider": DataSource.POLYGON.value,
+                    "metadata_sources": ["MASSIVE"],  # Track data source
+                    
+                    # ==================== Extended Data ====================
+                    # Store any additional fields that don't fit the schema
+                    "extended_data": {
+                        k: v for k, v in result.items()
+                        if k not in {
+                            "ticker", "name", "cik", "composite_figi", "share_class_figi",
+                            "ticker_root", "type", "market", "locale", "primary_exchange",
+                            "description", "sic_code", "sic_description", "homepage_url",
+                            "phone_number", "address", "branding", "market_cap", "total_employees",
+                            "share_class_shares_outstanding", "weighted_shares_outstanding",
+                            "round_lot", "currency_name", "currency_symbol", "list_date",
+                            "active", "delisted_utc", "last_updated_utc"
+                        }
+                    }
                 }
+                
+                logger.info(
+                    "Fetched complete ticker details from MASSIVE",
+                    extra={
+                        "ticker": ticker,
+                        "fields_mapped": len([v for v in mapped_data.values() if v is not None]),
+                        "has_branding": bool(branding_data),
+                        "has_address": bool(address_data)
+                    }
+                )
+                
+                return mapped_data
             
             return None
         
