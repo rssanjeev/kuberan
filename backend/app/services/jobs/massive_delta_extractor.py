@@ -183,7 +183,7 @@ async def save_new_ticker(ticker_data: Dict) -> bool:
             f"New IPO detected and saved: {ticker}",
             extra={
                 "ticker": ticker,
-                "name": ticker_data.get("name", ""),
+                "company_name": ticker_data.get("name", ""),
                 "list_date": ticker_data.get("list_date", ""),
                 "asset_type": placeholder.asset_type
             }
