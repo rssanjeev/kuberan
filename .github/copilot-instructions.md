@@ -316,6 +316,84 @@ You only need to explicitly mention files when:
 
 **80% of requests** don't need file mentions - Copilot handles it automatically!
 
+## MASSIVE API Integration
+
+**Primary metadata provider** for Kuberan's Stock Tracker domain.
+
+See [MASSIVE_REFERENCE_ENDPOINTS_GUIDE.md](../docs/MASSIVE_REFERENCE_ENDPOINTS_GUIDE.md) for complete documentation on all 11 free tier reference endpoints.
+
+### Free Tier Access (Current)
+
+**Available Endpoints** (11 total):
+- ✅ All Tickers - Comprehensive ticker list with filtering
+- ✅ Ticker Overview - Detailed company profiles (primary use for metadata enrichment)
+- ✅ Ticker Types - Security type classifications
+- ✅ Exchanges - Exchange directory with MIC codes
+- ✅ Condition Codes - Trade/quote condition mappings
+- ✅ Stock Splits - Historical split events
+- ✅ Dividends - Dividend history with dates and amounts
+- ✅ Financials (Deprecated) - SEC filings data (use with caution)
+- ✅ News - Financial news with sentiment analysis
+- ✅ All Option Contracts - Options contract listings
+- ✅ Option Contract Overview - Specific contract details
+
+**Rate Limits**: 5 calls/min, 300/hour, 7,200/day
+
+**Authentication**: API key required (passed as query param or header)
+
+### Migration from Polygon.io
+
+**Current Status**: Migrating metadata enrichment from Polygon.io to MASSIVE
+- Use **Ticker Overview** endpoint (`GET /v3/reference/tickers/{ticker}`) for foundation metadata
+- Collects: CIK, FIGI, SIC codes, branding (logos/icons), company description, financials
+- Background job: Enrich 5 tickers per minute (respects rate limits)
+- Progress: Ongoing replacement of Polygon.io integration
+
+**Key Differences**:
+- MASSIVE: Free tier includes reference data (no pricing)
+- Polygon.io: Free tier extremely limited (migrating away)
+- Both have same rate limits (5/min, 300/hr, 7,200/day)
+
+### When to Use MASSIVE API
+
+**✅ Always use for**:
+- Ticker metadata enrichment (CIK, FIGI, SIC, branding)
+- Corporate actions tracking (splits, dividends)
+- Company fundamentals (description, employees, market cap)
+- Financial news with sentiment analysis
+- Exchange and ticker type reference data
+
+**❌ Not available on free tier**:
+- Real-time or historical prices (use YFinance instead)
+- Technical indicators (SMA, EMA, RSI, etc.)
+- Market status and hours
+- WebSocket streaming
+
+**🔮 Future (paid tier upgrade)**:
+- Access to 130+ additional endpoints
+- Real-time pricing, trades, quotes
+- Technical indicators
+- Options pricing and Greeks
+
+### Implementation Patterns
+
+**Refer to MASSIVE_REFERENCE_ENDPOINTS_GUIDE.md** for:
+- Complete endpoint documentation with parameters and responses
+- Sample requests and responses
+- Kuberan integration recommendations
+- Rate limiting strategies
+- Error handling patterns
+- Caching guidelines
+
+**Quick Example**:
+```python
+# Fetch ticker overview for metadata enrichment
+async def fetch_ticker_metadata(ticker: str) -> Dict:
+    url = f"{base_url}/v3/reference/tickers/{ticker}"
+    response = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+    return response.json()["results"]
+```
+
 ## Web Scraping & Data Extraction
 
 **ALWAYS use MCP servers for web scraping and data extraction.** Never implement custom web scraping libraries.

@@ -13,17 +13,30 @@ def register_all_jobs():
     Register all scheduled jobs with the centralized scheduler.
     Called once during application startup.
     
-    SYSTEM 2 ONLY: Comprehensive NYSE/NASDAQ collection
-    - Metadata enrichment (Alpha Vantage)
-    - Incremental batch collection (YFinance)
-    - Precious metals collection
+    ============================================================================
+    ALL JOBS DISABLED (Dec 1, 2025)
+    ============================================================================
+    User requested all scheduled jobs to be stopped to prepare for:
+    - MASSIVE API provider implementation
+    - Migration from Polygon.io to MASSIVE for metadata enrichment
+    - Clean slate before new background job architecture
     
-    DISABLED: System 1 (Watchlist price collection for 7 tickers)
+    To re-enable jobs:
+    1. Uncomment the imports section below
+    2. Uncomment desired job registrations
+    3. Restart backend container: docker-compose restart backend
+    
+    Previous jobs (now disabled):
+    - metals_price_collector (daily at 10 AM IST)
+    - metadata_enrichment (daily at 2 AM EST)
+    - incremental_collection_15min (every 15 minutes)
+    - massive_foundation_per_minute (every minute)
+    ============================================================================
     """
-    # Import jobs here to avoid circular imports
-    from app.services.jobs.metals_price_collector import metals_price_collector_job
-    from app.services.jobs.metadata_collector import metadata_collector_job
-    from app.services.jobs.massive_foundation_builder import massive_foundation_builder_job
+    # # Import jobs here to avoid circular imports
+    # from app.services.jobs.metals_price_collector import metals_price_collector_job
+    # from app.services.jobs.metadata_collector import metadata_collector_job
+    # from app.services.jobs.massive_foundation_builder import massive_foundation_builder_job
     
     # ============================================================================
     # SYSTEM 1: DISABLED - Watchlist Price Collection (7 tickers)
@@ -59,52 +72,58 @@ def register_all_jobs():
     # )
     
     # ============================================================================
-    # SYSTEM 2: ACTIVE - Comprehensive NYSE/NASDAQ Collection
+    # SYSTEM 2: DISABLED - Comprehensive NYSE/NASDAQ Collection
     # ============================================================================
     
-    # Precious metals collection: Once daily at 10:00 AM IST (all days)
-    job_scheduler.add_job(
-        func=metals_price_collector_job.run,
-        trigger=CronTrigger(
-            hour='10',              # 10 AM
-            minute='0',             # At the start of the hour
-            second='0',
-            timezone='Asia/Kolkata'  # IST timezone
-        ),
-        job_id='metals_price_collector',
-        name='Precious Metals Price Collection'
-    )
+    # ============================================================================
+    # PRECIOUS METALS COLLECTION: DISABLED
+    # ============================================================================
+    # Uses Puppeteer browser automation to bypass Cloudflare protection
+    # Fetches gold and silver prices from goodreturns.in
+    # Schedule: Once daily at 10:00 AM IST (all days)
     
-    # Metadata enrichment: Daily at 2:00 AM EST (Alpha Vantage free tier: 25 calls/day)
-    # Processes 5 tickers per run to stay within limits
-    job_scheduler.add_job(
-        func=metadata_collector_job.run_enrichment_cycle,
-        trigger=CronTrigger(
-            hour='2',               # 2 AM
-            minute='0',             # At the start of the hour
-            second='0',
-            timezone='US/Eastern'   # EST timezone
-        ),
-        job_id='metadata_enrichment',
-        name='Stock Metadata Enrichment (Alpha Vantage)'
-    )
+    # job_scheduler.add_job(
+    #     func=metals_price_collector_job.run,
+    #     trigger=CronTrigger(
+    #         hour='10',              # 10 AM
+    #         minute='0',             # At the start of the hour
+    #         second='0',
+    #         timezone='Asia/Kolkata'  # IST timezone
+    #     ),
+    #     job_id='metals_price_collector',
+    #     name='Precious Metals Price Collection'
+    # )
     
-    # Incremental metadata collection: Every 15 minutes
-    # 100 tickers per batch * 4 times/hour * 24 hours = 9,600 tickers/day
-    # This ensures we feed the Foundation Builder (7,200/day) fast enough
-    job_scheduler.add_job(
-        func=metadata_collector_job.run_incremental_batch_collection,
-        trigger=CronTrigger(
-            minute='*/15',  # Every 15 minutes (0, 15, 30, 45)
-            second='0',
-            timezone='US/Eastern'
-        ),
-        job_id='incremental_collection_15min',
-        name='Incremental Metadata Collection (Every 15 min)'
-    )
+    # # Metadata enrichment: Daily at 2:00 AM EST (Alpha Vantage free tier: 25 calls/day)
+    # # Processes 5 tickers per run to stay within limits
+    # job_scheduler.add_job(
+    #     func=metadata_collector_job.run_enrichment_cycle,
+    #     trigger=CronTrigger(
+    #         hour='2',               # 2 AM
+    #         minute='0',             # At the start of the hour
+    #         second='0',
+    #         timezone='US/Eastern'   # EST timezone
+    #     ),
+    #     job_id='metadata_enrichment',
+    #     name='Stock Metadata Enrichment (Alpha Vantage)'
+    # )
+    
+    # # Incremental metadata collection: Every 15 minutes
+    # # 100 tickers per batch * 4 times/hour * 24 hours = 9,600 tickers/day
+    # # This ensures we feed the Foundation Builder (7,200/day) fast enough
+    # job_scheduler.add_job(
+    #     func=metadata_collector_job.run_incremental_batch_collection,
+    #     trigger=CronTrigger(
+    #         minute='*/15',  # Every 15 minutes (0, 15, 30, 45)
+    #         second='0',
+    #         timezone='US/Eastern'
+    #     ),
+    #     job_id='incremental_collection_15min',
+    #     name='Incremental Metadata Collection (Every 15 min)'
+    # )
     
     # ============================================================================
-    # MASSIVE Foundation Builder: Continuous Per-Minute Collection via Polygon.io
+    # MASSIVE Foundation Builder: DISABLED
     # ============================================================================
     # Purpose: Collect foundational metadata (CIK, FIGI, logos, etc.) for all tickers
     # Rate: 5 calls/min (Polygon.io free tier limit)
@@ -113,19 +132,19 @@ def register_all_jobs():
     # Target: Complete 1,066 tickers in ~4 hours
     # Benefits: Frequent updates, better rate limit adherence, no artificial delays
     
-    job_scheduler.add_job(
-        func=massive_foundation_builder_job.run,
-        trigger=CronTrigger(
-            minute='*',  # Every minute
-            second='0',
-            timezone='US/Eastern'  # EST/EDT timezone
-        ),
-        job_id='massive_foundation_per_minute',
-        name='MASSIVE Foundation Collection (Every Minute)'
-    )
+    # job_scheduler.add_job(
+    #     func=massive_foundation_builder_job.run,
+    #     trigger=CronTrigger(
+    #         minute='*',  # Every minute
+    #         second='0',
+    #         timezone='US/Eastern'  # EST/EDT timezone
+    #     ),
+    #     job_id='massive_foundation_per_minute',
+    #     name='MASSIVE Foundation Collection (Every Minute)'
+    # )
     
     logger.info(
-        f"Registered {len(job_scheduler.jobs)} scheduled jobs",
+        f"Registered {len(job_scheduler.jobs)} scheduled jobs (all disabled)",
         extra={"job_count": len(job_scheduler.jobs)}
     )
 

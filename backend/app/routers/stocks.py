@@ -26,7 +26,7 @@ async def list_all_tickers(
     search: Optional[str] = None,
     sort_by: Optional[str] = "market_cap",
     sort_order: Optional[str] = "desc",
-    limit: int = 100,
+    limit: Optional[int] = None,
     skip: int = 0
 ) -> Dict[str, Any]:
     """
@@ -39,7 +39,7 @@ async def list_all_tickers(
         search: Substring match on ticker or name
         sort_by: Field to sort by (market_cap, ticker, name)
         sort_order: "asc" or "desc"
-        limit: Max results (default 100, max 1000)
+        limit: Max results (default None = all results, max 50000)
         skip: Pagination offset
     Returns:
         {
@@ -65,83 +65,91 @@ async def list_all_tickers(
             ]
         }
     """
-    # Build query
-    filters = []
-    if enrichment_status:
-        filters.append(CompanyOverview.enrichment_status == enrichment_status)
-    async def list_all_tickers(
-        enrichment_status: Optional[str] = None,
-        asset_type: Optional[str] = None,
-        search: Optional[str] = None,
-        sort_by: Optional[str] = "market_cap",
-        sort_order: Optional[str] = "desc",
-        limit: int = 100,
-        skip: int = 0
-    ) -> Dict[str, Any]:
-    sort_map = {
-        "market_cap": "market_cap",
-        "ticker": "ticker",
-        "name": "name"
-        try:
-            # Build query
-            filters = []
-            if enrichment_status:
-                filters.append(CompanyOverview.enrichment_status == enrichment_status)
-            if asset_type:
-                filters.append(CompanyOverview.asset_type == asset_type)
-            if search:
-                # Use Beanie's or_ operator for substring search
-                filters.append(
-                    (CompanyOverview.ticker.regex(search, ignore_case=True)) |
-                    (CompanyOverview.name.regex(search, ignore_case=True))
+    try:
+        # Build query filters
+        filters = []
+        if enrichment_status:
+            filters.append(CompanyOverview.enrichment_status == enrichment_status)
+        if asset_type:
+            filters.append(CompanyOverview.asset_type == asset_type)
+        if search:
+            # Use MongoDB regex for case-insensitive substring search
+            from beanie.operators import Or, RegEx
+            search_pattern = {"$regex": search, "$options": "i"}
+            filters.append(
+                Or(
+                    {"ticker": search_pattern},
+                    {"name": search_pattern}
                 )
-            # Sorting
-            sort_map = {
-                "market_cap": "market_cap",
-                "ticker": "ticker",
-                "name": "name"
-            }
-            sort_field = sort_map[sort_by] if sort_by in sort_map else "market_cap"
-            sort_dir = -1 if sort_order == "desc" else 1
-            # Limit
-            limit = min(max(limit, 1), 1000)
-            skip = max(skip, 0)
-            # Query total count
-            total = await CompanyOverview.find(*filters).count()
-            # Query documents
-            docs = await CompanyOverview.find(*filters).sort([(sort_field, sort_dir)]).skip(skip).limit(limit).to_list()
-            # Format response
-            tickers = []
-            for doc in docs:
-                tickers.append({
-                    "ticker": doc.ticker,
-                    "name": doc.name,
-                    "sector": doc.sector,
-                    "industry": doc.industry,
-                    "market_cap": doc.market_cap,
-                    "enrichment_status": doc.enrichment_status,
-                    "asset_type": doc.asset_type,
-                    "exchange": doc.exchange,
-                    "country": doc.country,
-                    "fetched_at": doc.fetched_at.isoformat() if doc.fetched_at else None
-                    # Add more fields as needed
-                })
-            return {
-                "total": total,
-                "returned": len(tickers),
-                "skip": skip,
-                "limit": limit,
-                "tickers": tickers
-            }
-        except Exception:
-            # Defensive: always return 200 with empty result if any error occurs
-            return {
-                "total": 0,
-                "returned": 0,
-                "skip": skip,
-                "limit": limit,
-                "tickers": []
-            }
+            )
+        
+        # Sorting
+        sort_map = {
+            "market_cap": "market_cap",
+            "ticker": "ticker",
+            "name": "name"
+        }
+        sort_field = sort_map.get(sort_by, "market_cap")
+        sort_dir = -1 if sort_order == "desc" else 1
+        
+        # Limit and skip handling
+        if limit is None:
+            # No limit specified - return all results (up to 50k safety limit)
+            limit = 50000
+        else:
+            # Limit specified - constrain to reasonable range
+            limit = min(max(limit, 1), 50000)
+        skip = max(skip, 0)
+        
+        # Query total count
+        total = await CompanyOverview.find(*filters).count()
+        
+        # Query documents
+        docs = await CompanyOverview.find(*filters).sort([(sort_field, sort_dir)]).skip(skip).limit(limit).to_list()
+        
+        # Format response
+        tickers = []
+        for doc in docs:
+            tickers.append({
+                "ticker": doc.ticker,
+                "name": doc.name,
+                "sector": doc.sector,
+                "industry": doc.industry,
+                "market_cap": doc.market_cap,
+                "enrichment_status": doc.enrichment_status,
+                "asset_type": doc.asset_type,
+                "exchange": doc.exchange,
+                "country": doc.country,
+                "fetched_at": doc.fetched_at.isoformat() if doc.fetched_at else None
+            })
+        
+        return {
+            "total": total,
+            "returned": len(tickers),
+            "skip": skip,
+            "limit": limit,
+            "tickers": tickers
+        }
+    except Exception as e:
+        # Log error and return empty result
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.error(
+            "Failed to fetch tickers",
+            extra={"error": str(e)},
+            exc_info=True
+        )
+        return {
+            "total": 0,
+            "returned": 0,
+            "skip": skip,
+            "limit": limit,
+            "tickers": []
+        }
+
+
+@router.get("/market/status")
+async def get_market_status():
     """
     Check if the NYSE market is open today.
     """

@@ -1,0 +1,1746 @@
+I know we have already created a few services and endpoints. I would like to start with a clean state now. 
+
+Lets create a plan for this new implementation. Look through not just the reference endpoints (endpoints that has the reference keyword in it) but also all the ~114 endpoints we had gathered earlier. We can prioretize the reference endpoints as critical and the others as moderate as we might not have access to some (not all) of those endpoints. Make sure to use the existing mrket schedule/holidays info from yfinance. If not use MASSIVE's endpoint: 'GET /v1/marketstatus/upcoming' to retrieve upcoming market holidays and their corresponding open/close times. This endpoint is forward-looking only, listing future holidays that affect market hours. Use this data to plan ahead for trading activities and system operations. Other Use Cases: Trading schedule adjustments, integrated holiday calendars, operational planning (e.g., system maintenance), and notifying users about upcoming market closures.
+
+Some of the aspects/parts/service/endpoints of this new implementation might have already been implemented either fully or partially. Scan the entire project to get the full context of the project before proceeding with anything. 
+
+Category: Fundamentals
+Phase 1: All Ticker Gathering
+
+Docs: https://massive.com/docs/rest/stocks/tickers/all-tickers
+Endpoint: `GET /v3/reference/tickers`
+Target Endpoint: '/stocks/tickers/'
+
+The endpoint `GET /v3/reference/tickers` gives a comprehensive list of all tickers across asset classes (stocks, ETFs, indices, etc.). Supports extensive filtering by ticker symbol, type, market, exchange, CUSIP, CIK, and more. To build Kuberan and make it good enough to support any ticker in the market we need to know the complete set of tickers currently in the market. Lets use this endpoint and store the comprehensive list of tickers and its associated response in the database for us to create our own endpoint: '/stocks/tickers/'.
+
+This collection of data will be know as the 'base' data. As this forms the base for our entire application.
+
+Sample Repsonse:
+{
+  "results": [
+    {
+      "active": true,
+      "base_currency_name": "usd",
+      "base_currency_symbol": "$",
+      "cik": "0000320193",
+      "composite_figi": "BBG000B9XRY4",
+      "currency_name": "usd",
+      "currency_symbol": "$",
+      "delisted_utc": null,
+      "last_updated_utc": "2025-11-30T00:00:00Z",
+      "locale": "us",
+      "market": "stocks",
+      "name": "Apple Inc.",
+      "primary_exchange": "XNAS",
+      "share_class_figi": "BBG001S5N8V8",
+      "ticker": "AAPL",
+      "type": "CS"
+    }
+  ]
+}
+
+Schedule:
+Once every 6 months (Only after we implement month of the features we will schedule this). The list changes with IPOs so we need to implement a mechanism just to extract tickers that were added after the last extraction date.
+
+Schedule Priority: Low
+
+Phase 2: Ticker Types
+
+Docs: https://massive.com/docs/rest/stocks/tickers/ticker-types
+Endpoint: `GET /v3/reference/tickers/types`
+Target Endpoint: '/stocks/tickers/types'
+
+Use this endpoint to collect - Complete list of ticker type classifications used by MASSIVE. Each type includes a code (CS, ETF, ADRC), description, asset class, and locale. Essential for understanding ticker categorization.
+
+This will let us optimize/modify the API request to the next phase's endpoints based on the ticker type.
+
+Schedule; One time. No need for to schedule this as it rarely changes.
+
+Phase 3: Ticker Overview
+
+Docs: https://massive.com/docs/rest/stocks/tickers/ticker-overview
+Endpoint - `GET /v3/reference/tickers/{ticker}`
+Target Endpoint - '/stocks/tickers/overview/{ticker}'
+
+Collect the comprehensive company profile for a specific ticker. Using the endpoint - `GET /v3/reference/tickers/{ticker}` - we collect detailed information including company description, address, branding (logos/icons), financial metrics, identifiers (CIK, FIGI, SIC), and key dates. We will then store it in our database and create our own endpoint - '/stocks/tickers/{ticker}'. 
+
+This collection of data for each ticker will be know as the 'enriched metadata' as its been enriched by the new endpoint with additional comprehensive company profile. Use the existing `CompanyOverview` model (existing structure compatible if possible) and Prioretize the common stocks extraction first followed by ETFs and then the rest. Utilize the ticker types we extracted and stored in our database for that. This will help us optimize the data extraction and save API calls.
+
+Sample Response:
+{
+  "results": {
+    "active": true,
+    "address": {
+      "address1": "One Apple Park Way",
+      "city": "Cupertino",
+      "postal_code": "95014",
+      "state": "CA"
+    },
+    "branding": {
+      "icon_url": "https://api.massive.com/v1/reference/company-branding/d3d3LmFwcGxlLmNvbQ/images/2022-01-10_icon.png",
+      "logo_url": "https://api.massive.com/v1/reference/company-branding/d3d3LmFwcGxlLmNvbQ/images/2022-01-10_logo.svg"
+    },
+    "cik": "0000320193",
+    "composite_figi": "BBG000B9XRY4",
+    "currency_name": "usd",
+    "delisted_utc": null,
+    "description": "Apple Inc. designs, manufactures and markets smartphones, personal computers, tablets, wearables and accessories, and sells a variety of related services.",
+    "homepage_url": "https://www.apple.com",
+    "list_date": "1980-12-12",
+    "locale": "us",
+    "market": "stocks",
+    "market_cap": 2770000000000,
+    "name": "Apple Inc.",
+    "phone_number": "+1 408 996-1010",
+    "primary_exchange": "XNAS",
+    "share_class_figi": "BBG001S5N8V8",
+    "share_class_shares_outstanding": 15204100000,
+    "sic_code": "3571",
+    "sic_description": "ELECTRONIC COMPUTERS",
+    "ticker": "AAPL",
+    "ticker_root": "AAPL",
+    "total_employees": 154000,
+    "type": "CS",
+    "weighted_shares_outstanding": 15204100000
+  }
+}
+
+Schedule: 5 api calls per minute. (See if you can schedule each of them 10 seconds apart to give a buffer for the next minutes' calls) This also 2 years of historical data. We need to plan to get that as well. 
+
+Schedule Priority: Critical
+
+This schedule will serve as a blood line for our webapp. We need to establish a system endpoint to track the progress of this. Reuse/rename the existing metadata end point. This is a system level  tracker so its best we keep it under the system endpoints section.
+
+Cache results: 6months - This data rarely changes. We can schedule the update to this data at a later point.
+
+Phase 4: Related Tickers
+
+Docs: https://massive.com/docs/rest/stocks/tickers/related-tickers
+Endpoint: 'GET /v1/related-companies/{ticker}'
+Target Endpoint: '/stocks/related-companies/{ticker}'
+
+We need to retrieve a list of tickers related to a specified ticker, identified through an analysis of news coverage and returns data. This endpoint helps users discover peers, competitors, or thematically similar companies, aiding in comparative analysis, portfolio diversification, and market research.
+
+Use Cases: Peer identification, comparative analysis, portfolio diversification, market research. This is form the starting point of our market research where we will be gathering the financials of all the tickers in the next phase and combinging these 2 we can extract companies with similar financials either to invest in them or avoid them. This will be a crucial joining point for similar companies and their financials.
+
+Sample Response:
+{
+    "request_id": "3c1295e87bd5df8035fa3d39516c20b9",
+    "results": [
+        {
+            "ticker": "MSFT"
+        },
+        {
+            "ticker": "AMZN"
+        },
+        {
+            "ticker": "GOOGL"
+        },
+        {
+            "ticker": "GOOG"
+        },
+        {
+            "ticker": "NVDA"
+        },
+        {
+            "ticker": "TSLA"
+        },
+        {
+            "ticker": "META"
+        },
+        {
+            "ticker": "NFLX"
+        },
+        {
+            "ticker": "DIS"
+        },
+        {
+            "ticker": "BRK.B"
+        }
+    ],
+    "status": "OK",
+    "ticker": "AAPL"
+}
+
+Schedule: This to begin with will be one time run. Then we can schedule this to run once a month to refresh the data.
+
+
+Phase 5: Financials
+
+Docs: https://massive.com/docs/rest/stocks/fundamentals/financials
+Endpoint: `GET /vX/reference/financials`
+Target Endpoint: '/stocks/tickers/financials/{ticker}'
+
+We need to extract the historical financial data derived from SEC filings (XBRL). Includes income statements, balance sheets, cash flow statements, and comprehensive income. While still accessible, MASSIVE recommends migrating to newer financial data endpoints (if available on paid tiers) which we can do it in the future. We need to extract them while we can.
+
+This target endpoint should enable users to Track financial metrics over time, Compare financials across peers, Evaluate company financial health and finally  Build financial models, DCF valuations. 
+
+Sample Response:
+{
+  "results": [
+    {
+      "acceptance_datetime": "20220504163045",
+      "cik": "0001650729",
+      "company_name": "SiteOne Landscape Supply, Inc.",
+      "end_date": "20220403",
+      "filing_date": "2022-05-04",
+      "fiscal_period": "Q1",
+      "fiscal_year": "2022",
+      "sic": "5261",
+      "start_date": "20220103",
+      "ticker": ["SITE"],
+      "timeframe": "quarterly",
+      "financials": {
+        "balance_sheet": {
+          "assets": {"value": 2407400000, "unit": "USD", "label": "Assets"},
+          "liabilities": {"value": 1308200000, "unit": "USD", "label": "Liabilities"},
+          "equity": {"value": 1099200000, "unit": "USD", "label": "Equity"}
+        },
+        "income_statement": {
+          "revenues": {"value": 805300000, "unit": "USD", "label": "Revenues"},
+          "net_income_loss": {"value": 32300000, "unit": "USD", "label": "Net Income/Loss"},
+          "basic_earnings_per_share": {"value": 0.72, "unit": "USD / shares"}
+        },
+        "cash_flow_statement": {
+          "net_cash_flow_from_operating_activities": {"value": -118300000, "unit": "USD"},
+          "net_cash_flow_from_investing_activities": {"value": -41000000, "unit": "USD"},
+          "net_cash_flow_from_financing_activities": {"value": 150600000, "unit": "USD"}
+        }
+      },
+      "source_filing_url": "https://api.massive.com/v1/reference/sec/filings/0001650729-22-000010"
+    }
+  ]
+}
+
+Even though its available for free as of now, we need to make sure we start thinking/planning on a backup once this is deplteciated which is on Feb, 2026. We need to see if we can extract this imformation directly from the source as its publically available data. So everything that I had deemed not so important or handle it in the future - put it in the backlog so that we can get to it once the priority items are addressed.
+
+Schedule: 5 api calls per minute. Similar to ticker overview. but we will schedule this after we extract all the stock profiles and before we run the rest of the ticker types. This also 2 years of historical data. We need to plan to get that as well. 
+
+Category: Coporate Actoins
+Phase 6: Dividends
+
+Docs: https://massive.com/docs/rest/stocks/corporate-actions/dividends 
+Endpoint: `GET /v3/reference/dividends`
+Target: ''/stocks/tickers/dividends/{ticker}'
+
+Even though we get a c comprehensive dividend history including declaration, ex-dividend, record, and pay dates, along with cash amounts, frequency, and dividend types for all the tickers we need to store it in such a way that we query/filter our target endpoint for a specific tickers historical dividends. We dont provide the entire dividend history for all the tickers at one go.
+
+Sample Response:
+{
+    "results": [
+        {
+            "cash_amount": 0.15,
+            "currency": "CNY",
+            "dividend_type": "CD",
+            "ex_dividend_date": "2000-08-15",
+            "frequency": 1,
+            "id": "E4a7d4e17e772232caf90d14c98574c1e7b15c49c94246678bd28b603e0501954",
+            "pay_date": "2000-08-18",
+            "record_date": "2000-08-16",
+            "ticker": "CHVKF"
+        },
+        {
+            "cash_amount": 0.88,
+            "currency": "SEK",
+            "declaration_date": "2001-04-07",
+            "dividend_type": "CD",
+            "ex_dividend_date": "2001-04-27",
+            "frequency": 1,
+            "id": "E7cfbd720ca48876b5b9f73fd275225a676ac4c602efd8527eb43fed23c38cbd9",
+            "pay_date": "2001-05-07",
+            "record_date": "2001-05-01",
+            "ticker": "ATLFF"
+        },
+        {
+            "cash_amount": 29.0925,
+            "currency": "USD",
+            "dividend_type": "CD",
+            "ex_dividend_date": "2001-05-29",
+            "frequency": 0,
+            "id": "E4b37bcc3becf7f9fb24d6fd34aeaf522ef165f65f9d41359fb5c571adfa041c0",
+            "ticker": "TMVAX"
+        },
+        {
+            "cash_amount": 0.18,
+            "currency": "CNY",
+            "dividend_type": "CD",
+            "ex_dividend_date": "2001-08-17",
+            "frequency": 1,
+            "id": "Eafe5a76acea96143d1ef8cfa44f446412ae79b0c02b8bea48ffdec3abe2a0da3",
+            "pay_date": "2001-08-22",
+            "record_date": "2001-08-20",
+            "ticker": "CHVKF"
+        },
+        {
+            "cash_amount": 3,
+            "currency": "CHF",
+            "dividend_type": "SC",
+            "ex_dividend_date": "2002-03-14",
+            "frequency": 0,
+            "id": "E05390cdcad9df75a07882ed8c0ae94d16cc576906e9847d24ee845e6f38de87a",
+            "pay_date": "2002-03-26",
+            "record_date": "2002-03-15",
+            "ticker": "ALRHF"
+        },
+        {
+            "cash_amount": 10,
+            "currency": "JPY",
+            "dividend_type": "CD",
+            "ex_dividend_date": "2002-03-26",
+            "frequency": 2,
+            "id": "E5442ecd732e66c0ef631abe85b89a936c6a070b97e17faa305edf432fc5af609",
+            "pay_date": "2009-06-29",
+            "record_date": "2009-03-31",
+            "ticker": "CKOCF"
+        },
+        {
+            "cash_amount": 0.19536,
+            "currency": "USD",
+            "dividend_type": "CD",
+            "ex_dividend_date": "2002-04-02",
+            "frequency": 0,
+            "id": "Ecc10cae727a4cd93ce4184e88e08ab36322def5d45c99d05e8bbfd32dd2a8a24",
+            "pay_date": "2004-06-30",
+            "record_date": "2002-04-04",
+            "ticker": "TND"
+        },
+        {
+            "cash_amount": 2.4957e-05,
+            "currency": "USD",
+            "dividend_type": "CD",
+            "ex_dividend_date": "2002-04-29",
+            "frequency": 12,
+            "id": "E4bd8545c881e9b33a093218c9e61ce0c05599025fb433d51a73d96a79636cc39",
+            "pay_date": "2022-04-29",
+            "record_date": "2022-04-29",
+            "ticker": "SPIXX"
+        },
+        {
+            "cash_amount": 0.92,
+            "currency": "SEK",
+            "declaration_date": "2002-04-10",
+            "dividend_type": "CD",
+            "ex_dividend_date": "2002-04-30",
+            "frequency": 1,
+            "id": "Eb4097f526a983e7007efbb26cc8ba8b7a1607432e8bd45f060243bd7d45af79d",
+            "pay_date": "2002-05-08",
+            "record_date": "2002-05-01",
+            "ticker": "ATLFF"
+        },
+        {
+            "cash_amount": 0.2,
+            "currency": "CNY",
+            "dividend_type": "CD",
+            "ex_dividend_date": "2002-07-15",
+            "frequency": 1,
+            "id": "E0a100026b84e9417c21fee9f0f09d8f1244abd711b6a7072defda81438013f40",
+            "pay_date": "2002-07-17",
+            "record_date": "2002-07-16",
+            "ticker": "CHVKF"
+        }
+    ],
+    "status": "OK",
+    "request_id": "0f3203e89c395c91977eb29ae6cc7d44",
+    "next_url": "https://api.massive.com/v3/reference/dividends?cursor=YXA9MTAmYXM9JmxpbWl0PTEwJm9yZGVyPWFzYyZzb3J0PWV4X2RpdmlkZW5kX2RhdGU"
+}
+
+This has pagination we need to handle that accordingly. This also 2 years of historical data. We need to plan to get that as well. 
+
+Phase 7: IPOs
+
+Docs: https://massive.com/docs/rest/stocks/corporate-actions/ipos
+Endpoint: 'GET /vX/reference/ipos'
+Target Endpoint: '/stocks/ipos'
+
+Retrieve comprehensive information on Initial Public Offerings (IPOs), including upcoming and historical events, starting from the year 2008. This endpoint provides key details such as issuer name, ticker symbol, security type, IPO date, number of shares offered, expected price ranges, final issue prices, and offering sizes. Users can filter results by IPO status (e.g., pending, new, rumors, historical) to target their research and inform investment decisions.
+
+Use Cases: IPO research, market trend analysis, investment screening, historical event comparison.
+
+We need the ability to search for tickers, recent IPOs or IPOs based on the offer price or ipo status. These will help us with performing analysis on these IPOs and plan our investments.
+
+Sample Response: 
+{
+    "results": [
+        {
+            "ticker": "CCXIU",
+            "last_updated": "2025-12-01",
+            "announced_date": "2025-11-18",
+            "issuer_name": "Churchill Capital Corp XI",
+            "currency_code": "USD",
+            "final_issue_price": 10.00,
+            "max_shares_offered": 30000000,
+            "lowest_offer_price": 10.00,
+            "highest_offer_price": 10.00,
+            "total_offer_size": 3e+08,
+            "primary_exchange": "XNAS",
+            "shares_outstanding": 30500000,
+            "security_type": "SP",
+            "lot_size": 100,
+            "security_description": "Units 1 Ord Cls A  1/10 War",
+            "ipo_status": "pending"
+        },
+        {
+            "ticker": "TDHG",
+            "last_updated": "2025-12-01",
+            "announced_date": "2025-11-25",
+            "issuer_name": "Tongda International Group Co Ltd",
+            "currency_code": "USD",
+            "max_shares_offered": 1250000,
+            "lowest_offer_price": 4.00,
+            "highest_offer_price": 6.00,
+            "total_offer_size": 7.5e+06,
+            "primary_exchange": "XNAS",
+            "security_type": "CS",
+            "lot_size": 100,
+            "security_description": "Ordinary Shares",
+            "ipo_status": "pending"
+        },
+        {
+            "ticker": "PTORU",
+            "last_updated": "2025-12-01",
+            "announced_date": "2025-11-17",
+            "issuer_name": "Praetorian Acquisition Corp.",
+            "currency_code": "USD",
+            "final_issue_price": 10.00,
+            "min_shares_offered": 22000000,
+            "max_shares_offered": 22000000,
+            "lowest_offer_price": 10.00,
+            "highest_offer_price": 10.00,
+            "total_offer_size": 2.2e+08,
+            "primary_exchange": "XNAS",
+            "security_type": "SP",
+            "lot_size": 100,
+            "security_description": "Units 1 Ord cls A  1/3 War",
+            "ipo_status": "pending"
+        },
+        {
+            "ticker": "BRAI",
+            "last_updated": "2025-12-01",
+            "announced_date": "2025-11-10",
+            "issuer_name": "Braiin Ltd",
+            "currency_code": "USD",
+            "max_shares_offered": 68696076,
+            "primary_exchange": "XNAS",
+            "security_type": "CS",
+            "lot_size": 100,
+            "security_description": "Ordinary Shares",
+            "ipo_status": "direct_listing_process"
+        },
+        {
+            "ticker": "HACQU",
+            "last_updated": "2025-12-01",
+            "announced_date": "2025-11-07",
+            "issuer_name": "HCM IV Acquisition Corp",
+            "currency_code": "USD",
+            "final_issue_price": 10.00,
+            "max_shares_offered": 25000000,
+            "lowest_offer_price": 10.00,
+            "highest_offer_price": 10.00,
+            "total_offer_size": 2.5e+08,
+            "primary_exchange": "XNAS",
+            "shares_outstanding": 25000000,
+            "security_type": "SP",
+            "lot_size": 100,
+            "security_description": "Units 1 Ord Cls A  1/4 War",
+            "ipo_status": "pending"
+        },
+        {
+            "ticker": "RBO",
+            "last_updated": "2025-12-01",
+            "announced_date": "2025-11-07",
+            "issuer_name": "RoboStrategy Inc",
+            "max_shares_offered": 13067998,
+            "primary_exchange": "XNYS",
+            "security_type": "CS",
+            "lot_size": 100,
+            "security_description": "Ordinary Shares",
+            "ipo_status": "direct_listing_process"
+        },
+        {
+            "ticker": "PLYX",
+            "last_updated": "2025-12-01",
+            "announced_date": "2025-11-21",
+            "issuer_name": "Polaryx Therapeutics Inc.",
+            "currency_code": "USD",
+            "primary_exchange": "XNAS",
+            "security_type": "CS",
+            "lot_size": 100,
+            "security_description": "Ordinary Shares",
+            "ipo_status": "direct_listing_process"
+        },
+        {
+            "ticker": "RGGG",
+            "last_updated": "2025-12-01",
+            "announced_date": "2025-10-31",
+            "issuer_name": "Regenique Group Ltd",
+            "currency_code": "USD",
+            "max_shares_offered": 2000000,
+            "lowest_offer_price": 4.00,
+            "highest_offer_price": 5.00,
+            "total_offer_size": 1e+08,
+            "primary_exchange": "XNAS",
+            "shares_outstanding": 32450000,
+            "security_type": "CS",
+            "lot_size": 100,
+            "security_description": "Ordinary Shares - Class A",
+            "ipo_status": "pending"
+        },
+        {
+            "ticker": "XYJG",
+            "last_updated": "2025-12-01",
+            "announced_date": "2025-11-14",
+            "issuer_name": "XYJ Technology Corp",
+            "currency_code": "USD",
+            "final_issue_price": 2.00,
+            "max_shares_offered": 1000000,
+            "lowest_offer_price": 2.00,
+            "highest_offer_price": 2.00,
+            "total_offer_size": 2e+06,
+            "primary_exchange": "XNAS",
+            "shares_outstanding": 8000000,
+            "security_type": "CS",
+            "lot_size": 100,
+            "security_description": "Ordinary Shares",
+            "ipo_status": "pending"
+        },
+        {
+            "ticker": "VHCPU",
+            "last_updated": "2025-12-01",
+            "announced_date": "2025-11-25",
+            "issuer_name": "Vine Hill Capital Investment Corp II",
+            "currency_code": "USD",
+            "final_issue_price": 10.00,
+            "max_shares_offered": 17500000,
+            "lowest_offer_price": 10.00,
+            "highest_offer_price": 10.00,
+            "total_offer_size": 1.75e+08,
+            "primary_exchange": "XNAS",
+            "security_type": "SP",
+            "lot_size": 100,
+            "security_description": "Units 1 Ord Cls A  1/3 War",
+            "ipo_status": "pending"
+        }
+    ],
+    "status": "OK",
+    "request_id": "d6b4f6f0a3a0e25512b00dc999ce7e3c",
+    "next_url": "https://api.massive.com/vX/reference/ipos?cursor=YXA9MTAmYXM9JmxpbWl0PTEwJm9yZGVyPWRlc2Mmc29ydD1saXN0aW5nX2RhdGU"
+}
+
+Schedule: Once a day preferably at the end of the day. This also 2 years of historical data. We need to plan to get that as well. 
+
+Phase 8: Ticker Events
+
+Docs: https://massive.com/docs/rest/stocks/corporate-actions/ticker-events
+Endpoint: 'GET /vX/reference/tickers/{id}/events'
+Target Endpoint: '/stocks/events/{ticker}'
+
+We need to retrieve a timeline of key events associated with a given ticker, CUSIP, or Composite FIGI. This endpoint is experimental and highlights ticker changes, such as symbol renaming or rebranding, helping users maintain continuity in their records and analyses.
+
+Use Cases: Historical reference for ticker symbol changes, data continuity, and record-keeping.
+
+Schedule: This is updated daily so we can schedule it to run once a day, preferably at the end of the day. This also 2 years of historical data. We need to plan to get that as well. 
+
+Category: News
+Phase 9: News
+
+Docs: https://massive.com/docs/rest/stocks/news
+Endpoint: 'GET /v2/reference/news'
+Target Endpooint: '/stocks/news/{ticker}'
+
+We will retrieve the most recent news articles related to a specified ticker, along with summaries, source details, and sentiment analysis. This endpoint consolidates relevant financial news in one place, extracting associated tickers, assigning sentiment, and providing direct links to the original sources. By incorporating publisher information, article metadata, and sentiment reasoning, users can quickly gauge market sentiment, stay informed on company developments, and integrate news insights into their trading or research workflows.
+
+Schedule: This is endpoint updated hourly, so we need to retreive and update our endpoint hourly. For this we need to create a curated list of tickers we are interested in - instead of collecting the news data for all the tickers. But also we need a plan to gather news data on stocks that are not in our list but we need to be made aware of. We need to come up with a logic for this. Something thats efficient and that helps us widen our knowledge as to whats happening in the stock market. For Example: Bloomberg's TOP CALLs happens everyday at 1PM EST and they call out interesting stocks and their offerring price. Like this we need to gather data from multiple sources on top of MASSIVE API. This will be a major part of the Kuuberan application and we will end up notifying the user of news that requires their attention when we start building the application frontend. This would require a ranking system that wouldnt come back to bite us by discarding something we needed to be aware of. This also 2 years of historical data. We need to plan to get that as well. 
+
+Other Use Cases: Market sentiment analysis, investment research, automated monitoring, and portfolio strategy refinement.
+
+{
+    "results": [
+        {
+            "id": "YmGmHqaubjrLXVfxM2wfpxHVbEEJiQ4G4PxOl5wDymY",
+            "publisher": {
+                "name": "TheStreet",
+                "homepage_url": "https://www.thestreet.com/",
+                "logo_url": "https://s3.massive.com/public/assets/news/logos/thestreet.svg",
+                "favicon_url": "https://s3.massive.com/public/assets/news/favicons/thestreet.png"
+            },
+            "title": "Polymetal Could Be a Winning Ticket on the Gold Price Rollercoaster",
+            "author": "twocents@thestreet.com (Paul Whitfield)",
+            "published_utc": "2016-06-22T13:18:00Z",
+            "article_url": "http://feeds.thestreet.com/~r/tsc/feeds/rss/p/real-money/~3/jHb3j-_w74I/13616096.html",
+            "tickers": [
+                "AU",
+                "GFI"
+            ],
+            "image_url": "https://s.thestreet.com/files/tsc/tst_fb.jpg",
+            "description": "Gold has been on a rollercoaster in recent trading sessions but brokers at Goldman Sachs are recommending investors hang on for the ride and grab a ticket for the thrills by investing in Polymetal International \n  . \n\"We expect Polymetal to remain one of the few global precious metal minders delivering meaningful volume growth with one of the lowest cash costs globally thanks to macro tailwinds and management focus on cost cutting,\" the broker noted this week as it upgraded its 12-month price forecast to 950 pence ($13.94), from 870 pence. \nPolymetal shares traded Wednesday at 860 pence, with a little more than 10% to go before it hits the Goldman Sachs target. \nUnderpinning Polymetal's prospects are a pair of deals that appear well timed to benefit increases in the price of gold. The Kapan mine in Armenia and the Komarovskoye gold deposit in Kazakhstan, were secured in March and early April, suggesting negotiations took place just as gold was recovering from its turn-of-the-year lows of below $1,060 an ounce. \nThose acquisitions, coupled with the ramping up of its Kyzyl gold project in Kazakhstan will likely boost production by about 40% of the coming five years, or a compound average growth rate (CAGR) of about 6.9% until the end of 2020, Goldman predicts. \nThat is almost twice the growth of  Fresnillo \n  , which ranks second for growth among the big gold producers with a CAGR of 3.5%, while AngloGold \n  is expected to add just 1.4% a year to output and Gold Fields \n  is expected to shrink 2.2% a year, according to Goldman Sachs. \nBetter still Polymetal is not growing at the expense of cost discipline. Its cash cost for an ounce of gold is expected to come in below $573 this year.  That is down 10% since 2014, and should fall to $551 in 2017, according to Goldman's note. By comparison, Gold Fields and AngloGold both spend more than $600 for each ounce they produce. \nAll of that might suggest that Polymetal would trade at a premium to its rivals, yet the opposite is true. Shares are priced at about 12 times forecast 2017 earnings. Rival large gold miners trade at a median closer to 30 times 2017 earnings forecasts, though that figure is inflated by Fresnillo's valuation of about 45 times earnings. \n\"We believe that such a discount for Polymetal vs. peers is unjustified given its superior growth potential and low cost of existing operations as well as assets under development,\" noted Goldman Sachs. \nOf course any investment in Polymetal is also a bet on the gold price, and that has been a white-knuckle ride in recent days. Gold traded Wednesday at about $1,268 an ounce, after slumping on June 20 and 21 from just over $1,298 as fears of a British exit from the European Union receded. \nGold price volatility is all but assured until the results of that vote, which takes place on tomorrow, are released in the early hours of Friday. Yet Goldman said it is confident that support for gold is set to continue in the short term, driven by delays to a Federal Reserve rate hike, loose central bank monetary policy, devaluation of the Chinese currency and a flight to safety as the U.S. election nears.\n                        Click to view a price quote on POYYF.",
+            "keywords": [
+                "Equities",
+                "Analyst Upgrades/Downgrades",
+                "Basic Materials",
+                "Gold Prices",
+                "Metals and Mining",
+                "Opinion"
+            ]
+        },
+        {
+            "id": "ss-HN5xpsSLzgxTK80Snn_H76Gtk_7xWltzmvc47IUU",
+            "publisher": {
+                "name": "TheStreet",
+                "homepage_url": "https://www.thestreet.com/",
+                "logo_url": "https://s3.massive.com/public/assets/news/logos/thestreet.svg",
+                "favicon_url": "https://s3.massive.com/public/assets/news/favicons/thestreet.png"
+            },
+            "title": "Here's Why Facebook's Instagram Is Leaving Twitter in the Dust",
+            "author": "twocents@thestreet.com (Eric Jhonsa)",
+            "published_utc": "2016-06-22T20:37:00Z",
+            "article_url": "http://feeds.thestreet.com/~r/tsc/feeds/rss/p/real-money/~3/LchMMFbMSKM/13616961.html",
+            "tickers": [
+                "TWTR"
+            ],
+            "image_url": "https://s.thestreet.com/files/tsc/tst_fb.jpg",
+            "description": "Back in September 2013, Facebook \n   -owned Instagram had just 150 million monthly active users (MAUs) to Twitter's \n    230 million. But as of December 2014, the story was very different: Instagram's user base had doubled to 300 million, while Twitter's had grown a relatively modest 25% to 288 million. \n  \nInstagram's user growth. Source: TechCrunch \nFacebook and Twitter are holdings in Jim Cramer's Action Alerts PLUS Charitable Trust Portfolio. Want to be alerted before Cramer buys or sells FB or TWTR? Learn more now. \nFast-forward to today, and the difference between Instagram and Twitter's growth trajectories is even more striking: Instagram has blown past 500 million MAUs, while Twitter was only at 310 million as of the first quarter. International growth is heavily responsible: 80% of Instagram's users are now outside the U.S., up from 75% last September. \nOn top of this, Instagram says it now has over 300 million daily active users (DAUs), and that 95 million images are being shared daily. Twitter, which doesn't regularly update its DAU count, is estimated by analysts to have 140 million DAUs. DAUs are a better metric than MAUs for gauging how many users have made an Internet service part of their everyday lives. \nWhat accounts for the incredible difference between Instagram and Twitter's growth rates? \nSome of it is Twitter's fault: In spite of numerous product launches and feature changes, the company is still struggling to create an experience that appeals to -- and doesn't confuse or bewilder -- a broader base of social media users. \nBut a lot of it also stems from the huge appeal of Instagram's photo- and video-rich experience to mobile users worldwide, and its laser-like focus on helping users create, view and discover quality photos and videos. Simply put, Instagram understands what it's good at, and what users are loading its app for, and doesn't care to be anything else. \nFacebook integration also hasn't hurt: New Instagram users are given a list of Facebook friends on Instagram to follow, and those friends are alerted to the new user's arrival on Instagram. Users also have the option of simultaneously uploading a photo on both Instagram and Facebook. With Facebook claiming 1.65 billion MAUs and 1.09 billion DAUs for its core service as of March, Instagram's parent is quite the helpful user acquisition tool. \nMassive user growth has been accompanied by equally-impressive ad revenue growth, as Facebook continues an all-out effort to monetize Instagram. This effort has featured everything from launching e-commerce and mobile app install ads and striking deals with big ad agencies, to integrating with third-party ad software and giving marketers access to Facebook's demographic data and advanced targeting tools. \nWhile Facebook doesn't break out Instagram's revenue, Instagram's ad growth is believed to be a big reason why Facebook's total ad revenue rose 57% Y/Y in both the first quarter and the fourth quarter of 2015, up from 45% in the third quarter of 2015. \nIn April, Credit Suisse estimated Instagram would deliver 2016 revenue of $3.2 billion, a figure equal to 12% of Facebook's 2016 revenue consensus of $26.1 billion. And on Wednesday, MKM estimated Instagram could do $3.4 billion in 2016 ad sales if its ad revenue per user grew to match Twitter's. \nMKM thinks Instagram derived only about $2 per user last year versus Twitter's $6.50, but sees the gap narrowing rapidly thanks to Instagram's superior user engagement, Facebook's unmatched ad sales and ad technology resources and the fact that brand advertisers \"are enamored by the rich canvas that Instagram provides.\" \nInstagram's recent shift to an algorithmic timeline view -- photos and videos are no longer shown chronologically, but instead have their order determined by algorithm -- could provide a fresh boost to ad sales, as brands whose posts are pushed down by Instagram's algorithm pay to gain exposure (something similar has happened on Facebook in recent years). \nMeanwhile, Instagram's decision to double the maximum length of a video ad to 60 seconds, a move that coincides with the quadrupling of the max length of a user video to 60 seconds, could strengthen its push to grab TV ad dollars that have been shifting to online video. \nThose changes, together with strong user growth and access to Facebook's massive resources, leave Instagram well-positioned to be a major revenue growth engine for Facebook for at least the next couple of years. It's hardly an exaggeration to say Facebook's $1 billion 2012 acquisition of the photo-sharing platform is looking like one of the best bargains in tech M&A history.\n                        Click to view a price quote on FB.\n                        Click to research the Internet  industry.",
+            "keywords": [
+                "Equities",
+                "Google Editor's Picks",
+                "Google Standout Tag",
+                "Suppress PS_Text promo"
+            ]
+        },
+        {
+            "id": "WFgC547YWQCGVhakq9FI5EDZEi44CklyqW6hytydhnM",
+            "publisher": {
+                "name": "TheStreet",
+                "homepage_url": "https://www.thestreet.com/",
+                "logo_url": "https://s3.massive.com/public/assets/news/logos/thestreet.svg",
+                "favicon_url": "https://s3.massive.com/public/assets/news/favicons/thestreet.png"
+            },
+            "title": "Are Lululemon Executives Delusional About Its Future?",
+            "author": "twocents@thestreet.com (Brian Sozzi)",
+            "published_utc": "2016-06-22T22:19:00Z",
+            "article_url": "http://feeds.thestreet.com/~r/tsc/feeds/rss/p/real-money/~3/5QlUXjlurr0/13617165.html",
+            "tickers": [
+                "NKE",
+                "LULU"
+            ],
+            "image_url": "https://s.thestreet.com/files/tsc/tst_fb.jpg",
+            "description": "Despite Lululemon Athletica \n  experiencing several years of slowing growth amid increased competition from Nike \n  and Under Armour \n  in the female athleticwear space, execs still oddly hold a pretty high opinion on its future. \nDuring an investor presentation Wednesday, Lululemon CFO Stuart Haselden said the company plans to double its sales -- and more than than double its earnings -- by the year 2020. That would roughly bring Lululemon to revenue and net profit of $4.6 billion and $600 million, respectively, using results from last year as starting points. \nWhat's more, the company anticipates doubling sales of its women's and men's businesses over that time-frame to about $3 billion and $1 billion, respectively. \nWhat's driving Lululemon's uber-bullishness other than typical executive hubris? Well, the company is keen on the benefits of an improved pipeline of innovative products, opening more stores in key U.S. and overseas markets, expanding the size of existing stores and partaking fully in the digital shopping age. \nUnfortunately for Lululemon, it may be hard for investors to buy into such an over-the-top outlook due to multiple factors. \nFirst, the trend has not been a friend to Lululemon. The company's gross and operating profit margin have declined for four consecutive years as its once enviable market share has been encroached on by larger apparel competitors and smaller upstarts. \nFurther, the company has bore the brunt of internal operating inefficiencies. Same-store sales have risen by mid-single digit percentages in each of the past three years, down from the blistering double-digit percentage gains when it first burst onto the apparel scene in the mid 2000s. In fact, Lululemon barely doubled its revenue in the five years from 2011 to 2015 when it was on fire in the U.S. -- according to Bloomberg data, sales reached $2.03 billion last year compared to $1 billion in 2011.     \nMeanwhile, Lululemon's present-day performance has been tepid.  \nThe yoga apparel maker reported first-quarter earnings fell 11.8% from the prior year to 30 cents a share excluding one-time items, missing Wall Street forecasts of 31 cents. Total revenue rose 17% to $495 million, narrowly surpassing estimates of $487 million. Comparable-store sales rose 3%, or 5% excluding the influence of the strong dollar. Total comparable-store sales, which include sales online, increased 6% or 8% when stripping out currency fluctuations. Sales online increased 17% in the first quarter from the prior year to $97.6 million. \n\n In the fourth quarter, total comparable-store sales and online sales increased a healthier 11% and 20.8%, respectively.\n \n\n  \n \n\n And \n Lululemon may be experiencing a further slowdown so far in the second quarter. The company forecast second-quarter earnings of 36 cents a share to 38 cents a share, below Wall Street estimates of 39 cents. Total same-store sales, on a constant currency basis, are seen increasing by a mid-single digit percentage, slower than the 8% gain in the first quarter. On a \n June 8 call with analysts, Haselden acknowledged that traffic to its stores were weak in May and remained soft into the early stages of June. \n \n \n \n   \n  \n \n  Lululemon went on to leave its full-year guidance unchanged likely as it banks on a bumper holiday season. It sees earnings of $2.05 to $2.15 a share, which was below Wall Street estimates for $2.16 a share.\n  \n \n   \n  \n \n   \n  \n \n   \n  \n \n   \n  \n\n                        Click to view a price quote on LULU.\n                        Click to research the Consumer Non-Durables  industry.",
+            "keywords": [
+                "Equities",
+                "Breaking News",
+                "Consumer Durables",
+                "Consumer Goods",
+                "Online Retail",
+                "Opinion",
+                "Retail"
+            ]
+        },
+        {
+            "id": "UH_SBlXP6vmK2huhwHe6w_3VpFrUG9k_sLaaliUKqq0",
+            "publisher": {
+                "name": "TheStreet",
+                "homepage_url": "https://www.thestreet.com/",
+                "logo_url": "https://s3.massive.com/public/assets/news/logos/thestreet.svg",
+                "favicon_url": "https://s3.massive.com/public/assets/news/favicons/thestreet.png"
+            },
+            "title": "Jim Cramer -- Bed Bath Needs Someone Who Knows What Customers Want",
+            "author": "twocents@thestreet.com (Bret Kenwell)",
+            "published_utc": "2016-06-23T14:31:00Z",
+            "article_url": "http://feeds.thestreet.com/~r/tsc/feeds/rss/p/real-money/~3/zGUcjdTVUY8/13617892.html",
+            "tickers": [
+                "BBBY",
+                "M"
+            ],
+            "image_url": "https://s.thestreet.com/files/tsc/tst_fb.jpg",
+            "description": "Bed Bath & Beyond  \n   shares are up over 2% Thursday despite the company missing on earnings per share and revenue expectations. \nGuidance was unimpressive and inventories were a little high, too, TheStreet's Jim Cramer, co-manager of the Action Alerts PLUS portfolio, said on CNBC's \"Mad Dash\" segment. Comp-store sales results came in light while gross margins contracted. This was followed by a \"not great conference call,\" Cramer added. \nCramer is not impressed. What the company needs, he said, is \"someone young\" who knows what customers want and can make a big push online. \nYes, management did discuss the company's recent acquisition of online retailer One Kings Lane, but didn't call it a savior, Cramer said. Bed Bath & Beyond is full of terrific merchants who know retail but they are just not getting it done anymore. \nWhy? Because Bed Bath & Beyond, like Macy's \n   and other traditional retailers, continues to feel the pinch from online retailers starting Amazon  \n  . Unlike Macy's, however, Bed Bath doesn't have the type of dividend to keep investors interested, yielding just 1.15% to Macy's 4.5%. \nInstead, the company has been buying back a ton of stock, which now appears to be an obvious mistake, Cramer explained. The stock has dropped almost 40% on the year and is down 17% over the past five years.  \n \n                        Click to view a price quote on BBBY.\n                        Click to research the Retail  industry.",
+            "keywords": [
+                "Equities",
+                "How to Invest",
+                "JRC Top 5",
+                "Jim Cramer Stock Picks",
+                "Opinion",
+                "Stock Picks"
+            ]
+        },
+        {
+            "id": "5yZ34MJpcLQF4BHvC_YPzzFaV1HqvwsiYBzz4FingeM",
+            "publisher": {
+                "name": "TheStreet",
+                "homepage_url": "https://www.thestreet.com/",
+                "logo_url": "https://s3.massive.com/public/assets/news/logos/thestreet.svg",
+                "favicon_url": "https://s3.massive.com/public/assets/news/favicons/thestreet.png"
+            },
+            "title": "Take-Two CEO Discusses Company's Outlook Amid Robust Revenue, Profit",
+            "author": "twocents@thestreet.com (Brian Sozzi)",
+            "published_utc": "2016-06-23T23:26:00Z",
+            "article_url": "http://feeds.thestreet.com/~r/tsc/feeds/rss/p/real-money/~3/lbX_wiv21Hc/13618753.html",
+            "tickers": [
+                "TTWO",
+                "EA"
+            ],
+            "image_url": "https://s.thestreet.com/files/tsc/tst_fb.jpg",
+            "description": "It has been game on for Grand Theft Auto publisher Take Two Interactive \n  . The company, which also develops well-known titles Red Dead Redemption, NBA 2K, Civilization and WWE 2K, ended fiscal 2016 with its third consecutive year of stronger-than-expected sales and profit. \nSales for the year-ended March 31 fell 6.4% to $1.56 billion, as last year benefited from a more extensive title release slate such as the launch of Grand Theft Auto V on PlayStation 4 and Xbox One. But sales outperformed the company's original outlook of $1.3 billion to $1.4 billion. Earnings for the year tallied $1.96 a share compared to an outlook of 75 cents to $1.00 a share offered at the start of the fiscal year. \nSales in the fourth quarter clocked in at $342.5 million compared to guidance for $260 million to $310 million due primarily to stronger than expected results from Grand Theft Auto V and Grand Theft Auto Online. NBA 2K16 also exceeded Take-Two's sales expectations. \nThe better-than-anticipated performance in what remains a crowded videogame space -- made no easier by the competition for consumer eyeballs with Netflix \n  -- has led investors to snatch up Take-Two's stock. Shares have surged 30% over the past year, outperforming the Nasdaq Composite's 4.3% decline. \nWith another solid year under its belt, attention has turned to when Take-Two will unveil Grand Theft Auto 6 to capitalize on GTA 5's success in selling over 65 million copies since its launch a couple years ago. So far, Take-Two has not issued a release date, instead focusing on continuing to upgrade the gameplay for GTA 5 in order to keep consumers hooked. \nBut, seeing as GTA 5 has been on the market for over two and a half years, it's only natural to wonder what's taking Take-Two so long to launch the next iteration in the popular franchise. \n\"We aim for perfection and that takes time,\" Take-Two Interactive chairman and CEO Strauss Zelnick told TheStreet, adding, \"By resting our core products and not being on an annualized schedule we build anticipation.\" Zelnick pointed out that frequent new content releases for a title like Grand Theft Auto keeps people engaged and drives recurring consumer spending. \nMeanwhile, it's also natural to wonder if Take-Two's solid performance and bulging cash balance has caught the attention of fellow publishers who may want to bulk up via an acquisition. Take-Two is no stranger to being courted. Rival Electronic Arts \n  made a hostile $2 billion bid for Take Two back in 2008, which was early on in Zelnick's leadership of the company. Now, Electronic Arts appears to be on the acquisition hunt again, and its CEO hasn't ruled out making a play for Take-Two. \n\"For the last three years, we have been very focused on our company and getting it right in terms of culture and reinvigorating the company,\" Electronic Arts CEO Andrew Wilson told TheStreet in a recent interview when asked about revisiting Take-Two. Wilson, who was at Electronic Arts when it went hostile for Take-Two, added, \"We are now at a place where we think we are in a really good position, and so we are open to acquisitions for the first time I would say in the last few years.\" \nZelnick didn't completely kill the notion of sitting down with Electronic Arts, either. \"We like being independent, and equally we are here for the shareholders -- I think we are really proud of the track record of building value for our shareholders, the stock just hit an all-time high,' said Zelnick. \nIn the meantime, Take-Two will look to capitalize on pre-holiday launches such as Mafia III, NBA 2K17, WWE 2K17 and Sid Meier's Civilization VI. ity.\n                        Click to view a price quote on TTWO.\n                        Click to research the Computer Software &  Services  industry.",
+            "keywords": [
+                "Equities",
+                "Investing",
+                "Opinion"
+            ]
+        },
+        {
+            "id": "dnVHMq8NlVlZD_eyLEQ-tpbbdop158dV7ApVy0vaivo",
+            "publisher": {
+                "name": "TheStreet",
+                "homepage_url": "https://www.thestreet.com/",
+                "logo_url": "https://s3.massive.com/public/assets/news/logos/thestreet.svg",
+                "favicon_url": "https://s3.massive.com/public/assets/news/favicons/thestreet.png"
+            },
+            "title": "Nikkei 225 Clocks Up 16-Year Record Decline",
+            "author": "twocents@thestreet.com (Mariko Iwasaki)",
+            "published_utc": "2016-06-24T08:57:00Z",
+            "article_url": "http://feeds.thestreet.com/~r/tsc/feeds/rss/p/real-money/~3/cOhLWHhC-Uk/13618826.html",
+            "tickers": [
+                "TM"
+            ],
+            "image_url": "https://s.thestreet.com/files/tsc/tst_fb.jpg",
+            "description": "Asian markets plunged as it emerged the U.K. had voted to quit the European Union in Thursday's referendum. \nIn Tokyo, investors fled to the yen in search for a safe haven, causing the stock markets to tumble. The yen soared against the pound by 11.13% to  yen 140.302 and against the euro by 6.02% to yen 113.59. Against the dollar, the yen strengthened 3.24% to yen 102.72. \nAs the yen surged, the Japanese stock markets tumbled. The Nikkei 225 plunged 7.92% to close at 14,952.02--the lowest level in 20 months and the largest decline since April 17, 2000. The Topix fell 7.3% to 1,204.48. Major exporters suffered, with share prices down 8.7% for Toyota Motor  \n  , 8.0% for Sony  \n  , 16.5% for Sharp, 5.7% for Canon CAJ, 10.3% for Hitachi, 8.4% for Fuji Heavy Industries, and 10.2% for Murata Manufacturing. Fast Retailing, known for its Uniqlo brand, saw its share price plunge 10.4%. \n\"USDJPY could trade stronger driven by risk aversion and lower yields,\" UBS said in a research note.\"In their estimates, a range of 94-102 would reflect the relevant risks, although a sharp move below 100 could invite a policy response. \nPolicymakers made an effort to respond to the U.K. referendum outcome with calm. \nThe Bank of Japan Governor Haruhiko Kuroda pledged to ensure stability in the financial market. \n\"The BOJ will keep in close contact with the relevant authorities in Japan and overseas and keep a close watch on the impact the result of the referendum will have on the international financial markets,\" Kuroda said. \"We will make efforts to stabilize the financial market by making use of the swap rule whereby the central banks of Japan, America, Canada, the Eurozone, Switzerland, and the U.K. accommodate currencies for one another, while at the same time take all possible measures to ensure liquidity.\" \nElsewhere in Asia, the Shanghai Composite index was down 1.30%, the Hang Seng fell 4.06%, the CSI 300 index dropped 1.29%, the South Korean Kospi  fell 3.09%, and S&P/ASX 200 index in Sydney dropped 3.17%. \nOne key focus following the vote will be how Chinese investors interact with the U.K. and Europe. \n\"A key concern for many Chinese firms who have invested in the U.K. is that Brexit will see their business suffer because they will find it difficult to access EU markets from Britain,\" said University o fWarwick professor Kamel Mellahi. \"\"A significant number of Chinese businesses see the U.K. strategically placed as a gateway to EU markets, but with a Brexit they may put on hold investment in the U.K. until a clearer picture over trade deals with the EU emerges... . If one goes by what has been widely reported by Chinese corporate leaders, Brexit will dampen the appeal of the UK for Chinese investors.\"\n                        Click to view a price quote on TM.\n                        Click to research the Automotive  industry.",
+            "keywords": [
+                "Equities",
+                "China",
+                "Consumer Durables",
+                "Electronics",
+                "Japan",
+                "Machinery and Tools"
+            ]
+        },
+        {
+            "id": "7CenVx-o8ORHQiws3mD-NPwoR37a3r02DRuPr8AjjRc",
+            "publisher": {
+                "name": "TheStreet",
+                "homepage_url": "https://www.thestreet.com/",
+                "logo_url": "https://s3.massive.com/public/assets/news/logos/thestreet.svg",
+                "favicon_url": "https://s3.massive.com/public/assets/news/favicons/thestreet.png"
+            },
+            "title": "Why 'Brexit' Isn't a Big Deal for McDonald's",
+            "author": "twocents@thestreet.com (Brian Sozzi)",
+            "published_utc": "2016-06-24T14:20:00Z",
+            "article_url": "http://feeds.thestreet.com/~r/tsc/feeds/rss/p/real-money/~3/Qb-7AuRei6o/13619006.html",
+            "tickers": [
+                "DPZ"
+            ],
+            "image_url": "https://s.thestreet.com/files/tsc/tst_fb.jpg",
+            "description": "For years, McDonald's \n  has capitalized on the tepid economic growth and political unrest in the U.K. that has caused consumers there to seek out cheap fast food and deep discounts on clothing.  \nSo, Brexit-related economic and political chaos shouldn't be too big an issue for the Golden Arches, which operates over 1,200 restaurants in the country. In fact, it may even help extend one remarkable stat: This year's first quarter marked the 40th consecutive quarter of same-store sales growth for McDonald's U.K. arm as it benefited from the introduction of new touchscreen ordering systems and premium burgers, as well as a continued focus on promotions. \nMore recently, the division -- which is often used to incubate new food and customer service ideas -- launched new \"flavor wraps,\" in addition to a burger with a bagel as a bun (below). And the performance of the U.K. division likely makes McDonald's CEO Steve Easterbrook particularly proud. Born in the U.K., Easterbrook first worked for McDonald's as a manager at a London location and eventually became CEO of McDonald's U.K., where he engineered a dramatic turnaround in results. \n \n Ok so this was sold at McDonald's in the UK as the New York Stack. Kinda a burger on a bagel things. pic.twitter.com/N0T8ApCdhp — William Lumpkin (@Infojanitor) \n June 6, 2016\n \nOn Friday morning, shares of McDonald's were trading down 0.3% to $120.91, compared to a 2.1% decline in the S&P 500. \nWhile McDonald's U.K. is likely to serve up newly independent Brits tons of affordable fast food in coming quarters, performance at the company's largest market -- the U.S. -- may prove to a bit more mixed.   \n\"Traffic is still negative at McDonald's as the chain continues to wrestle with a Dollar Menu hangover, and prices of its premium items that are perhaps too high for perceived quality relative to chains such as Chick-fil-A or In 'N Out,\" wrote RBC restaurant analyst David Palmer in a note to clients Tuesday. \nPalmer, who slashed his second-quarter sales growth estimate for McDonald's to 2.5% from 3.5%, added that \"finding the right value message remains a struggle, which is leading to negative traffic and varied sales trends around the country.\" \nMcDonald's eliminated its popular Dollar Menu earlier this year when it was no longer profitable for many franchisees. In its place, the company unveiled several new value menus designed to win over customers. \nThe company launched the \"McPick 2\" menu in January, which lets customers select two items from a list of a double cheeseburger, small fries, a McChicken or mozzarella sticks for $2. But in February, McDonald's replaced that promotion with a McPick 2 for $5 menu that featured the Big Mac, 10-piece Chicken McNuggets, Filet-O-Fish and Quarter Pounder with Cheese. \nMeanwhile, McDonald's fast-food competitors have been more ruthless on the promotional front. In March, Yum! Brands'  \n  Taco Bell took the wraps off a new nationwide $1 breakfast menu that took aim at McDonald's pricier Egg McMuffin. The $1 breakfast menu -- which is permanent -- consists of 10 items. \nDomino's Pizza \n  continues to market a medium two-topping pizza for $5.99, which arguably provides more value to a family than buying two Big Macs for $5. And Pizza Hut, also owned by Yum! Brands, has also found success lately aggressively marketing affordable pizza. \nOn Wednesday, Nomura analyst Mark Kalinowski downgraded his rating on McDonald's to neutral from buy, citing slowing industry sales in the U.S. and tough sales comparisons for the Golden Arches. The analyst slashed his price target on McDonald's to $129 from $142.\n                        Click to view a price quote on MCD.\n                        Click to research the Leisure  industry.",
+            "keywords": [
+                "Equities",
+                "Breaking News",
+                "Consumer Goods",
+                "Consumer Non-Durables",
+                "Food and Beverage",
+                "Online Retail",
+                "Restaurants",
+                "Retail",
+                "Specialty Retail",
+                "Suppress PS_Text promo"
+            ]
+        },
+        {
+            "id": "n7sw009o2FjaZc8Yyin73NtgGARa86jlV_PdqrcBIu4",
+            "publisher": {
+                "name": "TheStreet",
+                "homepage_url": "https://www.thestreet.com/",
+                "logo_url": "https://s3.massive.com/public/assets/news/logos/thestreet.svg",
+                "favicon_url": "https://s3.massive.com/public/assets/news/favicons/thestreet.png"
+            },
+            "title": "WTI Crude Plummets With Brexit; Oil-Levered Names Feel the Hurt",
+            "author": "twocents@thestreet.com (Tom Terrarosa)",
+            "published_utc": "2016-06-24T15:06:00Z",
+            "article_url": "http://feeds.thestreet.com/~r/tsc/feeds/rss/p/real-money/~3/SpeDbStoZxA/13619332.html",
+            "tickers": [
+                "XOM",
+                "MRO",
+                "CVX"
+            ],
+            "image_url": "https://s.thestreet.com/files/tsc/tst_fb.jpg",
+            "description": "Just as the oil and gas industry started to see signs of renewed life in the U.S., the United Kingdom appears to have sent a title wave crashing down on commodity markets. \nWest Texas Intermediate futures, the U.S. crude oil benchmark, were down more than 5% to $47.56 as the stock markets prepared to open Friday. Futures for the global benchmark, Brent Crude, were down nearly 5.4% to $48.18.  \nU.S. stock markets also saw their steepest decline in 10 months as the Dow Jones Industrial Average plummeted by 400 points to start the day, the S&P 500 opened down 37 points, and the Nasdaq Composite took its largest daily hit since 2011, beginning the session down 186 points, or 3.8%. \nWhile the effect of the so-called Brexit weighing heavily across the board, diversified oil and gas behemoths like ExxonMobil \n    and Chevron \n    took a relatively modest hit in share prices, both down less than 2% near 10 a.m. Friday.  \nNot surprisingly, oil and gas players that are more heavily levered to commodity prices, such as U.S. independent explorers and producers QEP Resources \n   , Pioneer Natural Resources \n    and Marathon Oil \n   , were all suffering greater losses between 3% and 4% early Friday.  \nThe drop in oil prices following Brexit can be largely linked to a bolstered dollar, which saw as much as a 3.7% increase Friday, as a stronger dollar typically depresses oil prices.  \nBut fear not says BMI Research, a market analysis firm, in the long-term the UK's Brexit vote will have a limited impact on the global crude oil market. \n\"Risk-off trading will depress prices in the coming days, but positive physical fundamentals - which remain unchanged in the wake of the vote - will see any losses quickly pared. However, we highlight strong downside risks to North Sea investments, due to renewed uncertainty surrounding Scottish independence,\" BMI analysts wrote in a Friday report. \"Heightened volatility and broad risk-off sentiment pose further downside risk to prices [temporarily]. However, declines will be capped by firming fundamentals in the physical crude oil market and we expect any losses to be rapidly reversed.\" \nOn the other hand, the firm also warns that the Brexit vote is \"a potential trigger for wider and more sustained financial market weakness\" and has raised the odds on other tail-risk events, such as a U.S. recession, Chinese yuan devaluation and a fiscal crisis in Japan.  \nMeanwhile, the commodities market could take another blow later today as Baker Hughes is set to release its weekly rig report at 1 p.m. \nAfter three consecutive weeks of reported rig increases, a fourth uptick in active rigs could mean operators are putting rigs back to work sooner than expected, and even though analysts have warned that production tends to lag increased rig activity significantly, some have noted that a lower-than-expected U.S. production decline could hinder a global oil rally. \n                        Click to view a price quote on XOM.\n                        Click to research the Energy  industry.",
+            "keywords": [
+                "Equities",
+                "Energy",
+                "Google Editor's Picks",
+                "Industrial Goods"
+            ]
+        },
+        {
+            "id": "q53JHilhhX7eigtJHU_diWxyhU7TUhm8vLFDB5wKkM4",
+            "publisher": {
+                "name": "TheStreet",
+                "homepage_url": "https://www.thestreet.com/",
+                "logo_url": "https://s3.massive.com/public/assets/news/logos/thestreet.svg",
+                "favicon_url": "https://s3.massive.com/public/assets/news/favicons/thestreet.png"
+            },
+            "title": "Cramer Says Steer Clear of Financials Amid 'Brexit' Fallout",
+            "author": "twocents@thestreet.com (Laura Sanicola)",
+            "published_utc": "2016-06-24T17:05:00Z",
+            "article_url": "http://feeds.thestreet.com/~r/tsc/feeds/rss/p/real-money/~3/A_z_y5ryzKY/13619510.html",
+            "tickers": [
+                "GS",
+                "JPM",
+                "LYG"
+            ],
+            "image_url": "https://s.thestreet.com/files/tsc/tst_fb.jpg",
+            "description": "While the financial sector took the biggest hit after the U.K. voted to leave the EU, the fallout and disruption in the global markets does not necessarily provide a buying opportunity in the sector. \n\"Financials are not a buy,\" said Jim Cramer, adding that he is most concerned about the big international banks. \"These are not the opportunities I've been waiting for to get people to buy stocks,\" said Cramer, TheStreet's co-founder and portfolio manager of the Action Alerts Plus portfolio. \nThe S&P 500 dropped 3.08% lower to right around 2,050 midday Friday and financials saw a 4% decline. \nThe Dow Jones Industrial Average dropped more than 500 points in mid-day trading. \nLloyds Banking Group's \n  New York-listed shares were down 24.74% at 3.27. Barclays \n    traded down 20.13% at $8.93 per share midday Friday. Royal Bank of Scotland \n    traded down 22.76% at $5.78. \nIn other financials: JPMorgan \n  traded down almost 5% at $60.92 while Goldman Sachs \n  shares were down 5.33% at $144.53.  \nCramer advises holding off on buying or selling in the current market conditions. \nThe executives of several financials responded on Friday morning in attempts to reassure their workers and the public that they should remain confident in the banks' relationship with the UK. \nCEO of Barclays Jes Staley told his staff earlier that his company was not straying from its course, writing that \"the strategy we announced on 1 March was not conditional on the U.K. remaining in the E.U. We are a transatlantic consumer, corporate and investment bank, anchored in the U.K. and the U.S. That remains the core of our strength and the Barclays of the future.\" \nLloyds CEO Antonio Horta-Osorio told his employees Friday that the bank will \"work at pace\" on its contingency plans in an attempt to quell fears over Brexit. \n\"As one of the U.K.'s best capitalised banks we remain committed to helping Britain prosper, continuing our support for the U.K. economy, and providing banking and insurance services that our customers rely on,\" he wrote. \nDouglas Flint, chairman of HSBC, stated that \"our commitment to British businesses, customers and staff in the UK remains undiminished.\" \n  \nSee full Brexit coverage here.\n                        Click to view a price quote on LYG.\n                        Click to research the Banking  industry.",
+            "keywords": [
+                "Equities",
+                "Banks",
+                "Financial Services"
+            ]
+        },
+        {
+            "id": "C5GLfLdWZOsCzDoz_QDV-luhuqhYkWpJnsx_j2GBvxk",
+            "publisher": {
+                "name": "TheStreet",
+                "homepage_url": "https://www.thestreet.com/",
+                "logo_url": "https://s3.massive.com/public/assets/news/logos/thestreet.svg",
+                "favicon_url": "https://s3.massive.com/public/assets/news/favicons/thestreet.png"
+            },
+            "title": "Baker Hughes Rig Decline May Subdue U.S. Oil Tension After Brexit",
+            "author": "twocents@thestreet.com (Tom Terrarosa)",
+            "published_utc": "2016-06-24T17:33:00Z",
+            "article_url": "http://feeds.thestreet.com/~r/tsc/feeds/rss/p/real-money/~3/gqFdu_XT_S4/13619528.html",
+            "tickers": [
+                "XOM",
+                "CVX"
+            ],
+            "image_url": "https://s.thestreet.com/files/tsc/tst_fb.jpg",
+            "description": "After a three-week rally, Baker Hughes' \n   reports the number of active U.S. oil and gas rigs is down, falling to 421 this week, an decrease of 3 rigs over last week. \nU.S. oil rigs down significantly by 7 to 330 from 337 last week, while U.S. natural gas rigs were up 4 to 90 versus 86 last week and miscellaneous rigs came in the same at 1. \nThe U.S. offshore rig count remained stable once again this week at 21, but is down 7 rigs year over year. \nWhile the recent increase of U.S. active rigs had been somewhat expected at this stage in the cycle and a fairly positive event in recent weeks, following U.S. and global crude oil's reaction to the United Kingdom's break from the European Union, the market could have been further stressed by the count's continued ascent. West Texas Intermediate crude futures, the U.S. benchmark, were down 4.7% to $47.77 at 1 p.m., while the global Brent crude benchmark saw futures down 4.6% to $48.54. \nIn short, rigs being put back to work earlier than many analysts expected could signal operators are working their way through drilled but uncompleted wells, or DUCs, which therefore entails that U.S. production could see less of a decline than anticipated.   \nThe International Energy Agency has hinted toward this outcome in recent weeks, leading many, including longtime oil market bear Goldman Sachs, to believe the commodity recovery remains in a fragile state. Prior to a commodity rally beginning in March, industry followers saw little hope for rigs going back to work in 2016, and even after prices seemed to stabilize near $50 per barrel, bullish analysts have only pulled up forecasts to the tail-end of 2016. \nBut according to TheStreet's founder Jim Cramer, and as BHI's report demonstrated Friday, data that we're getting about oil continues to show a decline in the amount of drilling, leading him to believe oil remains between $45 and $50 per barrel, despite recent breakouts from powerhouses ExxonMobil \n    and Chevron \n   , which suggest oil is heading toward $80.  \n\"I don't think [oil] is doing that,\" Cramer explained, adding that recent positive movement of oil stocks like Pioneer Natural Resources \n    despite oil's fall illustrates the lack of opportunities for buying oil stocks now. \"I don't see any bargains in oil.\" \nA sooner-than-expected uptick in U.S. drilling, which has fallen dramatically as companies drastically cut capital expenditures through 2015 and into the first quarter of 2016 when oil prices hit a 12-year low, could halt improvement in a global oversupply of oil that has been dampened in recent months with exogenous production disruptions in Canada, Nigeria and elsewhere.  \nAnd while many analysts, such as the KLR Group's Darren Gacicia, insist that the supply-demand imbalance is headed toward correcting itself, others, including Cantor Fitzgerald's Brad Carpenter have opined that U.S. producers' insistence on adding rigs in a $50 oil world could prove self-defeating and cause a delay in a West Texas Intermediate crude oil rally that at one point did not see oil above that mark until 2018.  \nNevertheless, the market could feel some relief Friday after seeing the U.S. lose the majority of what it gained last week in oil rigs, an event that signals continue volatility in the count and shines light on the looming theory that $50 may not be the magic number. \n                        Click to view a price quote on XOM.\n                        Click to research the Energy  industry.",
+            "keywords": [
+                "Equities",
+                "Energy",
+                "Google Editor's Picks",
+                "Industrial Goods"
+            ]
+        }
+    ],
+    "status": "OK",
+    "request_id": "46e5abfd35a8a3df4744cb4031473ab2",
+    "count": 10,
+    "next_url": "https://api.massive.com/v2/reference/news?cursor=YXA9MjAxNi0wNi0yNFQxNyUzQTMzJTNBMDBaJmFzPUM1R0xmTGRXWk9zQ3pEb3pfUURWLWx1aHVxaFlrV3BKbnN4X2oyR0J2eGsmb3JkZXI9YXNjZW5kaW5n"
+}
+
+
+Category: Technical Indicators
+Phase 10: Simple Moving Average (SMA)
+
+Docs: https://massive.com/docs/rest/stocks/technical-indicators/simple-moving-average
+Endpoint: 'GET /v1/indicators/sma/{stockTicker}'
+Target Endpoint: '/stocks/sma/{ticker}'
+
+Use Cases: Trend analysis, trading signal generation (e.g., SMA crossovers), identifying support/resistance, and refining entry/exit timing.
+
+Sample Response:
+{
+    "results": {
+        "underlying": {
+            "url": "https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/1063281600000/1764679678288?limit=235&sort=desc"
+        },
+        "values": [
+            {
+                "timestamp": 1764565200000,
+                "value": 263.3914
+            },
+            {
+                "timestamp": 1764306000000,
+                "value": 262.63939999999997
+            },
+            {
+                "timestamp": 1764133200000,
+                "value": 261.81999999999994
+            },
+            {
+                "timestamp": 1764046800000,
+                "value": 261.0487999999999
+            },
+            {
+                "timestamp": 1763960400000,
+                "value": 260.27239999999995
+            },
+            {
+                "timestamp": 1763701200000,
+                "value": 259.48799999999994
+            },
+            {
+                "timestamp": 1763614800000,
+                "value": 258.73959999999994
+            },
+            {
+                "timestamp": 1763528400000,
+                "value": 258.0152
+            },
+            {
+                "timestamp": 1763442000000,
+                "value": 257.1798
+            },
+            {
+                "timestamp": 1763355600000,
+                "value": 256.518
+            }
+        ]
+    },
+    "status": "OK",
+    "request_id": "e17d3bc65ccb6708ad7b3c1f8f080d33",
+    "next_url": "https://api.massive.com/v1/indicators/sma/AAPL?cursor=YWRqdXN0ZWQ9dHJ1ZSZhcD0lN0IlMjJ2JTIyJTNBMCUyQyUyMm8lMjIlM0EwJTJDJTIyYyUyMiUzQTI3Mi40MSUyQyUyMmglMjIlM0EwJTJDJTIybCUyMiUzQTAlMkMlMjJ0JTIyJTNBMTc2MzA5NjQwMDAwMCU3RCZhcz0mZXhwYW5kX3VuZGVybHlpbmc9ZmFsc2UmbGltaXQ9MTAmb3JkZXI9ZGVzYyZzZXJpZXNfdHlwZT1jbG9zZSZ0aW1lc3Bhbj1kYXkmdGltZXN0YW1wLmx0PTE3NjMzNTU2MDAwMDAmd2luZG93PTUw"
+}
+
+Schedule: Once a day - After market close (limited due to free teir - After upgrade can do a run every 15mins) This also 2 years of historical data. We need to plan to get that as well. 
+
+Phase 11: Exponential Moving Average (EMA)
+
+Docs: https://massive.com/docs/rest/stocks/technical-indicators/exponential-moving-average
+Endpoint: 'GET /v1/indicators/ema/{stockTicker}'
+Target Endpoint: '/stocks/ema/{ticker}'
+
+We need to retrieve the Exponential Moving Average (EMA) for a specified ticker over a defined time range. The EMA places greater weight on recent prices, enabling quicker trend detection and more responsive signals.
+
+Use Cases: Trend identification, EMA crossover signals, dynamic support/resistance levels, and adjusting strategies based on recent market volatility.
+
+Schedule: Once a day - after market close (limited due to free teir - After upgrade can do a run every 15mins) This also 2 years of historical data. We need to plan to get that as well. 
+
+Phase 12: Moving Average Convergence/Divergence (MACD)
+
+Docs: https://massive.com/docs/rest/stocks/technical-indicators/moving-average-convergence-divergence
+Endpoint: 'GET /v1/indicators/macd/{stockTicker}'
+Target Endpoint: '/stocks/macd/{ticker}'
+
+We need to retrieve the Moving Average Convergence/Divergence (MACD) for a specified ticker over a defined time range. MACD is a momentum indicator derived from two moving averages, helping to identify trend strength, direction, and potential trading signals.
+
+Use Cases: Momentum analysis, signal generation (crossover events), spotting overbought/oversold conditions, and confirming trend directions.
+
+Schedule: Once a day - after market close (limited due to free teir - After upgrade can do a run every 15mins) This also 2 years of historical data. We need to plan to get that as well. 
+
+Phase 13: Relative Strength Index (RSI)
+
+Docs: https://massive.com/docs/rest/stocks/technical-indicators/relative-strength-index
+Endpoint: 'GET /v1/indicators/rsi/{stockTicker}'
+Target Endpoint: '/stocks/rsi/{ticker}'
+
+We need to retrieve the Relative Strength Index (RSI) for a specified ticker over a defined time range. The RSI measures the speed and magnitude of price changes, oscillating between 0 and 100 to help identify overbought or oversold conditions.
+
+Use Cases: Overbought/oversold detection, divergence analysis, trend confirmation, and refining market entry/exit strategies.
+
+Schedule: Once a day - after market close (limited due to free teir - After upgrade can do a run every 15mins) This also 2 years of historical data. We need to plan to get that as well. 
+
+Category: Economy
+Phase 14: Treasury Yields
+
+Docs: https://massive.com/docs/rest/economy/treasury-yields
+Endpoint: 'GET /fed/v1/treasury-yields'
+Target Endpoint: '/economy/treasury-yields'
+
+We need to retrieve historical U.S. Treasury yield data for standard timeframes ranging from 1-month to 30-years, with daily historical records back to 1962. This endpoint lets you query by date or date range to see how interest rates have changed over time. Each data point reflects the market yield for Treasury securities of a specific maturity, helping users understand short- and long-term rate movements.
+
+Use Cases: Charting rate trends, comparing short vs. long-term yields, economic research.
+
+Schedule: Once a day, pref. at the start of the day. This also 2 years of historical data. We need to plan to get that as well. 
+
+Sample Response:
+{
+    "status": "OK",
+    "request_id": "07fae4d85959491dbdd70949fdf0d265",
+    "results": [
+        {
+            "date": "1962-01-02",
+            "yield_1_year": 3.22,
+            "yield_5_year": 3.88,
+            "yield_10_year": 4.06
+        },
+        {
+            "date": "1962-01-03",
+            "yield_1_year": 3.24,
+            "yield_5_year": 3.87,
+            "yield_10_year": 4.03
+        },
+        {
+            "date": "1962-01-04",
+            "yield_1_year": 3.24,
+            "yield_5_year": 3.86,
+            "yield_10_year": 3.99
+        },
+        {
+            "date": "1962-01-05",
+            "yield_1_year": 3.26,
+            "yield_5_year": 3.89,
+            "yield_10_year": 4.02
+        },
+        {
+            "date": "1962-01-08",
+            "yield_1_year": 3.31,
+            "yield_5_year": 3.91,
+            "yield_10_year": 4.03
+        },
+        {
+            "date": "1962-01-09",
+            "yield_1_year": 3.32,
+            "yield_5_year": 3.93,
+            "yield_10_year": 4.05
+        },
+        {
+            "date": "1962-01-10",
+            "yield_1_year": 3.33,
+            "yield_5_year": 3.94,
+            "yield_10_year": 4.07
+        },
+        {
+            "date": "1962-01-11",
+            "yield_1_year": 3.33,
+            "yield_5_year": 3.94,
+            "yield_10_year": 4.08
+        },
+        {
+            "date": "1962-01-12",
+            "yield_1_year": 3.3,
+            "yield_5_year": 3.95,
+            "yield_10_year": 4.08
+        },
+        {
+            "date": "1962-01-15",
+            "yield_1_year": 3.32,
+            "yield_5_year": 3.96,
+            "yield_10_year": 4.1
+        },
+        {
+            "date": "1962-01-16",
+            "yield_1_year": 3.3,
+            "yield_5_year": 3.98,
+            "yield_10_year": 4.13
+        },
+        {
+            "date": "1962-01-17",
+            "yield_1_year": 3.3,
+            "yield_5_year": 3.97,
+            "yield_10_year": 4.12
+        },
+        {
+            "date": "1962-01-18",
+            "yield_1_year": 3.27,
+            "yield_5_year": 3.96,
+            "yield_10_year": 4.11
+        },
+        {
+            "date": "1962-01-19",
+            "yield_1_year": 3.27,
+            "yield_5_year": 3.95,
+            "yield_10_year": 4.11
+        },
+        {
+            "date": "1962-01-22",
+            "yield_1_year": 3.25,
+            "yield_5_year": 3.93,
+            "yield_10_year": 4.09
+        },
+        {
+            "date": "1962-01-23",
+            "yield_1_year": 3.25,
+            "yield_5_year": 3.94,
+            "yield_10_year": 4.11
+        },
+        {
+            "date": "1962-01-24",
+            "yield_1_year": 3.24,
+            "yield_5_year": 3.93,
+            "yield_10_year": 4.1
+        },
+        {
+            "date": "1962-01-25",
+            "yield_1_year": 3.27,
+            "yield_5_year": 3.94,
+            "yield_10_year": 4.11
+        },
+        {
+            "date": "1962-01-26",
+            "yield_1_year": 3.28,
+            "yield_5_year": 3.97,
+            "yield_10_year": 4.11
+        },
+        {
+            "date": "1962-01-29",
+            "yield_1_year": 3.28,
+            "yield_5_year": 3.98,
+            "yield_10_year": 4.12
+        },
+        {
+            "date": "1962-01-30",
+            "yield_1_year": 3.28,
+            "yield_5_year": 3.98,
+            "yield_10_year": 4.11
+        },
+        {
+            "date": "1962-01-31",
+            "yield_1_year": 3.29,
+            "yield_5_year": 3.99,
+            "yield_10_year": 4.1
+        },
+        {
+            "date": "1962-02-01",
+            "yield_1_year": 3.3,
+            "yield_5_year": 4.0,
+            "yield_10_year": 4.09
+        },
+        {
+            "date": "1962-02-02",
+            "yield_1_year": 3.3,
+            "yield_5_year": 3.97,
+            "yield_10_year": 4.08
+        },
+        {
+            "date": "1962-02-05",
+            "yield_1_year": 3.29,
+            "yield_5_year": 3.96,
+            "yield_10_year": 4.07
+        },
+        {
+            "date": "1962-02-06",
+            "yield_1_year": 3.29,
+            "yield_5_year": 3.96,
+            "yield_10_year": 4.06
+        },
+        {
+            "date": "1962-02-07",
+            "yield_1_year": 3.29,
+            "yield_5_year": 3.95,
+            "yield_10_year": 4.07
+        },
+        {
+            "date": "1962-02-08",
+            "yield_1_year": 3.3,
+            "yield_5_year": 3.93,
+            "yield_10_year": 4.07
+        },
+        {
+            "date": "1962-02-09",
+            "yield_1_year": 3.28,
+            "yield_5_year": 3.91,
+            "yield_10_year": 4.05
+        },
+        {
+            "date": "1962-02-13",
+            "yield_1_year": 3.28,
+            "yield_5_year": 3.91,
+            "yield_10_year": 4.03
+        },
+        {
+            "date": "1962-02-14",
+            "yield_1_year": 3.31,
+            "yield_5_year": 3.9,
+            "yield_10_year": 4.03
+        },
+        {
+            "date": "1962-02-15",
+            "yield_1_year": 3.33,
+            "yield_5_year": 3.9,
+            "yield_10_year": 4.02
+        },
+        {
+            "date": "1962-02-16",
+            "yield_1_year": 3.33,
+            "yield_5_year": 3.88,
+            "yield_10_year": 4.02
+        },
+        {
+            "date": "1962-02-19",
+            "yield_1_year": 3.32,
+            "yield_5_year": 3.86,
+            "yield_10_year": 4.01
+        },
+        {
+            "date": "1962-02-20",
+            "yield_1_year": 3.31,
+            "yield_5_year": 3.88,
+            "yield_10_year": 4.05
+        },
+        {
+            "date": "1962-02-21",
+            "yield_1_year": 3.28,
+            "yield_5_year": 3.86,
+            "yield_10_year": 4.03
+        },
+        {
+            "date": "1962-02-23",
+            "yield_1_year": 3.24,
+            "yield_5_year": 3.83,
+            "yield_10_year": 4.02
+        },
+        {
+            "date": "1962-02-26",
+            "yield_1_year": 3.22,
+            "yield_5_year": 3.8,
+            "yield_10_year": 4.0
+        },
+        {
+            "date": "1962-02-27",
+            "yield_1_year": 3.23,
+            "yield_5_year": 3.8,
+            "yield_10_year": 4.01
+        },
+        {
+            "date": "1962-02-28",
+            "yield_1_year": 3.21,
+            "yield_5_year": 3.77,
+            "yield_10_year": 4.0
+        },
+        {
+            "date": "1962-03-01",
+            "yield_1_year": 3.15,
+            "yield_5_year": 3.71,
+            "yield_10_year": 3.98
+        },
+        {
+            "date": "1962-03-02",
+            "yield_1_year": 3.17,
+            "yield_5_year": 3.72,
+            "yield_10_year": 3.98
+        },
+        {
+            "date": "1962-03-05",
+            "yield_1_year": 3.18,
+            "yield_5_year": 3.74,
+            "yield_10_year": 4.0
+        },
+        {
+            "date": "1962-03-06",
+            "yield_1_year": 3.18,
+            "yield_5_year": 3.74,
+            "yield_10_year": 4.01
+        },
+        {
+            "date": "1962-03-07",
+            "yield_1_year": 3.14,
+            "yield_5_year": 3.74,
+            "yield_10_year": 4.0
+        },
+        {
+            "date": "1962-03-08",
+            "yield_1_year": 3.11,
+            "yield_5_year": 3.72,
+            "yield_10_year": 3.98
+        },
+        {
+            "date": "1962-03-09",
+            "yield_1_year": 3.12,
+            "yield_5_year": 3.71,
+            "yield_10_year": 3.96
+        },
+        {
+            "date": "1962-03-12",
+            "yield_1_year": 3.13,
+            "yield_5_year": 3.73,
+            "yield_10_year": 3.94
+        },
+        {
+            "date": "1962-03-13",
+            "yield_1_year": 3.11,
+            "yield_5_year": 3.7,
+            "yield_10_year": 3.92
+        },
+        {
+            "date": "1962-03-14",
+            "yield_1_year": 3.1,
+            "yield_5_year": 3.72,
+            "yield_10_year": 3.93
+        },
+        {
+            "date": "1962-03-15",
+            "yield_1_year": 3.1,
+            "yield_5_year": 3.73,
+            "yield_10_year": 3.96
+        },
+        {
+            "date": "1962-03-16",
+            "yield_1_year": 3.06,
+            "yield_5_year": 3.72,
+            "yield_10_year": 3.96
+        },
+        {
+            "date": "1962-03-19",
+            "yield_1_year": 3.03,
+            "yield_5_year": 3.71,
+            "yield_10_year": 3.93
+        },
+        {
+            "date": "1962-03-20",
+            "yield_1_year": 3.02,
+            "yield_5_year": 3.67,
+            "yield_10_year": 3.91
+        },
+        {
+            "date": "1962-03-21",
+            "yield_1_year": 3.01,
+            "yield_5_year": 3.61,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-03-22",
+            "yield_1_year": 2.94,
+            "yield_5_year": 3.58,
+            "yield_10_year": 3.83
+        },
+        {
+            "date": "1962-03-23",
+            "yield_1_year": 2.94,
+            "yield_5_year": 3.62,
+            "yield_10_year": 3.87
+        },
+        {
+            "date": "1962-03-26",
+            "yield_1_year": 2.95,
+            "yield_5_year": 3.65,
+            "yield_10_year": 3.89
+        },
+        {
+            "date": "1962-03-27",
+            "yield_1_year": 2.95,
+            "yield_5_year": 3.65,
+            "yield_10_year": 3.9
+        },
+        {
+            "date": "1962-03-28",
+            "yield_1_year": 2.96,
+            "yield_5_year": 3.64,
+            "yield_10_year": 3.9
+        },
+        {
+            "date": "1962-03-29",
+            "yield_1_year": 2.96,
+            "yield_5_year": 3.64,
+            "yield_10_year": 3.9
+        },
+        {
+            "date": "1962-03-30",
+            "yield_1_year": 2.97,
+            "yield_5_year": 3.61,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-04-02",
+            "yield_1_year": 2.95,
+            "yield_5_year": 3.58,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-04-03",
+            "yield_1_year": 2.93,
+            "yield_5_year": 3.55,
+            "yield_10_year": 3.83
+        },
+        {
+            "date": "1962-04-04",
+            "yield_1_year": 2.88,
+            "yield_5_year": 3.51,
+            "yield_10_year": 3.78
+        },
+        {
+            "date": "1962-04-05",
+            "yield_1_year": 2.89,
+            "yield_5_year": 3.56,
+            "yield_10_year": 3.84
+        },
+        {
+            "date": "1962-04-06",
+            "yield_1_year": 2.89,
+            "yield_5_year": 3.55,
+            "yield_10_year": 3.81
+        },
+        {
+            "date": "1962-04-09",
+            "yield_1_year": 2.9,
+            "yield_5_year": 3.57,
+            "yield_10_year": 3.83
+        },
+        {
+            "date": "1962-04-10",
+            "yield_1_year": 2.94,
+            "yield_5_year": 3.57,
+            "yield_10_year": 3.83
+        },
+        {
+            "date": "1962-04-11",
+            "yield_1_year": 3.0,
+            "yield_5_year": 3.61,
+            "yield_10_year": 3.87
+        },
+        {
+            "date": "1962-04-12",
+            "yield_1_year": 3.0,
+            "yield_5_year": 3.61,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-04-13",
+            "yield_1_year": 3.0,
+            "yield_5_year": 3.6,
+            "yield_10_year": 3.85
+        },
+        {
+            "date": "1962-04-16",
+            "yield_1_year": 3.0,
+            "yield_5_year": 3.6,
+            "yield_10_year": 3.83
+        },
+        {
+            "date": "1962-04-17",
+            "yield_1_year": 3.0,
+            "yield_5_year": 3.6,
+            "yield_10_year": 3.82
+        },
+        {
+            "date": "1962-04-18",
+            "yield_1_year": 3.0,
+            "yield_5_year": 3.6,
+            "yield_10_year": 3.81
+        },
+        {
+            "date": "1962-04-19",
+            "yield_1_year": 3.0,
+            "yield_5_year": 3.6,
+            "yield_10_year": 3.82
+        },
+        {
+            "date": "1962-04-23",
+            "yield_1_year": 3.03,
+            "yield_5_year": 3.63,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-04-24",
+            "yield_1_year": 3.08,
+            "yield_5_year": 3.65,
+            "yield_10_year": 3.87
+        },
+        {
+            "date": "1962-04-25",
+            "yield_1_year": 3.08,
+            "yield_5_year": 3.66,
+            "yield_10_year": 3.88
+        },
+        {
+            "date": "1962-04-26",
+            "yield_1_year": 3.04,
+            "yield_5_year": 3.66,
+            "yield_10_year": 3.89
+        },
+        {
+            "date": "1962-04-27",
+            "yield_1_year": 3.07,
+            "yield_5_year": 3.64,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-04-30",
+            "yield_1_year": 3.07,
+            "yield_5_year": 3.64,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-05-01",
+            "yield_1_year": 3.06,
+            "yield_5_year": 3.63,
+            "yield_10_year": 3.85
+        },
+        {
+            "date": "1962-05-02",
+            "yield_1_year": 3.06,
+            "yield_5_year": 3.64,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-05-03",
+            "yield_1_year": 3.05,
+            "yield_5_year": 3.64,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-05-04",
+            "yield_1_year": 3.05,
+            "yield_5_year": 3.64,
+            "yield_10_year": 3.87
+        },
+        {
+            "date": "1962-05-07",
+            "yield_1_year": 3.04,
+            "yield_5_year": 3.64,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-05-08",
+            "yield_1_year": 3.01,
+            "yield_5_year": 3.62,
+            "yield_10_year": 3.85
+        },
+        {
+            "date": "1962-05-09",
+            "yield_1_year": 3.01,
+            "yield_5_year": 3.6,
+            "yield_10_year": 3.82
+        },
+        {
+            "date": "1962-05-10",
+            "yield_1_year": 2.99,
+            "yield_5_year": 3.61,
+            "yield_10_year": 3.83
+        },
+        {
+            "date": "1962-05-11",
+            "yield_1_year": 3.0,
+            "yield_5_year": 3.61,
+            "yield_10_year": 3.82
+        },
+        {
+            "date": "1962-05-14",
+            "yield_1_year": 3.0,
+            "yield_5_year": 3.63,
+            "yield_10_year": 3.85
+        },
+        {
+            "date": "1962-05-15",
+            "yield_1_year": 3.04,
+            "yield_5_year": 3.67,
+            "yield_10_year": 3.87
+        },
+        {
+            "date": "1962-05-16",
+            "yield_1_year": 3.04,
+            "yield_5_year": 3.67,
+            "yield_10_year": 3.86
+        },
+        {
+            "date": "1962-05-17",
+            "yield_1_year": 3.06,
+            "yield_5_year": 3.67,
+            "yield_10_year": 3.87
+        },
+        {
+            "date": "1962-05-18",
+            "yield_1_year": 3.05,
+            "yield_5_year": 3.72,
+            "yield_10_year": 3.93
+        },
+        {
+            "date": "1962-05-21",
+            "yield_1_year": 3.05,
+            "yield_5_year": 3.74,
+            "yield_10_year": 3.94
+        },
+        {
+            "date": "1962-05-22",
+            "yield_1_year": 3.05,
+            "yield_5_year": 3.71,
+            "yield_10_year": 3.93
+        },
+        {
+            "date": "1962-05-23",
+            "yield_1_year": 3.04,
+            "yield_5_year": 3.69,
+            "yield_10_year": 3.91
+        },
+        {
+            "date": "1962-05-24",
+            "yield_1_year": 3.02,
+            "yield_5_year": 3.68,
+            "yield_10_year": 3.9
+        }
+    ],
+    "next_url": "https://api.massive.com/fed/v1/treasury-yields?cursor=AAEAAAEBZAABAQ0KMTk2Mi0wNS0yNA=="
+}
+
+Phase 15: Inflation
+
+Docs: https://massive.com/docs/rest/economy/inflation
+Endpoint: 'GET /fed/v1/inflation'
+Target Endpoint: '/economy/inflation'
+
+We need to retrieve historical U.S. Treasury yield data for standard timeframes ranging from 1-month to 30-years, with daily historical records back to 1962. This endpoint lets you query by date or date range to see how interest rates have changed over time. Each data point reflects the market yield for Treasury securities of a specific maturity, helping users understand short- and long-term rate movements.
+
+Use Cases: Charting rate trends, comparing short vs. long-term yields, economic research.
+
+Schedule: Once a month, pref. at the start of the day. This also 2 years of historical data. We need to plan to get that as well. 
+
+Sample Response:
+{
+    "status": "OK",
+    "request_id": "a70d6ad83deb4d7dbd6e189c95f8c7fe",
+    "results": [
+        {
+            "date": "1982-01-01",
+            "model_1_year": 6.394507,
+            "model_5_year": 6.4809403,
+            "model_10_year": 6.1976113,
+            "model_30_year": 5.067615
+        },
+        {
+            "date": "1982-02-01",
+            "model_1_year": 6.432108,
+            "model_5_year": 6.404901,
+            "model_10_year": 6.079232,
+            "model_30_year": 4.9706383
+        },
+        {
+            "date": "1982-03-01",
+            "model_1_year": 6.3877316,
+            "model_5_year": 6.027709,
+            "model_10_year": 5.64813,
+            "model_30_year": 4.655782
+        },
+        {
+            "date": "1982-04-01",
+            "model_1_year": 6.1406274,
+            "model_5_year": 6.0649133,
+            "model_10_year": 5.713188,
+            "model_30_year": 4.7098966
+        },
+        {
+            "date": "1982-05-01",
+            "model_1_year": 5.488167,
+            "model_5_year": 5.9439187,
+            "model_10_year": 5.68998,
+            "model_30_year": 4.7294054
+        },
+        {
+            "date": "1982-06-01",
+            "model_1_year": 5.4452324,
+            "model_5_year": 5.8816986,
+            "model_10_year": 5.6023784,
+            "model_30_year": 4.659658
+        },
+        {
+            "date": "1982-07-01",
+            "model_1_year": 6.3748846,
+            "model_5_year": 6.26947,
+            "model_10_year": 5.9160056,
+            "model_30_year": 4.8483744
+        },
+        {
+            "date": "1982-08-01",
+            "model_1_year": 6.367801,
+            "model_5_year": 6.0254416,
+            "model_10_year": 5.696716,
+            "model_30_year": 4.708611
+        },
+        {
+            "date": "1982-09-01",
+            "model_1_year": 6.339422,
+            "model_5_year": 6.0024505,
+            "model_10_year": 5.733214,
+            "model_30_year": 4.7565355
+        },
+        {
+            "date": "1982-10-01",
+            "model_1_year": 5.132758,
+            "model_5_year": 5.5024133,
+            "model_10_year": 5.341065,
+            "model_30_year": 4.526298
+        }
+    ],
+    "next_url": "https://api.massive.com/fed/v1/inflation-expectations?cursor=AAEAAAEBCgABAQ0KMTk4Mi0xMC0wMQ=="
+}
+
+Phase 15: Inflation Expectations
+
+Docs: https://massive.com/docs/rest/economy/inflation-expectations
+Endpoint: 'GET /fed/v1/inflation-expectations'
+Target Endpoint: '/economy/inflation-expectations'
+
+We need to retrieve a broad view of how inflation is expected to evolve over time in the U.S. economy. This endpoint combines signals from financial markets and economic models to capture both near-term and long-term inflation outlooks. Each data point helps contextualize how inflation risk is perceived by investors and forecasters across different time horizons.
+
+Use Cases: Analyzing inflation sentiment, comparing near-term vs. long-term expectations, supporting macroeconomic research and fixed-income strategy.
+
+Schedule: Once a month, pref. at the start of the day. This also 2 years of historical data. We need to plan to get that as well. 
+
+Sample Response:
+{
+    "status": "OK",
+    "request_id": "772b4a8d939c46f5a7c5daed0599b515",
+    "results": [
+        {
+            "date": "1982-01-01",
+            "model_1_year": 6.394507,
+            "model_5_year": 6.4809403,
+            "model_10_year": 6.1976113,
+            "model_30_year": 5.067615
+        },
+        {
+            "date": "1982-02-01",
+            "model_1_year": 6.432108,
+            "model_5_year": 6.404901,
+            "model_10_year": 6.079232,
+            "model_30_year": 4.9706383
+        },
+        {
+            "date": "1982-03-01",
+            "model_1_year": 6.3877316,
+            "model_5_year": 6.027709,
+            "model_10_year": 5.64813,
+            "model_30_year": 4.655782
+        },
+        {
+            "date": "1982-04-01",
+            "model_1_year": 6.1406274,
+            "model_5_year": 6.0649133,
+            "model_10_year": 5.713188,
+            "model_30_year": 4.7098966
+        },
+        {
+            "date": "1982-05-01",
+            "model_1_year": 5.488167,
+            "model_5_year": 5.9439187,
+            "model_10_year": 5.68998,
+            "model_30_year": 4.7294054
+        },
+        {
+            "date": "1982-06-01",
+            "model_1_year": 5.4452324,
+            "model_5_year": 5.8816986,
+            "model_10_year": 5.6023784,
+            "model_30_year": 4.659658
+        },
+        {
+            "date": "1982-07-01",
+            "model_1_year": 6.3748846,
+            "model_5_year": 6.26947,
+            "model_10_year": 5.9160056,
+            "model_30_year": 4.8483744
+        },
+        {
+            "date": "1982-08-01",
+            "model_1_year": 6.367801,
+            "model_5_year": 6.0254416,
+            "model_10_year": 5.696716,
+            "model_30_year": 4.708611
+        },
+        {
+            "date": "1982-09-01",
+            "model_1_year": 6.339422,
+            "model_5_year": 6.0024505,
+            "model_10_year": 5.733214,
+            "model_30_year": 4.7565355
+        },
+        {
+            "date": "1982-10-01",
+            "model_1_year": 5.132758,
+            "model_5_year": 5.5024133,
+            "model_10_year": 5.341065,
+            "model_30_year": 4.526298
+        }
+    ],
+    "next_url": "https://api.massive.com/fed/v1/inflation-expectations?cursor=AAEAAAEBCgABAQ0KMTk4Mi0xMC0wMQ=="
+}
+
+
+So the order of priority would look like:
+Ticker List -> Ticker Type -> Ticker Full COmpany profile (Common Stocks only) -> Financials (Common Stocks only) -> Ticker Full COmpany profile (ETFs and others) 
+Use the DOCS urls to extract reh metaadata regarding the response. Ex: In financial's response we have something called CIK - central index key (CIK) Number - We need to create a seperate 'metadata' endpoint to store all the information extracted from the docs. 
+
+
+
+
+
+
+
+
+
+

@@ -23,6 +23,8 @@ async def fetch_gold_prices():
     """
     Manually trigger gold price fetching and save to database.
     
+    Uses Puppeteer browser automation to bypass Cloudflare protection.
+    
     Returns:
         Status and fetched gold price data
     """
@@ -32,7 +34,10 @@ async def fetch_gold_prices():
         result = await metals_price_service.fetch_and_save_gold_prices()
         
         if result["status"] == "error":
-            raise HTTPException(status_code=500, detail=result["message"])
+            raise HTTPException(
+                status_code=500,
+                detail=result.get("message", "Failed to fetch gold prices")
+            )
         
         return result
     except HTTPException:
