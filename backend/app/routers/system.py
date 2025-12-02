@@ -11,6 +11,7 @@ Provides APIs for:
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, List, Optional
 
+from app.core.logging_config import get_logger
 from app.services.providers import (
     provider_manager,
     provider_registry,
@@ -22,6 +23,7 @@ from app.services.jobs.massive_ticker_discovery import massive_ticker_discovery
 from app.services.stock.metadata_enrichment_service import metadata_enrichment_service
 from app.models.provider import CompanyOverview
 
+logger = get_logger(__name__)
 router = APIRouter(prefix="/system", tags=["System Management"])
 
 
@@ -674,6 +676,76 @@ async def trigger_ticker_enrichment(ticker: str):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to enrich ticker: {str(e)}"
+        )
+
+
+@router.post("/metadata/foundation/{ticker}")
+async def trigger_foundation_collection(ticker: str):
+    """
+    [TEST ENDPOINT] Trigger foundation metadata collection via MASSIVE for specific ticker.
+    
+    This endpoint is for Phase 3 testing - validates that all 30+ MASSIVE fields
+    are properly captured and stored at top level (not in extended_data).
+    
+    Args:
+        ticker: Ticker symbol to enrich
+        
+    Returns:
+        {
+            "status": "success",
+            "ticker": "MSFT",
+            "enrichment_status": "foundation",
+            "fields_captured": 32,
+            "has_cik": true,
+            "has_branding": true,
+            "metadata": {...}
+        }
+    """
+    try:
+        ticker = ticker.upper()
+        
+        # Collect foundation metadata from MASSIVE
+        metadata = await metadata_enrichment_service.collect_foundation_metadata(ticker)
+        
+        if not metadata:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Could not collect foundation metadata for {ticker}"
+            )
+        
+        # Save to database
+        saved = await metadata_enrichment_service.save_metadata(metadata)
+        
+        # Count non-null fields for verification
+        saved_dict = saved.dict()
+        fields_captured = len([v for v in saved_dict.values() if v is not None and v != "" and v != []])
+        
+        return {
+            "status": "success",
+            "ticker": ticker,
+            "enrichment_status": saved.enrichment_status,
+            "fields_captured": fields_captured,
+            "has_cik": bool(saved.cik),
+            "has_composite_figi": bool(saved.composite_figi),
+            "has_logo_url": bool(saved.logo_url),
+            "has_icon_url": bool(saved.icon_url),
+            "has_address1": bool(saved.address1),
+            "has_phone_number": bool(saved.phone_number),
+            "metadata_sources": saved.metadata_sources,
+            "message": f"Foundation metadata collected successfully ({fields_captured} fields)"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Failed to trigger foundation collection",
+            extra={"ticker": ticker, "error": str(e)},
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to collect foundation metadata: {str(e)}"
         )
 
 

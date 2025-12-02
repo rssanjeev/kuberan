@@ -138,6 +138,8 @@ class MetadataEnrichmentService:
         """
         Map MASSIVE ticker details to our metadata structure.
         
+        PHASE 3 ENHANCED: Maps all 30+ MASSIVE fields to CompanyOverview top-level fields.
+        
         MASSIVE provides comprehensive reference data:
         - Official identifiers (CIK, FIGI)
         - Detailed address and contact
@@ -149,61 +151,80 @@ class MetadataEnrichmentService:
             massive_details: Response from MASSIVE fetch_ticker_details
             
         Returns:
-            Mapped metadata dictionary
+            Mapped metadata dictionary with Phase 3 fields at top level
         """
-        # Extract branding
-        branding = massive_details.get("branding", {})
-        logo_url = branding.get("logo_url")
-        icon_url = branding.get("icon_url")
+        # Phase 3: MASSIVE returns pre-mapped data, pass through directly
+        # The fetch_ticker_details() method already maps all fields correctly
         
-        # Extract address
-        address = massive_details.get("address", {})
-        
-        # Build extended_data with MASSIVE-specific fields
-        extended_data = {
-            # Official identifiers
+        metadata = {
+            # ==================== Core Identification ====================
+            "ticker": massive_details.get("ticker"),
+            "name": massive_details.get("name"),
+            
+            # ==================== MASSIVE-Specific Identifiers ====================
             "cik": massive_details.get("cik"),
             "composite_figi": massive_details.get("composite_figi"),
             "share_class_figi": massive_details.get("share_class_figi"),
+            "ticker_root": massive_details.get("ticker_root"),
             
-            # Branding
-            "logo_url": logo_url,
-            "icon_url": icon_url,
+            # ==================== Classification ====================
+            "type": massive_details.get("type"),
+            "market": massive_details.get("market"),
+            "locale": massive_details.get("locale"),
+            "primary_exchange": massive_details.get("primary_exchange"),
+            "exchange": massive_details.get("primary_exchange"),  # Legacy field
+            "asset_type": self._classify_massive_asset_type(massive_details.get("type")),  # Legacy field
             
-            # SIC classification
+            # ==================== Company Information ====================
+            "description": massive_details.get("description"),
             "sic_code": massive_details.get("sic_code"),
             "sic_description": massive_details.get("sic_description"),
             
-            # Additional details
-            "list_date": massive_details.get("list_date"),
-            "total_employees": massive_details.get("total_employees"),
-            "active": massive_details.get("active", True),
-            "locale": massive_details.get("locale", "us"),
-        }
-        
-        metadata = {
-            "ticker": massive_details.get("ticker"),
-            "name": massive_details.get("name"),
-            "description": massive_details.get("description"),
-            "exchange": massive_details.get("primary_exchange"),
-            "currency": massive_details.get("currency_name", "usd").upper(),
-            "asset_type": self._classify_massive_asset_type(massive_details.get("type")),
-            "market_cap": massive_details.get("market_cap"),
-            "website": massive_details.get("homepage_url"),
+            # ==================== Contact Information ====================
+            "homepage_url": massive_details.get("homepage_url"),
+            "website": massive_details.get("homepage_url"),  # Legacy field
+            "phone_number": massive_details.get("phone_number"),
+            "phone": massive_details.get("phone_number"),  # Legacy field
+            
+            # Address fields (MASSIVE pre-flattens these)
+            "address1": massive_details.get("address1"),
+            "address": massive_details.get("address1"),  # Legacy field
+            "city": massive_details.get("city"),
+            "state": massive_details.get("state"),
+            "postal_code": massive_details.get("postal_code"),
+            "zip_code": massive_details.get("postal_code"),  # Legacy field
             "country": "US",  # MASSIVE is US-only
             
-            # Detailed address
-            "address": address.get("address1"),
-            "city": address.get("city"),
-            "state": address.get("state"),
-            "zip_code": address.get("postal_code"),
-            "phone": massive_details.get("phone_number"),
+            # ==================== Branding ====================
+            "logo_url": massive_details.get("logo_url"),
+            "icon_url": massive_details.get("icon_url"),
             
-            # Company structure
-            "shares_outstanding": massive_details.get("share_class_shares_outstanding"),
+            # ==================== Financial Metrics ====================
+            "market_cap": massive_details.get("market_cap"),
+            "total_employees": massive_details.get("total_employees"),
             
-            # Store MASSIVE-specific fields in extended_data
-            "extended_data": extended_data,
+            # Share information
+            "share_class_shares_outstanding": massive_details.get("share_class_shares_outstanding"),
+            "shares_outstanding": massive_details.get("share_class_shares_outstanding"),  # Legacy field
+            "weighted_shares_outstanding": massive_details.get("weighted_shares_outstanding"),
+            "round_lot": massive_details.get("round_lot"),
+            
+            # ==================== Currency ====================
+            "currency_name": massive_details.get("currency_name"),
+            "currency_symbol": massive_details.get("currency_symbol"),
+            "currency": massive_details.get("currency_name", "usd").upper(),  # Legacy field
+            
+            # ==================== Dates & Status ====================
+            "list_date": massive_details.get("list_date"),
+            "active": massive_details.get("active"),
+            "delisted_utc": massive_details.get("delisted_utc"),
+            "last_updated_utc": massive_details.get("last_updated_utc"),
+            
+            # ==================== Metadata ====================
+            "metadata_sources": massive_details.get("metadata_sources", ["MASSIVE"]),
+            
+            # ==================== Extended Data ====================
+            "extended_data": massive_details.get("extended_data", {}),
         }
         
         return metadata
