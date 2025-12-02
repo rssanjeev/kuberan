@@ -793,3 +793,95 @@ class MassiveProvider(BaseProvider):
                 exc_info=True
             )
             raise ProviderException(f"MASSIVE ticker list fetch failed: {str(e)}")
+    
+    async def fetch_ticker_types(
+        self,
+        asset_class: Optional[str] = None,
+        locale: Optional[str] = None
+    ) -> Optional[List[Dict]]:
+        """
+        Fetch official ticker type classifications from MASSIVE.
+        
+        Reference endpoint: GET /v3/reference/tickers/types
+        Returns all ticker types (CS, ETF, ADRC, PFD, etc.) with descriptions.
+        
+        Args:
+            asset_class: Filter by asset class (stocks, options, crypto, fx, indices)
+            locale: Filter by locale (us, global)
+            
+        Returns:
+            List of ticker type dictionaries or None if failed
+            
+        Example Response:
+            [
+                {
+                    "code": "CS",
+                    "description": "Common Stock",
+                    "asset_class": "stocks",
+                    "locale": "us"
+                },
+                {
+                    "code": "ETF",
+                    "description": "Exchange Traded Fund",
+                    "asset_class": "stocks",
+                    "locale": "us"
+                }
+            ]
+        """
+        try:
+            await self.rate_limiter.acquire(priority=0)
+            
+            params = {"apikey": self.api_key}
+            if asset_class:
+                params["asset_class"] = asset_class
+            if locale:
+                params["locale"] = locale
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/v3/reference/tickers/types",
+                    params=params
+                )
+                
+                self.rate_limiter.update_from_response(response.headers)
+                
+                if response.status_code == 429:
+                    raise RateLimitException(f"Rate limit exceeded for {self.name}")
+                
+                response.raise_for_status()
+                data = response.json()
+            
+            if data and "results" in data:
+                types = []
+                
+                for ticker_type in data["results"]:
+                    types.append({
+                        "code": ticker_type.get("code", ""),
+                        "description": ticker_type.get("description", ""),
+                        "asset_class": ticker_type.get("asset_class", ""),
+                        "locale": ticker_type.get("locale", ""),
+                    })
+                
+                logger.info(
+                    f"Fetched {len(types)} ticker types from MASSIVE",
+                    extra={
+                        "count": len(types),
+                        "asset_class": asset_class,
+                        "locale": locale
+                    }
+                )
+                
+                return types
+            
+            return None
+        
+        except RateLimitException:
+            raise
+        except Exception as e:
+            logger.error(
+                f"Failed to fetch ticker types",
+                extra={"error": str(e)},
+                exc_info=True
+            )
+            raise ProviderException(f"MASSIVE ticker types fetch failed: {str(e)}")
+

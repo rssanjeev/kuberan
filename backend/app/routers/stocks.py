@@ -13,7 +13,8 @@ import pytz
 from app.services.stock.fetcher import stock_fetcher as stock_service
 from app.core.market_calendar import is_market_open
 from app.models.provider import CompanyOverview
-from typing import Dict, Any
+from app.services.ticker_type_service import ticker_type_service
+from typing import Dict, Any, List
 
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
@@ -146,6 +147,90 @@ async def list_all_tickers(
             "limit": limit,
             "tickers": []
         }
+
+
+@router.get("/tickers/types")
+async def get_ticker_types(
+    asset_class: Optional[str] = None,
+    locale: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Get official ticker type classifications from MASSIVE API.
+    
+    Returns reference data showing all valid ticker types (CS, ETF, ADRC, PFD, etc.)
+    with descriptions. This is cached reference data - types rarely change.
+    
+    Args:
+        asset_class: Filter by asset class (stocks, options, crypto, fx, indices)
+        locale: Filter by locale (us, global)
+        
+    Returns:
+        {
+            "count": <int>,
+            "results": [
+                {
+                    "code": "CS",
+                    "description": "Common Stock",
+                    "asset_class": "stocks",
+                    "locale": "us"
+                },
+                {
+                    "code": "ETF",
+                    "description": "Exchange Traded Fund",
+                    "asset_class": "stocks",
+                    "locale": "us"
+                }
+            ]
+        }
+    
+    Common Ticker Types:
+        - CS: Common Stock
+        - ETF: Exchange Traded Fund
+        - ADRC: American Depository Receipt Common
+        - PFD: Preferred Stock
+        - WARRANT: Warrant
+        - RIGHT: Rights
+        - UNIT: Unit
+        - FUND: Mutual Fund
+        - INDEX: Index
+        - ETN: Exchange Traded Note
+        
+    Use Cases:
+        - Filter tickers by security type
+        - Validate ticker type classifications
+        - Educational reference for users
+        - System integration and data classification
+    """
+    try:
+        types = await ticker_type_service.get_types(
+            asset_class=asset_class,
+            locale=locale
+        )
+        
+        return {
+            "count": len(types),
+            "results": [
+                {
+                    "code": t.code,
+                    "description": t.description,
+                    "asset_class": t.asset_class,
+                    "locale": t.locale
+                }
+                for t in types
+            ]
+        }
+    except Exception as e:
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.error(
+            "Failed to fetch ticker types",
+            extra={"error": str(e)},
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch ticker types"
+        )
 
 
 @router.get("/market/status")

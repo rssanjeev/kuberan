@@ -87,6 +87,98 @@ Get a paginated, filtered list of all tickers with full metadata (from CompanyOv
 - `400 Bad Request` - Invalid query parameters
 - `500 Internal Server Error` - Server error
 
+### Get Ticker Types
+Get official ticker type classifications from MASSIVE API.
+
+**Endpoint:** `GET /stocks/tickers/types`
+
+**Query Parameters:**
+- `asset_class` (optional): Filter by asset class (`stocks`, `options`, `crypto`, `fx`, `indices`)
+- `locale` (optional): Filter by locale (`us`, `global`)
+
+**Example:** `GET /stocks/tickers/types?asset_class=stocks`
+
+**Response:**
+```json
+{
+  "count": 24,
+  "results": [
+    {
+      "code": "CS",
+      "description": "Common Stock",
+      "asset_class": "stocks",
+      "locale": "us"
+    },
+    {
+      "code": "ETF",
+      "description": "Exchange Traded Fund",
+      "asset_class": "stocks",
+      "locale": "us"
+    },
+    {
+      "code": "ADRC",
+      "description": "American Depository Receipt Common",
+      "asset_class": "stocks",
+      "locale": "us"
+    },
+    {
+      "code": "PFD",
+      "description": "Preferred Stock",
+      "asset_class": "stocks",
+      "locale": "us"
+    },
+    {
+      "code": "WARRANT",
+      "description": "Warrant",
+      "asset_class": "stocks",
+      "locale": "us"
+    }
+  ]
+}
+```
+
+**Common Ticker Types:**
+- **CS** - Common Stock
+- **ETF** - Exchange Traded Fund
+- **ADRC** - American Depository Receipt Common
+- **ADRP** - American Depository Receipt Preferred
+- **ADRR** - American Depository Receipt Rights
+- **ADRW** - American Depository Receipt Warrants
+- **PFD** - Preferred Stock
+- **WARRANT** - Warrant
+- **RIGHT** - Rights
+- **UNIT** - Unit
+- **FUND** - Fund
+- **ETN** - Exchange Traded Note
+- **BOND** - Corporate Bond
+
+**Use Cases:**
+- Filter tickers by security type
+- Validate ticker classifications
+- Educational reference for security types
+- System integration and data classification
+
+**Example Requests:**
+```bash
+# Get all ticker types
+curl http://localhost:8000/stocks/tickers/types
+
+# Filter by asset class
+curl "http://localhost:8000/stocks/tickers/types?asset_class=stocks"
+
+# Filter by locale
+curl "http://localhost:8000/stocks/tickers/types?locale=us"
+```
+
+**Errors:**
+- `500 Internal Server Error` - Failed to fetch ticker types
+
+**Notes:**
+- Data cached permanently (types rarely change)
+- Free tier compatible
+- 24 types available for stocks/us
+- Run `fetch_ticker_types.py` script once to populate database
+
 ### Get Stock Information
 Get current stock information for a specific ticker.
 

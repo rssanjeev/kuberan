@@ -6,6 +6,7 @@ Models:
 - StockPrice: Time-series price data
 - UserWatchlist: User's tracked tickers
 - TickerConfig: Global ticker configuration for polling
+- TickerType: MASSIVE ticker type classifications (CS, ETF, etc.)
 """
 
 from beanie import Document
@@ -81,4 +82,29 @@ class TickerConfig(Document):
         indexes = [
             "ticker",
             "enabled",
+        ]
+
+
+class TickerType(Document):
+    """
+    MASSIVE ticker type classifications.
+    
+    Reference data from MASSIVE API /v3/reference/tickers/types.
+    Fetched once and cached permanently (types rarely change).
+    
+    Examples: CS (Common Stock), ETF (Exchange Traded Fund), 
+              ADRC (American Depository Receipt Common)
+    """
+    code: str  # Type code (CS, ETF, ADRC, PFD, etc.)
+    description: str  # Human-readable description
+    asset_class: str  # Asset class (stocks, options, crypto, fx, indices)
+    locale: str  # Locale (us, global)
+    fetched_at: datetime  # When data was fetched from MASSIVE
+    
+    class Settings:
+        name = "ticker_types"
+        indexes = [
+            "code",  # Unique index on type code
+            "asset_class",  # Filter by asset class
+            "locale",  # Filter by locale
         ]

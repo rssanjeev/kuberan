@@ -26,6 +26,7 @@ from app.models.stock import (
     StockPrice,
     UserWatchlist,
     TickerConfig,
+    TickerType
 )
 
 # Financier models
@@ -105,6 +106,7 @@ __all__ = [
     "StockPrice",
     "UserWatchlist",
     "TickerConfig",
+    "TickerType",
     
     # Financier
     "MerchantCategory",
@@ -172,6 +174,7 @@ DOCUMENT_MODELS = [
     StockPrice,
     UserWatchlist,
     TickerConfig,
+    TickerType,
     
     # Financier
     MerchantCategory,
