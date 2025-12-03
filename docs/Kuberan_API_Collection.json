@@ -144,6 +144,67 @@
               "response": []
             },
             {
+              "name": "Get Complete Stock Info (Real-time + MASSIVE)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/complete/AAPL",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "stocks",
+                    "complete",
+                    "AAPL"
+                  ]
+                },
+                "description": "Get comprehensive stock information combining real-time Yahoo Finance data with MASSIVE Phase 3 metadata.\n\nCombines:\n- Real-time pricing from Yahoo Finance (current_price, volume, day high/low, market_cap)\n- MASSIVE foundation metadata from database (CIK, FIGI, logos, descriptions, address, phone, SIC codes)\n\nReturns 50+ fields including both real-time and enriched company metadata. If MASSIVE data is not available for the ticker, returns only Yahoo Finance data with massive_metadata_available=false."
+              },
+              "response": [
+                {
+                  "name": "Success - With MASSIVE Data (AAPL)",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/stocks/complete/AAPL",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["stocks", "complete", "AAPL"]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {"key": "Content-Type", "value": "application/json"}
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"ticker\": \"AAPL\",\n  \"name\": \"Apple Inc.\",\n  \"short_name\": \"Apple Inc.\",\n  \"sector\": \"Technology\",\n  \"industry\": \"Consumer Electronics\",\n  \"current_price\": 284.15,\n  \"market_cap\": 4216896618496,\n  \"currency\": \"USD\",\n  \"exchange\": \"NMS\",\n  \"country\": \"United States\",\n  \"website\": \"https://www.apple.com\",\n  \"timestamp\": \"2025-12-03T17:05:53.761823-05:00\",\n  \"updated_at\": \"2025-12-03T17:05:54.047894-05:00\",\n  \"cik\": \"0000320193\",\n  \"composite_figi\": \"BBG000B9XRY4\",\n  \"share_class_figi\": \"BBG001S5N8V8\",\n  \"lei\": null,\n  \"sic_code\": \"3571\",\n  \"sic_description\": \"ELECTRONIC COMPUTERS\",\n  \"description\": \"Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide...\",\n  \"homepage_url\": \"https://www.apple.com\",\n  \"total_employees\": 166000,\n  \"list_date\": \"1980-12-12\",\n  \"address\": \"ONE APPLE PARK WAY\",\n  \"phone_number\": \"(408) 996-1010\",\n  \"logo_url\": \"https://api.polygon.io/v1/reference/company-branding/YXBwbGUuY29t/images/2025-04-04_logo.svg\",\n  \"icon_url\": \"https://api.polygon.io/v1/reference/company-branding/YXBwbGUuY29t/images/2025-04-04_icon.png\",\n  \"weighted_shares_outstanding\": 14776353000,\n  \"share_class_shares_outstanding\": 14776353000,\n  \"enrichment_status\": \"foundation\",\n  \"metadata_sources\": [\"MASSIVE\"],\n  \"massive_metadata_available\": true,\n  \"fetched_at\": \"2025-12-02T22:40:59.967000\"\n}"
+                },
+                {
+                  "name": "Success - Without MASSIVE Data",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/stocks/complete/NVDA",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["stocks", "complete", "NVDA"]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {"key": "Content-Type", "value": "application/json"}
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"ticker\": \"NVDA\",\n  \"name\": \"NVIDIA Corporation\",\n  \"current_price\": 495.22,\n  \"market_cap\": 1200000000000,\n  \"sector\": \"Technology\",\n  \"industry\": \"Semiconductors\",\n  \"massive_metadata_available\": false,\n  \"enrichment_status\": null\n}"
+                }
+              ]
+            },
+            {
               "name": "List All Tickers with Metadata",
               "request": {
                 "method": "GET",
@@ -162,7 +223,7 @@
                     {"key": "skip", "value": "0", "description": "Pagination offset"}
                   ]
                 },
-                "description": "Get a paginated, filtered list of all tickers with full metadata (from CompanyOverview)."
+                "description": "Get a paginated, filtered list of all tickers with full metadata (from CompanyOverview).\n\nSearch behavior:\n- Exact match: If search query exactly matches a ticker symbol (case-insensitive), returns ONLY that ticker\n- Partial match: If no exact match, returns all tickers where ticker or name contains the search string\n- Example: search=NVDA returns only NVDA (exact match), search=tech returns all tickers with 'tech' in name/ticker"
               },
               "response": [
                 {
