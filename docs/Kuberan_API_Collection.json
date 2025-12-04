@@ -278,6 +278,148 @@
               "response": []
             },
             {
+              "name": "Get Historical Prices (Period-based)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/history/AAPL?period=1y&interval=1d&cache=true",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "stocks",
+                    "history",
+                    "AAPL"
+                  ],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "1y",
+                      "description": "Time period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max"
+                    },
+                    {
+                      "key": "interval",
+                      "value": "1d",
+                      "description": "Data interval: 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo"
+                    },
+                    {
+                      "key": "cache",
+                      "value": "true",
+                      "description": "Cache fetched data in database (default: true)"
+                    }
+                  ]
+                },
+                "description": "Get historical OHLCV price data from Yahoo Finance.\n\nFetches data for specified period and optionally caches in database for future queries. Returns Open, High, Low, Close, Volume, Adjusted Close, Dividends, and Stock Splits.\n\nValid periods: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max\nValid intervals: 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo\n\nNote: Intraday intervals (1m-1h) are limited to last 60 days."
+              },
+              "response": [
+                {
+                  "name": "Success - 1 Year Daily Data",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/stocks/history/AAPL?period=1y&interval=1d&cache=true",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["stocks", "history", "AAPL"],
+                      "query": [
+                        {"key": "period", "value": "1y"},
+                        {"key": "interval", "value": "1d"},
+                        {"key": "cache", "value": "true"}
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [{"key": "Content-Type", "value": "application/json"}],
+                  "body": "{\n  \"ticker\": \"AAPL\",\n  \"period\": \"1y\",\n  \"interval\": \"1d\",\n  \"source\": \"yfinance\",\n  \"count\": 250,\n  \"cached_count\": 250,\n  \"data\": [\n    {\n      \"Date\": \"2024-12-04T00:00:00-05:00\",\n      \"Open\": 177.26,\n      \"High\": 179.0,\n      \"Low\": 175.99,\n      \"Close\": 178.85,\n      \"Volume\": 20135600,\n      \"Dividends\": 0.0,\n      \"Stock Splits\": 0.0\n    }\n    // ...249 more records\n  ]\n}"
+                }
+              ]
+            },
+            {
+              "name": "Get Historical Prices (Date-range from cache)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/history/AAPL?start_date=2024-01-01&end_date=2024-12-31&interval=1d",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "stocks",
+                    "history",
+                    "AAPL"
+                  ],
+                  "query": [
+                    {
+                      "key": "start_date",
+                      "value": "2024-01-01",
+                      "description": "Start date in YYYY-MM-DD format"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2024-12-31",
+                      "description": "End date in YYYY-MM-DD format"
+                    },
+                    {
+                      "key": "interval",
+                      "value": "1d",
+                      "description": "Data interval: 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo"
+                    }
+                  ]
+                },
+                "description": "Query cached historical price data by date range.\n\nReturns only previously cached data (fast but limited to cached records). Use period-based query to fetch and cache new data.\n\nReturns 404 if no cached data exists for the date range. In that case, use period parameter to fetch from Yahoo Finance."
+              },
+              "response": [
+                {
+                  "name": "Success - Cached Data",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/stocks/history/AAPL?start_date=2024-01-01&end_date=2024-12-31&interval=1d",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["stocks", "history", "AAPL"],
+                      "query": [
+                        {"key": "start_date", "value": "2024-01-01"},
+                        {"key": "end_date", "value": "2024-12-31"},
+                        {"key": "interval", "value": "1d"}
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [{"key": "Content-Type", "value": "application/json"}],
+                  "body": "{\n  \"ticker\": \"AAPL\",\n  \"start_date\": \"2024-01-01\",\n  \"end_date\": \"2024-12-31\",\n  \"interval\": \"1d\",\n  \"source\": \"cache\",\n  \"count\": 250,\n  \"data\": [\n    {\n      \"Date\": \"2024-01-02\",\n      \"Open\": 177.26,\n      \"High\": 179.0,\n      \"Low\": 175.99,\n      \"Close\": 178.85,\n      \"Volume\": 20135600,\n      \"Adj Close\": null\n    }\n    // ...249 more records\n  ]\n}"
+                },
+                {
+                  "name": "Not Found - No Cached Data",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/stocks/history/TSLA?start_date=2024-01-01&end_date=2024-12-31&interval=1d",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["stocks", "history", "TSLA"],
+                      "query": [
+                        {"key": "start_date", "value": "2024-01-01"},
+                        {"key": "end_date", "value": "2024-12-31"},
+                        {"key": "interval", "value": "1d"}
+                      ]
+                    }
+                  },
+                  "status": "Not Found",
+                  "code": 404,
+                  "_postman_previewlanguage": "json",
+                  "header": [{"key": "Content-Type", "value": "application/json"}],
+                  "body": "{\n  \"detail\": \"No cached data found for ticker TSLA. Use period parameter to fetch from Yahoo Finance.\"\n}"
+                }
+              ]
+            },
+            {
               "name": "Get Ticker Types",
               "request": {
                 "method": "GET",

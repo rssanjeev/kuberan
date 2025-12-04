@@ -209,37 +209,110 @@ Get current stock information for a specific ticker.
 ---
 
 ### Get Stock History
-Get historical stock data for a specific ticker from Yahoo Finance.
+Get historical OHLCV price data for a specific ticker. Supports two query modes:
+1. **Period-based** (Yahoo Finance): Fetch fresh data and optionally cache
+2. **Date-range** (Database cache): Query previously cached data (fast)
 
 **Endpoint:** `GET /stocks/history/{ticker}`
 
 **Parameters:**
-- `ticker` (path) - Stock ticker symbol
+- `ticker` (path, required) - Stock ticker symbol
+
+**Period-based Query Parameters:**
 - `period` (query, optional) - Time period (default: `1mo`)
   - Valid values: `1d`, `5d`, `1mo`, `3mo`, `6mo`, `1y`, `2y`, `5y`, `10y`, `ytd`, `max`
+- `interval` (query, optional) - Data interval (default: `1d`)
+  - Valid values: `1m`, `5m`, `15m`, `30m`, `1h`, `1d`, `1wk`, `1mo`
+  - Note: Intraday intervals (1m-1h) limited to last 60 days
+- `cache` (query, optional) - Cache fetched data in database (default: `true`)
 
-**Example:** `GET /stocks/history/KO?period=1mo`
+**Date-range Query Parameters (Cache Mode):**
+- `start_date` (query) - Start date in `YYYY-MM-DD` format
+- `end_date` (query) - End date in `YYYY-MM-DD` format
+- `interval` (query, optional) - Data interval (default: `1d`)
 
-**Response:**
+**Example - Period-based (Fetch and Cache):**  
+`GET /stocks/history/AAPL?period=1y&interval=1d&cache=true`
+
+**Response (Period-based):**
 ```json
 {
-  "ticker": "KO",
-  "period": "1mo",
+  "ticker": "AAPL",
+  "period": "1y",
+  "interval": "1d",
+  "source": "yfinance",
+  "count": 250,
+  "cached_count": 250,
   "data": [
     {
-      "date": "2025-10-15",
-      "open": 70.25,
-      "high": 71.50,
-      "low": 69.80,
-      "close": 71.20,
-      "volume": 15234567
+      "Date": "2024-12-04T00:00:00-05:00",
+      "Open": 177.26,
+      "High": 179.0,
+      "Low": 175.99,
+      "Close": 178.85,
+      "Volume": 20135600,
+      "Dividends": 0.0,
+      "Stock Splits": 0.0
     }
+    // ...249 more records
   ]
 }
 ```
 
+**Example - Date-range (Cache Query):**  
+`GET /stocks/history/AAPL?start_date=2024-01-01&end_date=2024-12-31&interval=1d`
+
+**Response (Date-range):**
+```json
+{
+  "ticker": "AAPL",
+  "start_date": "2024-01-01",
+  "end_date": "2024-12-31",
+  "interval": "1d",
+  "source": "cache",
+  "count": 250,
+  "data": [
+    {
+      "Date": "2024-01-02",
+      "Open": 177.26,
+      "High": 179.0,
+      "Low": 175.99,
+      "Close": 178.85,
+      "Volume": 20135600,
+      "Adj Close": null
+    }
+    // ...249 more records
+  ]
+}
+```
+
+**Fields Returned:**
+- `Date` - Trading date with timezone (period-based) or YYYY-MM-DD (cache)
+- `Open` - Opening price
+- `High` - Highest price
+- `Low` - Lowest price
+- `Close` - Closing price
+- `Volume` - Trading volume
+- `Adj Close` - Adjusted close (null in cache mode)
+- `Dividends` - Dividend amount (0.0 if none)
+- `Stock Splits` - Split ratio (0.0 if none)
+
+**Caching Strategy:**
+- **Automatic**: Data is cached by default when using period-based queries
+- **Storage**: MongoDB `stock_historical_prices` collection with 5-year TTL
+- **Duplicates**: Automatically prevented (re-fetching same data won't duplicate)
+- **Growth**: Organic - data cached only when requested or via background job
+- **Benefits**: Fast subsequent queries, reduced API calls, historical analysis
+
+**Use Cases:**
+1. **Initial fetch with caching**: `?period=5y` (cache 5 years of data)
+2. **Fast cached queries**: `?start_date=2024-01-01&end_date=2024-12-31`
+3. **Technical indicator data**: `?period=2y` (enough for 200-day SMA calculations)
+4. **Backtesting**: Fetch max available history with `?period=max`
+
 **Errors:**
-- `404 Not Found` - History not found for ticker
+- `404 Not Found` - No historical data available (period-based) or no cached data (date-range)
+- `400 Bad Request` - Invalid period, interval, or date format
 
 ---
 

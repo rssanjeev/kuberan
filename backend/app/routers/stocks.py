@@ -6,14 +6,16 @@ IMPORTANT: When modifying endpoints in this file, update the API documentation:
 
 This ensures the API documentation stays in sync with the actual implementation.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
+import asyncio
 from app.services.stock.fetcher import stock_fetcher as stock_service
 from app.core.market_calendar import is_market_open
-from app.models.provider import CompanyOverview
+from app.models.provider import CompanyOverview, DataSource
 from app.services.ticker_type_service import ticker_type_service
+from app.repositories.provider_repository import provider_repository
 from typing import Dict, Any, List
 
 
@@ -74,8 +76,34 @@ async def list_all_tickers(
         if asset_type:
             filters.append(CompanyOverview.asset_type == asset_type)
         if search:
-            # Use MongoDB regex for case-insensitive substring search
-            from beanie.operators import Or, RegEx
+            # Check for exact match first
+            exact_match = await CompanyOverview.find_one(
+                CompanyOverview.ticker == search.upper()
+            )
+            
+            if exact_match:
+                # Found exact match - return only this ticker
+                return {
+                    "total": 1,
+                    "returned": 1,
+                    "skip": 0,
+                    "limit": 1,
+                    "tickers": [{
+                        "ticker": exact_match.ticker,
+                        "name": exact_match.name,
+                        "sector": exact_match.sector,
+                        "industry": exact_match.industry,
+                        "market_cap": exact_match.market_cap,
+                        "enrichment_status": exact_match.enrichment_status,
+                        "asset_type": exact_match.asset_type,
+                        "exchange": exact_match.exchange,
+                        "country": exact_match.country,
+                        "fetched_at": exact_match.fetched_at.isoformat() if exact_match.fetched_at else None
+                    }]
+                }
+            
+            # No exact match - use regex for partial matches
+            from beanie.operators import Or
             search_pattern = {"$regex": search, "$options": "i"}
             filters.append(
                 Or(
@@ -262,6 +290,81 @@ async def get_stock_price(ticker: str):
     return price
 
 # Stock info endpoints
+@router.get("/complete/{ticker}")
+async def get_complete_stock_info(ticker: str):
+    """
+    Get comprehensive stock information combining real-time data and MASSIVE metadata.
+    
+    Combines:
+    - Real-time pricing from Yahoo Finance (price, volume, day high/low, etc.)
+    - MASSIVE foundation metadata from database (CIK, FIGI, logos, descriptions, etc.)
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL, NVDA)
+        
+    Returns:
+        Complete stock information with ~50+ fields including both real-time and metadata
+    """
+    from app.models.provider import CompanyOverview
+    
+    # Fetch real-time data from Yahoo Finance
+    stock_data = await stock_service.get_stock_info(ticker.upper())
+    if not stock_data:
+        raise HTTPException(status_code=404, detail=f"Stock data not found for {ticker}")
+    
+    # Fetch MASSIVE metadata from database
+    company_overview = await CompanyOverview.find_one(
+        CompanyOverview.ticker == ticker.upper()
+    )
+    
+    if not company_overview:
+        # No MASSIVE data available, return just yfinance data
+        return {
+            **stock_data,
+            "massive_metadata_available": False,
+            "enrichment_status": None
+        }
+    
+    # Merge yfinance data with MASSIVE metadata
+    # yfinance data takes precedence for overlapping fields
+    massive_data = {
+        # Identifiers
+        "cik": getattr(company_overview, "cik", None),
+        "composite_figi": getattr(company_overview, "composite_figi", None),
+        "share_class_figi": getattr(company_overview, "share_class_figi", None),
+        "lei": getattr(company_overview, "lei", None),
+        "sic_code": getattr(company_overview, "sic_code", None),
+        "sic_description": getattr(company_overview, "sic_description", None),
+        
+        # Company info
+        "description": getattr(company_overview, "description", None),
+        "homepage_url": getattr(company_overview, "homepage_url", None),
+        "total_employees": getattr(company_overview, "total_employees", None),
+        "list_date": getattr(company_overview, "list_date", None),
+        
+        # Address
+        "address": getattr(company_overview, "address", None),
+        "phone_number": getattr(company_overview, "phone_number", None),
+        
+        # Branding
+        "logo_url": getattr(company_overview, "logo_url", None),
+        "icon_url": getattr(company_overview, "icon_url", None),
+        
+        # Financials
+        "weighted_shares_outstanding": getattr(company_overview, "weighted_shares_outstanding", None),
+        "share_class_shares_outstanding": getattr(company_overview, "share_class_shares_outstanding", None),
+        
+        # Metadata
+        "enrichment_status": getattr(company_overview, "enrichment_status", None),
+        "metadata_sources": getattr(company_overview, "metadata_sources", None),
+        "massive_metadata_available": True,
+        "fetched_at": company_overview.fetched_at.isoformat() if company_overview.fetched_at else None
+    }
+    
+    # Merge with preference for yfinance real-time data
+    return {**massive_data, **stock_data}
+
+
 @router.get("/{ticker}")
 async def get_stock(ticker: str):
     """
@@ -390,4 +493,215 @@ async def get_provider_routing_config():
         "documentation": "See docs/MULTI_PROVIDER_ARCHITECTURE.md for detailed architecture"
     }
 
+
+@router.get("/history/{ticker}")
+async def get_stock_history(
+    ticker: str,
+    period: Optional[str] = Query(
+        "1mo",
+        regex="^(1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max)$",
+        description="Time period for historical data"
+    ),
+    interval: str = Query(
+        "1d",
+        regex="^(1m|5m|15m|30m|1h|1d|1wk|1mo)$",
+        description="Data interval (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo)"
+    ),
+    start_date: Optional[str] = Query(
+        None,
+        description="Start date (YYYY-MM-DD) for database query mode"
+    ),
+    end_date: Optional[str] = Query(
+        None,
+        description="End date (YYYY-MM-DD) for database query mode"
+    ),
+    cache: bool = Query(
+        True,
+        description="Cache fetched data in database for future queries"
+    )
+) -> Dict[str, Any]:
+    """
+    Get historical OHLCV price data for a ticker.
+    
+    Two query modes:
+    1. **Period-based** (default): Fetch from Yahoo Finance using period parameter
+       - Returns up to 20+ years of data depending on ticker's trading history
+       - Example: AAPL with period=max returns 40+ years (since 1980)
+       - Data is fetched fresh and optionally cached
+    
+    2. **Date-range**: Query cached data from database using start_date and end_date
+       - Only returns previously cached data
+       - Faster but limited to what's been cached
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL, MSFT, TSLA)
+        period: Time period (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
+        interval: Data interval (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo)
+        start_date: Start date for database query (YYYY-MM-DD)
+        end_date: End date for database query (YYYY-MM-DD)
+        cache: If true, save fetched data to database (default: true)
+    
+    Returns:
+        {
+            "ticker": "AAPL",
+            "period": "5y",
+            "source": "yfinance" or "cache",
+            "cached_count": 1260,  # If data was cached
+            "data": [
+                {
+                    "Date": "2019-12-03",
+                    "Open": 142.50,
+                    "High": 145.20,
+                    "Low": 141.80,
+                    "Close": 144.95,
+                    "Volume": 85234000,
+                    "Adj Close": 138.45
+                },
+                ...
+            ]
+        }
+    
+    Examples:
+        # Get 5 years of daily data (fetch from Yahoo Finance)
+        GET /stocks/history/AAPL?period=5y
+        
+        # Get maximum available history (could be 40+ years for AAPL)
+        GET /stocks/history/AAPL?period=max
+        
+        # Get 1 year of weekly data without caching
+        GET /stocks/history/MSFT?period=1y&interval=1wk&cache=false
+        
+        # Query cached data for specific date range
+        GET /stocks/history/SPY?start_date=2024-01-01&end_date=2024-12-01
+    
+    Notes:
+        - Period-based queries always fetch from Yahoo Finance (fresh data)
+        - Date-range queries only return cached data (fast but limited)
+        - Cached data has 5-year TTL (automatically expires)
+        - Split/dividend adjustments included in 'Adj Close' field
+    """
+    try:
+        ticker = ticker.upper()
+        
+        # Mode 1: Date-range query (database cache only)
+        if start_date and end_date:
+            from app.core.logging_config import get_logger
+            logger = get_logger(__name__)
+            
+            logger.info(
+                "Querying cached historical data",
+                extra={"ticker": ticker, "start_date": start_date, "end_date": end_date, "interval": interval}
+            )
+            
+            cached_prices = await provider_repository.get_historical_prices(
+                ticker=ticker,
+                start_date=start_date,
+                end_date=end_date,
+                interval=interval
+            )
+            
+            if not cached_prices:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No cached data found for {ticker} between {start_date} and {end_date}. Use period parameter to fetch from Yahoo Finance."
+                )
+            
+            # Convert to response format
+            data = [
+                {
+                    "Date": price.date,
+                    "Open": price.open,
+                    "High": price.high,
+                    "Low": price.low,
+                    "Close": price.close,
+                    "Volume": price.volume,
+                    "Adj Close": price.adjusted_close
+                }
+                for price in cached_prices
+            ]
+            
+            return {
+                "ticker": ticker,
+                "start_date": start_date,
+                "end_date": end_date,
+                "interval": interval,
+                "source": "cache",
+                "count": len(data),
+                "data": data
+            }
+        
+        # Mode 2: Period-based query (fetch from Yahoo Finance)
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        
+        logger.info(
+            "Fetching historical data from Yahoo Finance",
+            extra={"ticker": ticker, "period": period, "interval": interval, "cache": cache}
+        )
+        
+        # Fetch from Yahoo Finance
+        history = await stock_service.get_stock_history(ticker, period)
+        
+        if not history or not history.get('data'):
+            raise HTTPException(
+                status_code=404,
+                detail=f"No historical data available for ticker {ticker}"
+            )
+        
+        # Cache data in background if requested
+        cached_count = 0
+        if cache and history['data']:
+            try:
+                # Run caching in background (don't block response)
+                async def cache_data():
+                    return await provider_repository.save_historical_prices_bulk(
+                        ticker=ticker,
+                        historical_data=history['data'],
+                        source=DataSource.YFINANCE,
+                        interval=interval
+                    )
+                
+                # Start background task
+                cached_count = await cache_data()
+                
+                logger.info(
+                    "Cached historical data",
+                    extra={"ticker": ticker, "cached_count": cached_count, "total_records": len(history['data'])}
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to cache historical data",
+                    extra={"ticker": ticker, "error": str(e)},
+                    exc_info=True
+                )
+                # Don't fail the request if caching fails
+        
+        response = {
+            "ticker": ticker,
+            "period": period,
+            "interval": interval,
+            "source": "yfinance",
+            "count": len(history['data']),
+            "data": history['data']
+        }
+        
+        if cache:
+            response["cached_count"] = cached_count
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.error(
+            "Error fetching stock history",
+            extra={"ticker": ticker, "period": period, "error": str(e)},
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch historical data for {ticker}: {str(e)}"
+        )
 

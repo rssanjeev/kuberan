@@ -191,17 +191,24 @@ class StockFetcher:
             period: Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
             
         Returns:
-            Dictionary with historical data
+            Dictionary with historical data including Date field
         """
         try:
             loop = asyncio.get_event_loop()
             stock = await loop.run_in_executor(None, yf.Ticker, ticker)
             history = await loop.run_in_executor(None, lambda: stock.history(period=period))
             
+            # Convert DataFrame to dict, including Date index as a column
+            if not history.empty:
+                history_reset = history.reset_index()  # Moves Date from index to column
+                data = history_reset.to_dict('records')
+            else:
+                data = []
+            
             return {
                 "ticker": ticker,
                 "period": period,
-                "data": history.to_dict('records') if not history.empty else []
+                "data": data
             }
         except Exception as e:
             logger.error(

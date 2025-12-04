@@ -209,6 +209,78 @@ class ProviderRepository:
         
         return await query.sort(+StockHistoricalPrice.date).to_list()
     
+    async def save_historical_prices_bulk(
+        self,
+        ticker: str,
+        historical_data: List[Dict[str, Any]],
+        source: DataSource,
+        interval: str = "1d"
+    ) -> int:
+        """
+        Bulk save historical prices from Yahoo Finance or other sources.
+        
+        Args:
+            ticker: Stock ticker symbol
+            historical_data: List of OHLCV records from yfinance
+            source: Data source provider
+            interval: Time interval (1d, 1wk, 1mo, etc.)
+            
+        Returns:
+            Number of records saved
+        """
+        if not historical_data:
+            return 0
+        
+        saved_count = 0
+        for record in historical_data:
+            try:
+                # Check if record already exists
+                date_str = record.get('Date') or record.get('date')
+                if isinstance(date_str, datetime):
+                    date_str = date_str.strftime('%Y-%m-%d')
+                elif not isinstance(date_str, str):
+                    continue
+                
+                existing = await StockHistoricalPrice.find_one(
+                    StockHistoricalPrice.ticker == ticker,
+                    StockHistoricalPrice.date == date_str,
+                    StockHistoricalPrice.interval == interval
+                )
+                
+                if existing:
+                    continue
+                
+                # Create new record
+                price = StockHistoricalPrice(
+                    ticker=ticker,
+                    date=date_str,
+                    timestamp=datetime.fromisoformat(date_str) if isinstance(date_str, str) else record.get('Date'),
+                    open=float(record.get('Open', 0)),
+                    high=float(record.get('High', 0)),
+                    low=float(record.get('Low', 0)),
+                    close=float(record.get('Close', 0)),
+                    volume=int(record.get('Volume', 0)),
+                    adjusted_close=float(record.get('Adj Close')) if record.get('Adj Close') else None,
+                    source_provider=source,
+                    interval=interval,
+                )
+                await price.insert()
+                saved_count += 1
+                
+            except Exception as e:
+                logger.error(
+                    "Failed to save historical price record",
+                    extra={"ticker": ticker, "date": date_str, "error": str(e)},
+                    exc_info=True
+                )
+                continue
+        
+        logger.info(
+            "Bulk saved historical prices",
+            extra={"ticker": ticker, "saved_count": saved_count, "total_records": len(historical_data)}
+        )
+        return saved_count
+    
     # ============================================================================
     # Dividend Operations
     # ============================================================================
