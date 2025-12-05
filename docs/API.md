@@ -304,6 +304,17 @@ Get historical OHLCV price data for a specific ticker. Supports two query modes:
 - **Growth**: Organic - data cached only when requested or via background job
 - **Benefits**: Fast subsequent queries, reduced API calls, historical analysis
 
+**Background Job - Automated Backfill:**
+A daily background job gradually populates the historical price cache for all active tickers:
+- **Schedule**: Every day at 6:00 PM EST
+- **Batch Size**: 10 tickers per run
+- **Data Range**: 5 years of daily OHLCV data (~1,260 records per ticker)
+- **Throughput**: ~12,600 records per day
+- **Coverage Timeline**: All active foundation-enriched tickers backfilled over ~4 months
+- **Rate Limiting**: 12-second delays between API calls (respects Yahoo Finance limits)
+- **Tracking**: Tickers marked with `backfill_complete` flag to prevent re-processing
+- **Purpose**: Ensures fast queries for technical analysis, charting, and backtesting without repeated Yahoo Finance calls
+
 **Use Cases:**
 1. **Initial fetch with caching**: `?period=5y` (cache 5 years of data)
 2. **Fast cached queries**: `?start_date=2024-01-01&end_date=2024-12-31`

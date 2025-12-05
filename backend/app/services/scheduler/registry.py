@@ -55,6 +55,18 @@ def register_all_jobs():
     from app.services.jobs.massive_deactivation_detector import massive_deactivation_detector
     from app.services.jobs.massive_biannual_refresh import massive_biannual_refresh
     
+    # ============================================================================
+    # PHASE 3.5 JOBS: Historical Data Backfill (ENABLED Dec 4, 2025)
+    # ============================================================================
+    # Daily job to gradually populate 5-year historical price cache
+    # Purpose: Enable fast queries for technical analysis, backtesting, charting
+    # Schedule: Daily at 6:00 PM EST
+    # Throughput: 10 tickers/day × ~1,260 records = ~12,600 records/day
+    # Coverage: ~1,200 tickers over 120 days (4 months)
+    # Rate Limiting: 12-second delays between API calls (5 calls/min)
+    # ============================================================================
+    from app.services.jobs.historical_data_backfill import historical_data_backfill
+    
     # DELTA EXTRACTOR: Weekly IPO detection (every Monday 2:00 AM EST)
     # Queries MASSIVE API with list_date.gte filter to find new listings
     # First run: 30-day lookback, subsequent: incremental since last run
@@ -104,6 +116,26 @@ def register_all_jobs():
         ),
         job_id='massive_biannual_refresh',
         name='MASSIVE Bi-Annual Refresh (Failsafe Full Re-Scan)'
+    )
+    
+    # ============================================================================
+    # HISTORICAL DATA BACKFILL: Gradual 5-year cache population
+    # ============================================================================
+    # Daily at 6:00 PM EST - processes 10 tickers per run
+    # Fetches 5 years of daily OHLCV data from Yahoo Finance
+    # Throughput: 10 tickers × ~1,260 records = ~12,600 records/day
+    # Coverage timeline: ~1,200 tickers over 120 days (4 months)
+    # Rate limiting: 12-second delays between API calls (5 calls/min)
+    job_scheduler.add_job(
+        func=historical_data_backfill.run,
+        trigger=CronTrigger(
+            hour='18',              # 6 PM
+            minute='0',
+            second='0',
+            timezone='US/Eastern'
+        ),
+        job_id='historical_data_backfill',
+        name='Historical Data Backfill (Daily 5-Year Cache Population)'
     )
     
     # ============================================================================
