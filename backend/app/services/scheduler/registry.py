@@ -36,7 +36,7 @@ def register_all_jobs():
     # # Import jobs here to avoid circular imports
     # from app.services.jobs.metals_price_collector import metals_price_collector_job
     # from app.services.jobs.metadata_collector import metadata_collector_job
-    # from app.services.jobs.massive_foundation_builder import massive_foundation_builder_job
+    from app.services.jobs.massive_foundation_builder import massive_foundation_builder_job
     
     # ============================================================================
     # PHASE 1 JOBS: MASSIVE All Tickers Discovery (ENABLED Dec 2, 2025)
@@ -66,6 +66,31 @@ def register_all_jobs():
     # Rate Limiting: 12-second delays between API calls (5 calls/min)
     # ============================================================================
     from app.services.jobs.historical_data_backfill import historical_data_backfill
+    
+    # ============================================================================
+    # PHASE 4 JOBS: Related Tickers Collection (ENABLED Dec 5, 2025)
+    # ============================================================================
+    # Weekly job to collect related companies for S&P 500 tickers
+    # Purpose: Populate peer/competitor relationships for comparison features
+    # Schedule: Weekly Monday 4:00 AM EST
+    # Throughput: 300 tickers/week, ~5-10 relationships per ticker
+    # Rate Limiting: 12-second delays between API calls (5 calls/min)
+    # ============================================================================
+    from app.services.jobs.related_tickers_collector import related_tickers_collector_job
+    
+    # ============================================================================
+    # PHASE 5 JOBS: Financials Collection (ENABLED Dec 5, 2025)
+    # ============================================================================
+    # Quarterly job to collect financial statements before API deprecation
+    # Purpose: Archive income statements, balance sheets, cash flow statements
+    # Schedule: Quarterly (February, May, August, November) at 5:00 AM EST
+    # ⚠️ URGENT: API deprecated Feb 23, 2026 - 79 days remaining
+    # Backfill Strategy:
+    #   - S&P 500: 500 tickers × 10 statements = 5,000 calls (~17 hours)
+    #   - Full dataset: 12,140 tickers × 10 statements = 121,400 calls (~50 days)
+    # Rate Limiting: 12-second delays between API calls (5 calls/min)
+    # ============================================================================
+    from app.services.jobs.financials_collector import financials_collector_job
     
     # DELTA EXTRACTOR: Weekly IPO detection (every Monday 2:00 AM EST)
     # Queries MASSIVE API with list_date.gte filter to find new listings
@@ -136,6 +161,49 @@ def register_all_jobs():
         ),
         job_id='historical_data_backfill',
         name='Historical Data Backfill (Daily 5-Year Cache Population)'
+    )
+    
+    # ============================================================================
+    # RELATED TICKERS COLLECTION: Weekly peer/competitor relationship building
+    # ============================================================================
+    # Weekly Monday 4:00 AM EST - processes 300 tickers per run
+    # Fetches related companies from MASSIVE API for S&P 500 tickers
+    # Throughput: 300 tickers × ~5-10 relationships = 1,500-3,000 relationships/week
+    # Rate limiting: 12-second delays between API calls (5 calls/min)
+    job_scheduler.add_job(
+        func=related_tickers_collector_job.run,
+        trigger=CronTrigger(
+            day_of_week='mon',      # Monday only
+            hour='4',               # 4 AM
+            minute='0',
+            second='0',
+            timezone='US/Eastern'
+        ),
+        job_id='related_tickers_collection',
+        name='Related Tickers Collection (Weekly S&P 500)'
+    )
+    
+    # ============================================================================
+    # FINANCIALS COLLECTION: Quarterly financial statements archival
+    # ============================================================================
+    # Quarterly (February, May, August, November) at 5:00 AM EST
+    # Processes latest annual financial statements for S&P 500
+    # ⚠️ URGENT: API deprecated Feb 23, 2026 - backfill ASAP
+    # Normal mode: Latest annual only (500-1,000 statements per quarter)
+    # Backfill mode: 2 annual + 8 quarterly per ticker (run manually)
+    # Rate limiting: 12-second delays between API calls (5 calls/min)
+    job_scheduler.add_job(
+        func=financials_collector_job.run,
+        trigger=CronTrigger(
+            month='2,5,8,11',       # February, May, August, November
+            day='15',               # Mid-month (after most earnings)
+            hour='5',               # 5 AM
+            minute='0',
+            second='0',
+            timezone='US/Eastern'
+        ),
+        job_id='financials_collection',
+        name='Financials Collection (Quarterly Statements Archival)'
     )
     
     # ============================================================================
@@ -223,25 +291,26 @@ def register_all_jobs():
     # )
     
     # ============================================================================
-    # MASSIVE Foundation Builder: DISABLED
+    # MASSIVE Foundation Builder: ENABLED (Dec 5, 2025)
     # ============================================================================
     # Purpose: Collect foundational metadata (CIK, FIGI, logos, etc.) for all tickers
     # Rate: 5 calls/min (Polygon.io free tier limit)
     # Schedule: Every minute, processing 5 tickers per run
     # Throughput: 300 tickers/hour = 7,200 tickers/day
-    # Target: Complete 1,066 tickers in ~4 hours
-    # Benefits: Frequent updates, better rate limit adherence, no artificial delays
+    # Progress: 4,463/12,147 enriched (36.7%)
+    # Remaining: 7,464 tickers (~24.9 hours to completion)
+    # Benefits: Frequent updates, better rate limit adherence, market cap prioritization
     
-    # job_scheduler.add_job(
-    #     func=massive_foundation_builder_job.run,
-    #     trigger=CronTrigger(
-    #         minute='*',  # Every minute
-    #         second='0',
-    #         timezone='US/Eastern'  # EST/EDT timezone
-    #     ),
-    #     job_id='massive_foundation_per_minute',
-    #     name='MASSIVE Foundation Collection (Every Minute)'
-    # )
+    job_scheduler.add_job(
+        func=massive_foundation_builder_job.run,
+        trigger=CronTrigger(
+            minute='*',  # Every minute
+            second='0',
+            timezone='US/Eastern'  # EST/EDT timezone
+        ),
+        job_id='massive_foundation_per_minute',
+        name='MASSIVE Foundation Collection (Every Minute)'
+    )
     
     logger.info(
         f"Registered {len(job_scheduler.jobs)} scheduled jobs",

@@ -460,6 +460,178 @@
           ]
         },
         {
+          "name": "GET - MASSIVE Tier 1 Phase 4 (Related Companies)",
+          "item": [
+            {
+              "name": "Get Related Companies (AAPL - Default 10)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/related-companies/AAPL",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stocks", "related-companies", "AAPL"]
+                },
+                "description": "Get companies related to AAPL based on news coverage and returns correlation. Returns peers, competitors, and subsidiaries.\n\nUse Cases:\n- Portfolio diversification recommendations\n- Peer comparison analysis\n- Sector concentration alerts\n- Investment research (find competitors automatically)"
+              },
+              "response": [
+                {
+                  "name": "Success - AAPL (10 related companies)",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/stocks/related-companies/AAPL",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["stocks", "related-companies", "AAPL"]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [{"key": "Content-Type", "value": "application/json"}],
+                  "cookie": [],
+                  "body": "{\n  \"ticker\": \"AAPL\",\n  \"count\": 10,\n  \"related_companies\": [\n    {\n      \"ticker\": \"MSFT\",\n      \"name\": \"Microsoft Corporation\",\n      \"relationship_strength\": 0.85,\n      \"relationship_type\": \"peer\",\n      \"last_updated\": \"2025-12-05T16:42:37.429000\"\n    },\n    {\n      \"ticker\": \"GOOGL\",\n      \"name\": \"Alphabet Inc. Class A\",\n      \"relationship_strength\": 0.82,\n      \"relationship_type\": \"peer\",\n      \"last_updated\": \"2025-12-05T16:42:37.429000\"\n    },\n    {\n      \"ticker\": \"AMZN\",\n      \"name\": \"Amazon.com Inc.\",\n      \"relationship_strength\": 0.78,\n      \"relationship_type\": \"peer\",\n      \"last_updated\": \"2025-12-05T16:42:37.429000\"\n    }\n  ]\n}"
+                }
+              ]
+            },
+            {
+              "name": "Get Related Companies (AAPL - Limit 5)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/related-companies/AAPL?limit=5",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stocks", "related-companies", "AAPL"],
+                  "query": [
+                    {"key": "limit", "value": "5", "description": "Maximum number of results (1-100)"}
+                  ]
+                },
+                "description": "Get top 5 related companies for AAPL"
+              },
+              "response": []
+            },
+            {
+              "name": "Get Related Companies (MSFT - Min Correlation)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/related-companies/MSFT?min_correlation=0.7",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stocks", "related-companies", "MSFT"],
+                  "query": [
+                    {"key": "min_correlation", "value": "0.7", "description": "Minimum relationship strength (0.0-1.0)"}
+                  ]
+                },
+                "description": "Get MSFT related companies with relationship strength >= 0.7"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "GET - MASSIVE Tier 1 Phase 5 (Financials - DEPRECATED)",
+          "item": [
+            {
+              "name": "Get Financials (AAPL - Quarterly)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/financials/AAPL?timeframe=quarterly&limit=4",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stocks", "financials", "AAPL"],
+                  "query": [
+                    {"key": "timeframe", "value": "quarterly", "description": "annual, quarterly, or all"},
+                    {"key": "limit", "value": "4", "description": "Number of periods (1-20)"}
+                  ]
+                },
+                "description": "⚠️ DEPRECATION WARNING: This endpoint uses MASSIVE API data that will be removed on February 23, 2026 (79 days remaining).\n\nUse for archival purposes only. Returns historical financial statements (10-K, 10-Q data).\n\nArchival Status:\n- ✅ Endpoint operational with deprecation warning\n- ⏳ S&P 500 archival (500 tickers): URGENT - Start Dec 6, 2025\n- ⏳ Full dataset archival (12,140 tickers): Start Jan 1, 2026\n\nKnown Limitations:\n- Revenue and financial metrics may be null (XBRL parsing complexity)\n- Raw data dict preserved for future re-parsing\n- Endpoint will be READ-ONLY after full archival complete\n\nMigration Plan: After Feb 23, 2026, use Alpha Vantage MCP integration for new statements. Historical data remains available from MongoDB (5-year retention) and JSON backups."
+              },
+              "response": [
+                {
+                  "name": "Success - AAPL Quarterly (4 statements)",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/stocks/financials/AAPL?timeframe=quarterly&limit=4",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["stocks", "financials", "AAPL"],
+                      "query": [
+                        {"key": "timeframe", "value": "quarterly"},
+                        {"key": "limit", "value": "4"}
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [{"key": "Content-Type", "value": "application/json"}],
+                  "cookie": [],
+                  "body": "{\n  \"ticker\": \"AAPL\",\n  \"timeframe\": \"quarterly\",\n  \"count\": 4,\n  \"statement_type_filter\": null,\n  \"deprecation_warning\": \"⚠️ This API is deprecated and will be removed on Feb 23, 2026 (79 days remaining)\",\n  \"statements\": [\n    {\n      \"fiscal_year\": 2025,\n      \"fiscal_quarter\": 3,\n      \"period\": \"FY2025 Q3\",\n      \"fiscal_date_ending\": \"2025-06-28\",\n      \"statement_type\": \"comprehensive\",\n      \"currency\": \"USD\",\n      \"revenue\": null,\n      \"net_income\": null,\n      \"total_assets\": null,\n      \"total_liabilities\": null,\n      \"shareholders_equity\": null,\n      \"operating_cash_flow\": null,\n      \"investing_cash_flow\": null,\n      \"financing_cash_flow\": null,\n      \"data\": {},\n      \"source_provider\": \"polygon\",\n      \"fetched_at\": \"2025-12-05T16:43:22.197000\"\n    }\n  ]\n}"
+                }
+              ]
+            },
+            {
+              "name": "Get Financials (AAPL - Annual)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/financials/AAPL?timeframe=annual&limit=2",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stocks", "financials", "AAPL"],
+                  "query": [
+                    {"key": "timeframe", "value": "annual", "description": "annual, quarterly, or all"},
+                    {"key": "limit", "value": "2", "description": "Number of periods (1-20)"}
+                  ]
+                },
+                "description": "Get 2 most recent annual financial statements for AAPL"
+              },
+              "response": []
+            },
+            {
+              "name": "Get Financials (AAPL - All Statements)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/financials/AAPL?timeframe=all&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stocks", "financials", "AAPL"],
+                  "query": [
+                    {"key": "timeframe", "value": "all", "description": "Returns both annual and quarterly"},
+                    {"key": "limit", "value": "20", "description": "Max 20 statements"}
+                  ]
+                },
+                "description": "Get all available statements (both annual and quarterly) for AAPL"
+              },
+              "response": []
+            },
+            {
+              "name": "Get Financials (TSLA - Quarterly)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/financials/TSLA?timeframe=quarterly&limit=4",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stocks", "financials", "TSLA"],
+                  "query": [
+                    {"key": "timeframe", "value": "quarterly"},
+                    {"key": "limit", "value": "4"}
+                  ]
+                },
+                "description": "Get 4 most recent quarterly financial statements for TSLA"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
           "name": "GET - Market Status",
           "item": [
             {

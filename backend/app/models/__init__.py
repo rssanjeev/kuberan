@@ -5,7 +5,7 @@ This package contains all Beanie ODM models organized by domain:
 
 Domain Models:
 - auth: User authentication and profile
-- stock: Stock Tracker domain (StockMetadata, StockPrice, UserWatchlist, TickerConfig)
+- stock: Stock Tracker domain (StockMetadata, StockPrice, UserWatchlist)
 - financier: Financier domain (MerchantCategory, CreditCardTransaction, FinancialDocumentMetadata)
 - precious_metals: Precious metals tracking (GoldPrice, SilverPrice)
 - provider: Multi-provider data models (17 models for stocks, forex, crypto, news, etc.)
@@ -25,7 +25,6 @@ from app.models.stock import (
     StockMetadata,
     StockPrice,
     UserWatchlist,
-    TickerConfig,
     TickerType
 )
 
@@ -85,6 +84,9 @@ from app.models.provider import (
     
     # Economic Indicator model
     EconomicIndicator,
+    
+    # Related Companies model (Phase 4)
+    RelatedCompany,
 )
 
 # Monitoring & Metrics models
@@ -105,7 +107,6 @@ __all__ = [
     "StockMetadata",
     "StockPrice",
     "UserWatchlist",
-    "TickerConfig",
     "TickerType",
     
     # Financier
@@ -154,6 +155,9 @@ __all__ = [
     # Provider Economic
     "EconomicIndicator",
     
+    # Provider Related Companies
+    "RelatedCompany",
+    
     # Monitoring Enums
     "CallStatus",
     
@@ -173,7 +177,6 @@ DOCUMENT_MODELS = [
     StockMetadata,
     StockPrice,
     UserWatchlist,
-    TickerConfig,
     TickerType,
     
     # Financier
@@ -206,6 +209,7 @@ DOCUMENT_MODELS = [
     ETFProfile,
     ETFComparison,
     EconomicIndicator,
+    RelatedCompany,
     
     # Monitoring Models
     ProviderAPICall,

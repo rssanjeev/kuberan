@@ -791,6 +791,329 @@ class MassiveProvider(BaseProvider):
             )
             raise ProviderException(f"MASSIVE ticker details fetch failed: {str(e)}") from e
     
+    async def fetch_related_companies(self, ticker: str) -> Optional[List[Dict]]:
+        """
+        Fetch related companies (peers, competitors, correlated stocks) for a ticker.
+        
+        PHASE 4: Related Tickers Implementation
+        
+        Endpoint: GET /v1/related-companies/{ticker}
+        
+        Returns companies with similar business models, market sectors, or price correlations.
+        Useful for competitive analysis, sector tracking, and portfolio diversification.
+        
+        Args:
+            ticker: Stock ticker symbol
+            
+        Returns:
+            List of related company dictionaries with relationship details or None if failed
+            
+        Example Return:
+            [
+                {
+                    "ticker": "MSFT",
+                    "name": "Microsoft Corporation",
+                    "market_cap": 2800000000000,
+                    "similarity_score": 0.85
+                },
+                {
+                    "ticker": "GOOGL",
+                    "name": "Alphabet Inc Class A",
+                    "market_cap": 1900000000000,
+                    "similarity_score": 0.78
+                }
+            ]
+        """
+        try:
+            await self.rate_limiter.acquire(priority=0)
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/v1/related-companies/{ticker}",
+                    params={"apikey": self.api_key}
+                )
+                
+                self.rate_limiter.update_from_response(response.headers)
+                
+                if response.status_code == 429:
+                    raise RateLimitException(f"Rate limit exceeded for {self.name}")
+                
+                # Handle 404 gracefully - no related companies found
+                if response.status_code == 404:
+                    logger.warning(
+                        f"No related companies found for ticker (404)",
+                        extra={"ticker": ticker}
+                    )
+                    return None
+                
+                response.raise_for_status()
+                data = response.json()
+            
+            if data and "results" in data:
+                results = data["results"]
+                
+                # Transform to simplified format
+                related_companies = []
+                
+                for company in results:
+                    related_companies.append({
+                        "ticker": company.get("ticker"),
+                        "name": company.get("name"),
+                        "market_cap": company.get("market_cap"),
+                        "similarity_score": company.get("similarity_score", 0.0),
+                        "sector": company.get("sector"),
+                        "industry": company.get("industry"),
+                        "relationship_type": self._infer_relationship_type(
+                            company.get("similarity_score", 0.0)
+                        ),
+                        "extended_data": company  # Store full response
+                    })
+                
+                logger.info(
+                    f"Fetched {len(related_companies)} related companies for {ticker}",
+                    extra={
+                        "ticker": ticker,
+                        "related_count": len(related_companies)
+                    }
+                )
+                
+                return related_companies
+            
+            return None
+        
+        except RateLimitException:
+            raise
+        except Exception as e:
+            logger.error(
+                f"Failed to fetch related companies for {ticker}",
+                extra={"ticker": ticker, "error": str(e)},
+                exc_info=True
+            )
+            raise ProviderException(f"MASSIVE related companies fetch failed: {str(e)}") from e
+    
+    def _infer_relationship_type(self, similarity_score: float) -> str:
+        """
+        Infer relationship type based on similarity score.
+        
+        Args:
+            similarity_score: 0.0 to 1.0 similarity score
+            
+        Returns:
+            Relationship type string
+        """
+        if similarity_score >= 0.8:
+            return "direct_competitor"
+        elif similarity_score >= 0.6:
+            return "sector_peer"
+        elif similarity_score >= 0.4:
+            return "correlated"
+        else:
+            return "loosely_related"
+    
+    async def fetch_financials(
+        self,
+        ticker: str,
+        timeframe: str = "annual",
+        limit: int = 4
+    ) -> Optional[List[Dict]]:
+        """
+        Fetch financial statements (income, balance sheet, cash flow) for a ticker.
+        
+        PHASE 5: Financials Implementation
+        
+        ⚠️ DEPRECATED ENDPOINT: Will be removed February 23, 2026
+        
+        Endpoint: GET /vX/reference/financials
+        
+        Returns quarterly and annual financial statements derived from SEC filings (XBRL).
+        Includes income statement, balance sheet, cash flow statement, and comprehensive income.
+        
+        Args:
+            ticker: Stock ticker symbol
+            timeframe: "annual" or "quarterly" (default: annual)
+            limit: Number of periods to return (default: 4)
+            
+        Returns:
+            List of financial statement dictionaries or None if failed
+            
+        Example Return:
+            [
+                {
+                    "ticker": "AAPL",
+                    "cik": "0000320193",
+                    "fiscal_period": "Q1",
+                    "fiscal_year": "2025",
+                    "fiscal_date_ending": "2024-12-28",
+                    "filing_date": "2025-01-30",
+                    "income_statement": {
+                        "revenues": 119575000000,
+                        "cost_of_revenue": 67772000000,
+                        "gross_profit": 51803000000,
+                        "operating_income": 36818000000,
+                        "net_income": 33916000000,
+                        "basic_earnings_per_share": 2.09
+                    },
+                    "balance_sheet": {
+                        "total_assets": 353514000000,
+                        "total_liabilities": 279414000000,
+                        "total_equity": 74100000000
+                    },
+                    "cash_flow_statement": {
+                        "operating_cash_flow": 40330000000,
+                        "investing_cash_flow": -1780000000,
+                        "financing_cash_flow": -27280000000
+                    }
+                }
+            ]
+        """
+        try:
+            await self.rate_limiter.acquire(priority=0)
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                params = {
+                    "apikey": self.api_key,
+                    "ticker": ticker,
+                    "timeframe": timeframe,
+                    "limit": limit,
+                    "sort": "filing_date",
+                    "order": "desc"
+                }
+                
+                response = await client.get(
+                    f"{self.base_url}/vX/reference/financials",
+                    params=params
+                )
+                
+                self.rate_limiter.update_from_response(response.headers)
+                
+                if response.status_code == 429:
+                    raise RateLimitException(f"Rate limit exceeded for {self.name}")
+                
+                # Handle 404 gracefully - no financial data available
+                if response.status_code == 404:
+                    logger.warning(
+                        f"No financial data found for ticker (404)",
+                        extra={"ticker": ticker, "timeframe": timeframe}
+                    )
+                    return None
+                
+                response.raise_for_status()
+                data = response.json()
+            
+            if data and "results" in data:
+                results = data["results"]
+                
+                # Transform to simplified format
+                financials = []
+                
+                for filing in results:
+                    # Extract common fields
+                    financial_data = {
+                        "ticker": filing.get("ticker", [ticker])[0] if isinstance(filing.get("ticker"), list) else ticker,
+                        "cik": filing.get("cik"),
+                        "fiscal_period": filing.get("fiscal_period"),
+                        "fiscal_year": filing.get("fiscal_year"),
+                        "fiscal_date_ending": filing.get("end_date"),
+                        "filing_date": filing.get("filing_date"),
+                        "timeframe": filing.get("timeframe"),
+                        "source_filing_url": filing.get("source_filing_url")
+                    }
+                    
+                    # Extract financial statements
+                    if "financials" in filing:
+                        financials_dict = filing["financials"]
+                        
+                        # Income Statement
+                        if "income_statement" in financials_dict:
+                            income = financials_dict["income_statement"]
+                            financial_data["income_statement"] = {
+                                "revenues": self._get_financial_value(income, "revenues"),
+                                "cost_of_revenue": self._get_financial_value(income, "cost_of_revenue"),
+                                "gross_profit": self._get_financial_value(income, "gross_profit"),
+                                "operating_expenses": self._get_financial_value(income, "operating_expenses"),
+                                "operating_income": self._get_financial_value(income, "operating_income_loss"),
+                                "net_income": self._get_financial_value(income, "net_income_loss"),
+                                "basic_earnings_per_share": self._get_financial_value(income, "basic_earnings_per_share"),
+                                "diluted_earnings_per_share": self._get_financial_value(income, "diluted_earnings_per_share")
+                            }
+                        
+                        # Balance Sheet
+                        if "balance_sheet" in financials_dict:
+                            balance = financials_dict["balance_sheet"]
+                            financial_data["balance_sheet"] = {
+                                "total_assets": self._get_financial_value(balance, "assets"),
+                                "current_assets": self._get_financial_value(balance, "current_assets"),
+                                "noncurrent_assets": self._get_financial_value(balance, "noncurrent_assets"),
+                                "total_liabilities": self._get_financial_value(balance, "liabilities"),
+                                "current_liabilities": self._get_financial_value(balance, "current_liabilities"),
+                                "noncurrent_liabilities": self._get_financial_value(balance, "noncurrent_liabilities"),
+                                "total_equity": self._get_financial_value(balance, "equity"),
+                                "stockholders_equity": self._get_financial_value(balance, "equity_attributable_to_parent")
+                            }
+                        
+                        # Cash Flow Statement
+                        if "cash_flow_statement" in financials_dict:
+                            cash_flow = financials_dict["cash_flow_statement"]
+                            financial_data["cash_flow_statement"] = {
+                                "operating_cash_flow": self._get_financial_value(
+                                    cash_flow, "net_cash_flow_from_operating_activities"
+                                ),
+                                "investing_cash_flow": self._get_financial_value(
+                                    cash_flow, "net_cash_flow_from_investing_activities"
+                                ),
+                                "financing_cash_flow": self._get_financial_value(
+                                    cash_flow, "net_cash_flow_from_financing_activities"
+                                ),
+                                "net_change_in_cash": self._get_financial_value(
+                                    cash_flow, "net_cash_flow"
+                                )
+                            }
+                    
+                    # Store complete raw data for reference
+                    financial_data["raw_data"] = filing
+                    
+                    financials.append(financial_data)
+                
+                logger.info(
+                    f"Fetched {len(financials)} financial statements for {ticker}",
+                    extra={
+                        "ticker": ticker,
+                        "timeframe": timeframe,
+                        "periods": len(financials)
+                    }
+                )
+                
+                return financials
+            
+            return None
+        
+        except RateLimitException:
+            raise
+        except Exception as e:
+            logger.error(
+                f"Failed to fetch financials for {ticker}",
+                extra={"ticker": ticker, "timeframe": timeframe, "error": str(e)},
+                exc_info=True
+            )
+            raise ProviderException(f"MASSIVE financials fetch failed: {str(e)}") from e
+    
+    def _get_financial_value(self, data: Dict, key: str) -> Optional[float]:
+        """
+        Extract financial value from nested dictionary structure.
+        
+        MASSIVE financials have structure: {"key": {"value": <number>, "unit": "USD"}}
+        
+        Args:
+            data: Dictionary containing financial data
+            key: Key to extract
+            
+        Returns:
+            Numeric value or None if not found
+        """
+        if key in data and isinstance(data[key], dict) and "value" in data[key]:
+            return data[key]["value"]
+        return None
+    
     async def fetch_all_tickers(self, limit: int = 1000) -> Optional[List[Dict]]:
         """
         Fetch list of all available tickers.
@@ -952,3 +1275,13 @@ class MassiveProvider(BaseProvider):
             )
             raise ProviderException(f"MASSIVE ticker types fetch failed: {str(e)}")
 
+
+
+# Singleton instance
+import os
+_api_key = os.getenv("MASSIVE_KEY")
+if _api_key:
+    massive_provider = MassiveProvider(api_key=_api_key)
+else:
+    logger.warning("MASSIVE_KEY not set in environment, singleton not initialized")
+    massive_provider = None

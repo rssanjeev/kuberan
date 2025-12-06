@@ -70,21 +70,6 @@ class UserWatchlist(Document):
         ]
 
 
-class TickerConfig(Document):
-    """Store global ticker configuration for price polling."""
-    ticker: str
-    enabled: bool = True
-    added_at: datetime
-    updated_at: datetime
-    
-    class Settings:
-        name = "ticker_config"
-        indexes = [
-            "ticker",
-            "enabled",
-        ]
-
-
 class MerchantCategory(Document):
     """
     Store merchant-to-category mappings for transaction categorization.

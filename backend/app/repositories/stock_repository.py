@@ -2,6 +2,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 import pytz
 from app.models import StockMetadata, StockPrice, UserWatchlist
+from app.models.provider import RelatedCompany, FinancialStatement
 
 # US/Eastern timezone for stock market
 EST = pytz.timezone('US/Eastern')
@@ -161,6 +162,149 @@ class StockRepository:
             await watchlist.save()
         
         return watchlist
+    
+    async def save_related_company(self, related_data: dict) -> RelatedCompany:
+        """
+        Save or update related company relationship.
+        
+        Args:
+            related_data: Dictionary with relationship data
+            
+        Returns:
+            Saved RelatedCompany document
+        """
+        ticker = related_data["ticker"]
+        related_ticker = related_data["related_ticker"]
+        
+        # Check if relationship already exists
+        existing = await RelatedCompany.find_one(
+            RelatedCompany.ticker == ticker,
+            RelatedCompany.related_ticker == related_ticker
+        )
+        
+        if existing:
+            # Update existing relationship
+            for key, value in related_data.items():
+                if value is not None:
+                    setattr(existing, key, value)
+            existing.updated_at = datetime.now(EST)
+            await existing.save()
+            return existing
+        else:
+            # Create new relationship
+            related = RelatedCompany(
+                ticker=ticker,
+                related_ticker=related_ticker,
+                relationship_type=related_data.get("relationship_type", "related"),
+                correlation_score=related_data.get("correlation_score"),
+                sector_similarity=related_data.get("sector_similarity"),
+                metadata=related_data.get("metadata", {}),
+                created_at=datetime.now(EST),
+                updated_at=datetime.now(EST)
+            )
+            await related.insert()
+            return related
+    
+    async def get_related_companies(
+        self,
+        ticker: str,
+        relationship_type: Optional[str] = None,
+        min_correlation: Optional[float] = None,
+        limit: int = 100
+    ) -> List[RelatedCompany]:
+        """
+        Get related companies for a ticker.
+        
+        Args:
+            ticker: Stock ticker
+            relationship_type: Filter by relationship type
+            min_correlation: Minimum correlation score
+            limit: Maximum number of results
+            
+        Returns:
+            List of RelatedCompany documents
+        """
+        query = RelatedCompany.find(RelatedCompany.ticker == ticker)
+        
+        if relationship_type:
+            query = query.find(RelatedCompany.relationship_type == relationship_type)
+        
+        if min_correlation is not None:
+            query = query.find(RelatedCompany.correlation_score >= min_correlation)
+        
+        return await query.sort(-RelatedCompany.correlation_score).limit(limit).to_list()
+    
+    async def save_financial_statement(self, statement_data: dict) -> FinancialStatement:
+        """
+        Save financial statement data.
+        
+        Args:
+            statement_data: Dictionary with financial statement data
+            
+        Returns:
+            Saved FinancialStatement document
+        """
+        ticker = statement_data["ticker"]
+        fiscal_year = statement_data["fiscal_year"]
+        fiscal_quarter = statement_data.get("fiscal_quarter")  # None for annual
+        statement_type = statement_data.get("statement_type", "comprehensive")
+        
+        # Check if statement already exists
+        query = FinancialStatement.find(
+            FinancialStatement.ticker == ticker,
+            FinancialStatement.fiscal_year == fiscal_year,
+            FinancialStatement.statement_type == statement_type
+        )
+        
+        if fiscal_quarter is not None:
+            query = query.find(FinancialStatement.fiscal_quarter == fiscal_quarter)
+        else:
+            query = query.find(FinancialStatement.fiscal_quarter == None)
+        
+        existing = await query.first_or_none()
+        
+        if existing:
+            # Update existing statement
+            for key, value in statement_data.items():
+                if value is not None and hasattr(existing, key):
+                    setattr(existing, key, value)
+            existing.fetched_at = datetime.now(EST)
+            await existing.save()
+            return existing
+        else:
+            # Create new statement - remove created_at/updated_at logic
+            statement = FinancialStatement(**statement_data)
+            # fetched_at is set automatically by default_factory
+            await statement.insert()
+            return statement
+    
+    async def get_financial_statements(
+        self,
+        ticker: str,
+        statement_type: Optional[str] = None,
+        limit: int = 10
+    ) -> List[FinancialStatement]:
+        """
+        Get financial statements for a ticker.
+        
+        Args:
+            ticker: Stock ticker
+            statement_type: Filter by statement type (income, balance_sheet, cash_flow)
+            limit: Maximum number of results
+            
+        Returns:
+            List of FinancialStatement documents
+        """
+        query = FinancialStatement.find(FinancialStatement.ticker == ticker)
+        
+        if statement_type:
+            query = query.find(FinancialStatement.statement_type == statement_type)
+        
+        # Sort by fiscal year and quarter (most recent first)
+        return await query.sort(
+            -FinancialStatement.fiscal_year,
+            -FinancialStatement.fiscal_quarter
+        ).limit(limit).to_list()
 
 # Singleton instance
 stock_repository = StockRepository()

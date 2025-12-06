@@ -705,3 +705,264 @@ async def get_stock_history(
             detail=f"Failed to fetch historical data for {ticker}: {str(e)}"
         )
 
+
+@router.get("/related-companies/{ticker}")
+async def get_related_companies(
+    ticker: str,
+    limit: int = Query(20, ge=1, le=100),
+    relationship_type: Optional[str] = None,
+    min_correlation: Optional[float] = Query(None, ge=-1.0, le=1.0)
+) -> Dict[str, Any]:
+    """
+    Get related companies (peers, competitors, correlated stocks) for a ticker.
+    
+    PHASE 4: Related Tickers Feature
+    
+    Returns companies with similar business models, market sectors, or price correlations.
+    Useful for competitive analysis, sector tracking, and portfolio diversification.
+    
+    Args:
+        ticker: Stock ticker symbol
+        limit: Maximum results (1-100, default 20)
+        relationship_type: Filter by type (direct_competitor, sector_peer, correlated, loosely_related)
+        min_correlation: Minimum correlation score (-1.0 to 1.0)
+    
+    Returns:
+        {
+            "ticker": "AAPL",
+            "count": 8,
+            "relationships": [
+                {
+                    "related_ticker": "MSFT",
+                    "name": "Microsoft Corporation",
+                    "relationship_type": "direct_competitor",
+                    "correlation_score": 0.85,
+                    "market_cap": 2800000000000,
+                    "sector": "Technology",
+                    "last_updated": "2025-12-01T10:30:00Z"
+                },
+                ...
+            ]
+        }
+    
+    Example:
+        GET /stocks/related-companies/AAPL?limit=10&relationship_type=direct_competitor
+    """
+    from app.models.provider import RelatedCompany
+    from app.core.logging_config import get_logger
+    
+    logger = get_logger(__name__)
+    
+    try:
+        # Build query filters
+        filters = [RelatedCompany.ticker == ticker.upper()]
+        
+        if relationship_type:
+            filters.append(RelatedCompany.relationship_type == relationship_type)
+        
+        if min_correlation is not None:
+            filters.append(RelatedCompany.correlation_score >= min_correlation)
+        
+        # Query RelatedCompany collection
+        query = RelatedCompany.find(*filters)
+        
+        # Sort by correlation score descending (most correlated first)
+        query = query.sort([("correlation_score", -1)])
+        
+        # Apply limit
+        relationships = await query.limit(limit).to_list()
+        
+        if not relationships:
+            return {
+                "ticker": ticker.upper(),
+                "count": 0,
+                "relationships": [],
+                "message": "No related companies found. Try running the background job to populate data."
+            }
+        
+        # Transform to response format
+        result_list = []
+        
+        for rel in relationships:
+            # Fetch company overview for related ticker (if available)
+            related_overview = await CompanyOverview.find_one(
+                CompanyOverview.ticker == rel.related_ticker
+            )
+            
+            result_list.append({
+                "related_ticker": rel.related_ticker,
+                "name": related_overview.name if related_overview else None,
+                "relationship_type": rel.relationship_type,
+                "correlation_score": rel.correlation_score,
+                "market_cap": related_overview.market_cap if related_overview else None,
+                "sector": related_overview.sector if related_overview else None,
+                "industry": related_overview.industry if related_overview else None,
+                "last_updated": rel.last_updated.isoformat() if rel.last_updated else None
+            })
+        
+        logger.info(
+            f"Returned {len(result_list)} related companies for {ticker}",
+            extra={
+                "ticker": ticker,
+                "count": len(result_list),
+                "relationship_type": relationship_type,
+                "min_correlation": min_correlation
+            }
+        )
+        
+        return {
+            "ticker": ticker.upper(),
+            "count": len(result_list),
+            "filters": {
+                "relationship_type": relationship_type,
+                "min_correlation": min_correlation,
+                "limit": limit
+            },
+            "relationships": result_list
+        }
+    
+    except Exception as e:
+        logger.error(
+            f"Failed to fetch related companies for {ticker}",
+            extra={"ticker": ticker, "error": str(e)},
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch related companies: {str(e)}"
+        )
+
+
+@router.get("/financials/{ticker}")
+async def get_financials(
+    ticker: str,
+    timeframe: str = Query("quarterly", regex="^(annual|quarterly|all)$"),
+    limit: int = Query(10, ge=1, le=20),
+    statement_type: Optional[str] = Query(None)
+) -> Dict[str, Any]:
+    """
+    Get financial statements for a ticker (income statement, balance sheet, cash flow).
+    
+    ⚠️ WARNING: This endpoint uses MASSIVE API's /vX/reference/financials which is
+    DEPRECATED and will be removed on February 23, 2026. Data collection is ongoing
+    to archive historical financials before deprecation.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL, MSFT)
+        timeframe: "annual", "quarterly", or "all" (default: quarterly)
+        limit: Number of periods to return (1-20, default: 10)
+        statement_type: Optional filter for specific statement type
+    
+    Returns:
+        {
+            "ticker": "AAPL",
+            "timeframe": "quarterly",
+            "count": 4,
+            "deprecation_warning": "API deprecated Feb 23, 2026",
+            "statements": [
+                {
+                    "fiscal_year": 2024,
+                    "fiscal_quarter": 4,
+                    "fiscal_date_ending": "2024-09-28",
+                    "statement_type": "comprehensive",
+                    "revenue": 94930000000,
+                    "net_income": 14736000000,
+                    "data": {...}  # Full statement data
+                }
+            ]
+        }
+    """
+    from app.repositories.stock_repository import stock_repository
+    from app.core.logging_config import get_logger
+    
+    logger = get_logger(__name__)
+    
+    try:
+        ticker = ticker.upper()
+        
+        # Calculate deprecation countdown
+        deprecation_date = datetime(2026, 2, 23, tzinfo=pytz.UTC)
+        days_until_deprecation = (deprecation_date - datetime.now(pytz.UTC)).days
+        
+        # Fetch from repository
+        statements = await stock_repository.get_financial_statements(
+            ticker=ticker,
+            statement_type=statement_type,
+            limit=limit if timeframe == "all" else limit * 2  # Get extra to filter
+        )
+        
+        if not statements:
+            logger.warning(
+                f"No financial statements found for {ticker}",
+                extra={"ticker": ticker, "timeframe": timeframe}
+            )
+            raise HTTPException(
+                status_code=404,
+                detail=f"No financial statements found for {ticker}. "
+                       f"Data may not be collected yet or ticker is invalid."
+            )
+        
+        # Filter by timeframe
+        if timeframe == "annual":
+            statements = [s for s in statements if s.fiscal_quarter is None]
+        elif timeframe == "quarterly":
+            statements = [s for s in statements if s.fiscal_quarter is not None]
+        # else "all" - no filtering
+        
+        # Apply limit after filtering
+        statements = statements[:limit]
+        
+        # Transform to response format
+        result_list = []
+        for stmt in statements:
+            quarter_str = f"Q{stmt.fiscal_quarter}" if stmt.fiscal_quarter else "Annual"
+            result_list.append({
+                "fiscal_year": stmt.fiscal_year,
+                "fiscal_quarter": stmt.fiscal_quarter,
+                "period": f"FY{stmt.fiscal_year} {quarter_str}",
+                "fiscal_date_ending": stmt.fiscal_date_ending,
+                "statement_type": stmt.statement_type,
+                "currency": stmt.currency,
+                "revenue": stmt.revenue,
+                "net_income": stmt.net_income,
+                "total_assets": stmt.total_assets,
+                "total_liabilities": stmt.total_liabilities,
+                "shareholders_equity": stmt.shareholders_equity,
+                "operating_cash_flow": stmt.operating_cash_flow,
+                "data": stmt.data,  # Full statement data
+                "source_provider": stmt.source_provider,
+                "fetched_at": stmt.fetched_at.isoformat() if stmt.fetched_at else None
+            })
+        
+        logger.info(
+            f"Returned {len(result_list)} financial statements for {ticker}",
+            extra={
+                "ticker": ticker,
+                "timeframe": timeframe,
+                "count": len(result_list),
+                "statement_type_filter": statement_type
+            }
+        )
+        
+        return {
+            "ticker": ticker,
+            "timeframe": timeframe,
+            "count": len(result_list),
+            "statement_type_filter": statement_type,
+            "deprecation_warning": f"⚠️ This API is deprecated and will be removed on Feb 23, 2026 ({days_until_deprecation} days remaining)",
+            "statements": result_list
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Failed to fetch financials for {ticker}",
+            extra={"ticker": ticker, "timeframe": timeframe, "error": str(e)},
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch financial statements: {str(e)}"
+        )
+

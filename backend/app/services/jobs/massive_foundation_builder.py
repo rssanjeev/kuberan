@@ -17,12 +17,53 @@ Architecture: Hybrid functional/OOP
 from datetime import datetime
 from typing import List, Optional
 import time
+import re
 
 from app.core.logging_config import get_logger
 from app.services.stock.metadata_enrichment_service import metadata_enrichment_service
 from app.models.provider import CompanyOverview
 
 logger = get_logger(__name__)
+
+
+# ============================================================================
+# Ticker Validation
+# ============================================================================
+
+def is_valid_ticker_format(ticker: str) -> bool:
+    """
+    Validate ticker format to avoid API errors.
+    
+    Invalid formats:
+    - Warrants: ticker-WS, ticker-WT (e.g., ZEV-WS, AEON-WS)
+    - Preferred stocks: ticker-P-X (e.g., APO-P-A, WRB-P-H)
+    - Dual-class stocks: ticker-A, ticker-B (e.g., AKO-A, WSO-B, AGM-A)
+    - Test tickers: ATEST-X
+    - ANY tickers with hyphens (not supported by Polygon.io API)
+    
+    Valid format: 1-5 uppercase letters, optional single dot only
+    Examples: AAPL, MSFT, GOOGL, BRK.A (dot is acceptable)
+    
+    Args:
+        ticker: Stock ticker symbol
+        
+    Returns:
+        True if valid format, False otherwise
+    """
+    if not ticker or not isinstance(ticker, str):
+        return False
+    
+    # Reject ANY ticker with hyphen (Polygon.io doesn't support them)
+    if '-' in ticker:
+        return False
+    
+    # Valid: 1-5 characters, uppercase letters, optional single dot
+    # Examples: AAPL, MSFT, BRK.A, BRK.B, GOOGL, META
+    # Dot is allowed for dual-class stocks (BRK.A, BRK.B)
+    if re.match(r'^[A-Z]{1,5}(\\.?[A-Z])?$', ticker):
+        return True
+    
+    return False
 
 
 # ============================================================================
@@ -95,13 +136,35 @@ async def get_tickers_needing_foundation(limit: int = 5) -> List[str]:
     try:
         # Get tickers at "base" level (need foundation upgrade)
         # Exclude "failed" tickers (404, delisted, etc.)
-        # Fetch full documents to avoid Beanie projection issues
+        # Sort by market_cap descending to prioritize large-cap stocks (S&P 500)
+        # Tickers without market_cap will be sorted last (nulls last behavior)
         pending_docs = await CompanyOverview.find(
             {"enrichment_status": "base"}
-        ).limit(limit).to_list()
+        ).sort([("market_cap", -1)]).limit(limit * 2).to_list()  # Fetch extra to account for filtering
         
-        # Extract ticker symbols from documents
-        pending_tickers = [doc.ticker for doc in pending_docs]
+        # Extract ticker symbols and filter invalid formats
+        all_tickers = [doc.ticker for doc in pending_docs]
+        valid_tickers = [t for t in all_tickers if is_valid_ticker_format(t)]
+        invalid_tickers = [t for t in all_tickers if not is_valid_ticker_format(t)]
+        
+        # Mark invalid tickers as failed immediately (skip API calls)
+        if invalid_tickers:
+            for ticker in invalid_tickers:
+                await CompanyOverview.find_one(
+                    {"ticker": ticker}
+                ).update({"$set": {"enrichment_status": "failed"}})
+            
+            logger.warning(
+                "Skipped invalid ticker formats",
+                extra={
+                    "invalid_count": len(invalid_tickers),
+                    "examples": invalid_tickers[:5],
+                    "reason": "Warrants/preferred stocks with hyphens not supported by API"
+                }
+            )
+        
+        # Use only valid tickers, limit to requested batch size
+        pending_tickers = valid_tickers[:limit]
         
         # Get counts for logging
         base_count = len(pending_tickers)

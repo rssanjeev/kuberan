@@ -1024,3 +1024,59 @@ class EconomicIndicator(Document):
             "source_provider",
         ]
         # No TTL - keep economic data forever
+
+
+class RelatedCompany(Document):
+    """
+    Related companies/tickers for a given stock (PHASE 4).
+    
+    Captures peer companies, competitors, and correlated stocks from MASSIVE API.
+    Used for comparative analysis, sector tracking, and portfolio diversification.
+    
+    TTL: 90 days (refresh quarterly)
+    Source provider: MASSIVE (GET /v1/related-companies/{ticker})
+    
+    Example relationships:
+    - AAPL → MSFT (competitor)
+    - AAPL → GOOGL (tech sector peer)
+    - TSLA → F (auto sector peer)
+    """
+    # Primary ticker
+    ticker: str  # Stock symbol (e.g., "AAPL")
+    
+    # Related ticker
+    related_ticker: str  # Related stock symbol (e.g., "MSFT")
+    
+    # Relationship details
+    relationship_type: Optional[str] = None  # "competitor", "sector_peer", "correlated", etc.
+    
+    # Correlation metrics (if available from provider)
+    correlation_score: Optional[float] = None  # -1.0 to 1.0 (price correlation)
+    
+    # Dates
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Metadata
+    source_provider: DataSource = DataSource.POLYGON  # MASSIVE uses Polygon data
+    fetched_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Extended relationship data (flexible schema for provider-specific fields)
+    extended_data: Dict[str, Any] = Field(default_factory=dict)
+    
+    class Settings:
+        name = "related_companies"
+        indexes = [
+            "ticker",  # Find all related companies for a ticker
+            "related_ticker",  # Reverse lookup
+            [("ticker", 1), ("related_ticker", 1)],  # Unique relationship
+            "relationship_type",  # Filter by relationship type
+            [("ticker", 1), ("correlation_score", -1)],  # Most correlated first
+            "last_updated",
+            "fetched_at",
+        ]
+        # TTL: Keep relationships for 90 days
+        timeseries_options = {
+            "timeField": "fetched_at",
+            "granularity": "hours",
+            "expireAfterSeconds": 7776000  # 90 days
+        }

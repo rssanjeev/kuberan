@@ -351,6 +351,138 @@ Get just the current price for a specific ticker (lightweight endpoint).
 
 ---
 
+### Get Related Companies
+Get companies related to the specified ticker based on news coverage and returns correlation (peers, competitors, subsidiaries).
+
+**Endpoint:** `GET /stocks/related-companies/{ticker}`
+
+**Parameters:**
+- `ticker` (path, required) - Stock ticker symbol
+- `limit` (query, optional) - Maximum number of results (1-100, default: 10)
+- `relationship_type` (query, optional) - Filter by relationship type (if available from provider)
+- `min_correlation` (query, optional) - Minimum relationship strength (0.0-1.0)
+
+**Example:**
+```bash
+GET /stocks/related-companies/AAPL?limit=10
+```
+
+**Response:**
+```json
+{
+  "ticker": "AAPL",
+  "count": 10,
+  "related_companies": [
+    {
+      "ticker": "MSFT",
+      "name": "Microsoft Corporation",
+      "relationship_strength": 0.85,
+      "relationship_type": "peer",
+      "last_updated": "2025-12-05T16:42:37.429000"
+    },
+    {
+      "ticker": "GOOGL",
+      "name": "Alphabet Inc. Class A",
+      "relationship_strength": 0.82,
+      "relationship_type": "peer",
+      "last_updated": "2025-12-05T16:42:37.429000"
+    },
+    {
+      "ticker": "AMZN",
+      "name": "Amazon.com Inc.",
+      "relationship_strength": 0.78,
+      "relationship_type": "peer",
+      "last_updated": "2025-12-05T16:42:37.429000"
+    }
+  ]
+}
+```
+
+**Errors:**
+- `404 Not Found` - No related companies found for ticker
+
+**Use Cases:**
+- Portfolio diversification recommendations
+- Peer comparison analysis
+- Sector concentration alerts
+- Investment research (find competitors automatically)
+
+---
+
+### Get Financial Statements (Deprecated)
+⚠️ **DEPRECATION WARNING:** This endpoint uses MASSIVE API data that will be removed on **February 23, 2026** (79 days remaining). Use for archival purposes only. After archival, use Alpha Vantage MCP integration for new financial statements.
+
+**Endpoint:** `GET /stocks/financials/{ticker}`
+
+**Parameters:**
+- `ticker` (path, required) - Stock ticker symbol
+- `timeframe` (query, optional) - "annual", "quarterly", or "all" (default: "quarterly")
+- `statement_type` (query, optional) - Filter by statement type (if multiple types stored)
+- `limit` (query, optional) - Number of periods to return (1-20, default: 10)
+
+**Example:**
+```bash
+# Get 4 most recent quarterly statements
+GET /stocks/financials/AAPL?timeframe=quarterly&limit=4
+
+# Get 2 most recent annual statements
+GET /stocks/financials/AAPL?timeframe=annual&limit=2
+
+# Get all available statements
+GET /stocks/financials/AAPL?timeframe=all&limit=20
+```
+
+**Response:**
+```json
+{
+  "ticker": "AAPL",
+  "timeframe": "quarterly",
+  "count": 4,
+  "statement_type_filter": null,
+  "deprecation_warning": "⚠️ This API is deprecated and will be removed on Feb 23, 2026 (79 days remaining)",
+  "statements": [
+    {
+      "fiscal_year": 2025,
+      "fiscal_quarter": 3,
+      "period": "FY2025 Q3",
+      "fiscal_date_ending": "2025-06-28",
+      "statement_type": "comprehensive",
+      "currency": "USD",
+      "revenue": null,
+      "net_income": null,
+      "total_assets": null,
+      "total_liabilities": null,
+      "shareholders_equity": null,
+      "operating_cash_flow": null,
+      "investing_cash_flow": null,
+      "financing_cash_flow": null,
+      "data": {},
+      "source_provider": "polygon",
+      "fetched_at": "2025-12-05T16:43:22.197000"
+    }
+  ]
+}
+```
+
+**Known Limitations:**
+- ⚠️ Revenue and financial metrics may be `null` due to XBRL parsing complexity
+- ⚠️ Raw `data` dict preserved for future re-parsing attempts
+- ⚠️ Endpoint will be marked READ-ONLY after full archival complete
+
+**Archival Status:**
+- ✅ Endpoint operational with deprecation warning
+- ⏳ S&P 500 archival (500 tickers): **URGENT - Start Dec 6, 2025**
+- ⏳ Full dataset archival (12,140 tickers): **Start Jan 1, 2026**
+
+**Errors:**
+- `404 Not Found` - No financial statements found for ticker
+- `400 Bad Request` - Invalid timeframe or limit
+
+**Migration Plan:**
+After Feb 23, 2026, use Alpha Vantage MCP integration for new statements. Historical data will remain available from MongoDB (5-year retention) and JSON export backups.
+
+---
+
 ## Market Status Endpoints
 
 ### Get Market Status
@@ -985,7 +1117,7 @@ Error response format:
 - Timestamps are in ISO 8601 format
 - Market hours are based on NYSE calendar (US/Eastern timezone)
 - Price collection only occurs during market hours (9 AM - 5 PM EST, Monday-Friday, excluding holidays)
-- Historical price data from `/stocks/price/collected/{ticker}` returns data from the last 365 days
+- Historical price data from `/stocks/history/{ticker}` returns up to 5 years of data
 
 ---
 
