@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from app.routers import root, public, profile, stocks, financier, precious_metals, monitoring, system, etf
@@ -15,6 +16,15 @@ from app.core.logging_config import get_logger
 logger = get_logger(__name__)
 
 app = FastAPI()
+
+# Enable CORS for Flutter frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
 
 @app.on_event("startup")
 async def app_init():

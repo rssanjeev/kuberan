@@ -47,7 +47,46 @@ Key rules:
 - ✅ Process PDFs in-memory only, delete immediately
 - ✅ Use SHA256 hashes for file deduplication
 
-### 2. Structured Logging
+### 2. File Size Limit (300 Lines Maximum)
+
+**CRITICAL RULE**: All new files MUST be kept within 300 lines of code.
+
+**Why 300 Lines?**
+- ✅ Easier to scan and understand entire file
+- ✅ Efficient AI/Copilot context loading
+- ✅ Reduces complexity and coupling
+- ✅ Prevents accidental breaking changes during updates
+- ✅ Clear file purpose and responsibility
+
+**Implementation Rules**:
+- ❌ **NEVER** create files exceeding 300 lines
+- ✅ Break large files into logical modules (e.g., split services into multiple files)
+- ✅ Use meaningful file names that indicate specific purpose
+- ✅ Extract shared utilities into separate helper files
+- ✅ When updating existing files: if additions push beyond 300 lines, refactor first
+
+**Examples**:
+```python
+# ❌ BAD: financier_service.py (800 lines)
+# One giant file with all financier logic
+
+# ✅ GOOD: Split into focused files
+# financier/document_processor_service.py (250 lines)
+# financier/transaction_service.py (180 lines)
+# financier/merchant_service.py (220 lines)
+```
+
+**Existing Code Audit**:
+- Files exceeding 300 lines will be audited and refactored in future
+- When modifying existing large files: if update pushes beyond 300 lines, extract logic to new file
+- Gradual migration approach - no rush, but enforce for all new code
+
+**Counting Lines**:
+- Exclude: blank lines, comments, docstrings, imports
+- Include: actual code logic (functions, classes, statements)
+- Use `cloc` or similar tools for accurate counts
+
+### 3. Structured Logging
 
 **ALWAYS follow [LOGGING.md](docs/LOGGING.md) for consistent logging.**
 
@@ -66,7 +105,7 @@ logger.info(
 logger.error("Operation failed", extra={"error": str(e)}, exc_info=True)
 ```
 
-### 3. Clean Architecture
+### 4. Clean Architecture
 
 **Follow [ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design.**
 
@@ -75,10 +114,11 @@ logger.error("Operation failed", extra={"error": str(e)}, exc_info=True)
 - **Repositories**: Data access only, no business logic
 - **Core**: Shared utilities and helpers
 
-### 4. Coding Standards
+### 5. Coding Standards
 
 **Follow [STYLE_GUIDE.md](docs/STYLE_GUIDE.md) for consistent code.**
 
+- **Maximum 300 lines per file** (exclude blanks/comments/imports)
 - Type hints required for all functions
 - snake_case for files/functions, PascalCase for classes
 - Docstrings required for all classes and functions
@@ -151,6 +191,78 @@ When asked to add functionality:
 6. Commit all changes together (code + docs + collection)
 
 **Critical**: Never commit endpoint changes without updating the Postman collection!
+
+### Adding New Tabs or Dashboards (Frontend)
+
+When adding a new tabbed screen (like Stocks, Financier):
+
+1. **Create the main screen** with TabController
+2. **Add ExpansionTile dropdown** to navigation drawer (all locations):
+   - home_screen.dart drawer
+   - The new screen's own drawer (with `initiallyExpanded: true`)
+   - All other screen drawers (financier_screen.dart, stocks_tabs_screen.dart, etc.)
+3. **Dropdown pattern to follow**:
+   ```dart
+   ExpansionTile(
+     leading: Icon(Icons.your_icon),
+     title: Text('Your Screen'),
+     initiallyExpanded: currentScreen, // true on this screen, false on others
+     children: [
+       ListTile(
+         leading: Icon(Icons.tab_icon),
+         title: Text('  Tab Name'),
+         selected: _tabController.index == 0, // if on this screen
+         onTap: () {
+           Navigator.pop(context);
+           if (currentScreen) {
+             _tabController.animateTo(0); // Switch tab
+           } else {
+             context.go('/route?tab=0'); // Navigate with tab param
+           }
+         },
+       ),
+     ],
+   ),
+   ```
+4. **Add tab navigation support** in initState:
+   ```dart
+   WidgetsBinding.instance.addPostFrameCallback((_) {
+     final uri = Uri.base;
+     final tabParam = uri.queryParameters['tab'];
+     if (tabParam != null) {
+       final tabIndex = int.tryParse(tabParam);
+       if (tabIndex != null && tabIndex >= 0 && tabIndex < tabCount) {
+         _tabController.animateTo(tabIndex);
+       }
+     }
+   });
+   ```
+4. **Update submenu items** with appropriate icons and tab indices
+5. **Test navigation** from all screens to all tabs
+
+**Pattern to follow:**
+```dart
+ExpansionTile(
+  leading: Icon(Icons.your_icon),
+  title: Text('Your Screen'),
+  initiallyExpanded: currentScreen, // true on this screen, false on others
+  children: [
+    ListTile(
+      leading: Icon(Icons.tab_icon),
+      title: Text('  Tab Name'),
+      selected: _tabController.index == 0, // if on this screen
+      onTap: () {
+        Navigator.pop(context);
+        if (currentScreen) {
+          _tabController.animateTo(0); // Switch tab
+        } else {
+          context.go('/route?tab=0'); // Navigate with tab param
+        }
+      },
+    ),
+  ],
+),
+```
 
 ### Making Code Changes
 ```bash
@@ -413,6 +525,68 @@ See [WEB_SCRAPING.md](docs/WEB_SCRAPING.md) for comprehensive guidelines on:
 - ❌ Never install custom scraping libraries (requests, beautifulsoup, scrapy, selenium)
 - ❌ Don't bypass rate limits or store scraped HTML
 
+## Frontend Development (Flutter)
+
+**Framework:** Flutter (Web, iOS, Android)  
+**Design Reference:** Budget App (https://github.com/theReynald/Budget-App)  
+**Implementation Plan:** [docs/FRONTEND_IMPLEMENTATION_PLAN.md](../docs/FRONTEND_IMPLEMENTATION_PLAN.md)
+
+### Key Principles
+
+**Beginner-Friendly Approach:**
+- Explain every step in simple terms before implementing
+- Show what user will see in their browser after each change
+- Wait for approval at checkpoints before continuing
+- Provide exact commands to test and verify functionality
+- Never assume user knows Flutter/Dart terminology
+
+**Design Philosophy:**
+- Copy proven patterns from Budget App (card-based layout)
+- Translate React patterns to Flutter equivalently
+- Use Material Design components (familiar, well-documented)
+- Responsive design (desktop → tablet → mobile)
+- Clean visual hierarchy (stats cards, tables, forms)
+
+**Development Workflow:**
+1. **Phase-based implementation** (6 phases, each with clear goal)
+2. **Hot reload testing** (save file → see changes instantly)
+3. **Browser-first development** (test in Chrome before mobile)
+4. **Checkpoint approvals** (user verifies before continuing)
+5. **Troubleshooting support** (provide exact fix commands)
+
+### When Working on Frontend
+
+**Before implementing any feature:**
+1. Explain in simple terms what will be built
+2. Show mockup/layout of what user will see
+3. List exact files that will be created/modified
+4. Provide test commands user will run
+5. Wait for explicit approval
+
+**After implementing:**
+1. Provide exact test commands
+2. Describe what user should see in browser
+3. List common issues and fixes
+4. Wait for checkpoint approval before next phase
+5. Never batch multiple phases - one at a time only
+
+**Communication Style:**
+- Use analogies to React/TypeScript (user's familiar territory)
+- Avoid Flutter jargon unless explained first
+- Provide screenshots or ASCII diagrams for layouts
+- Give exact commands (copy-pasteable)
+- Explain why each step is needed
+
+### Frontend File Structure
+
+See [FRONTEND_IMPLEMENTATION_PLAN.md](../docs/FRONTEND_IMPLEMENTATION_PLAN.md#project-structure) for complete directory tree and file purposes.
+
+**Key Directories:**
+- `lib/screens/` - Full page views (like React pages)
+- `lib/widgets/` - Reusable components (like React components)
+- `lib/services/` - Backend API calls (like fetch/axios)
+- `lib/models/` - Data structures (like TypeScript interfaces)
+
 ## Project Philosophy
 
 - **Security First**: Financial data protection is non-negotiable
@@ -421,6 +595,7 @@ See [WEB_SCRAPING.md](docs/WEB_SCRAPING.md) for comprehensive guidelines on:
 - **Documentation as Code**: Keep docs in sync with code
 - **Thoughtful Design**: Consider impact before implementing
 - **MCP-First Approach**: Use MCP servers for all external data fetching
+- **Beginner-Friendly**: Explain everything in simple terms, wait for approvals
 
 ## Notes for Copilot
 
@@ -430,9 +605,11 @@ See [WEB_SCRAPING.md](docs/WEB_SCRAPING.md) for comprehensive guidelines on:
 - When in doubt, use functional programming first, add OOP when state/lifecycle needed
 - The user values thoughtful architecture over quick hacks
 - **Always use MCP servers** for web scraping and data extraction (never custom libraries)
+- **Frontend development**: Follow [FRONTEND_IMPLEMENTATION_PLAN.md](../docs/FRONTEND_IMPLEMENTATION_PLAN.md) phase-by-phase
+- **User is new to Flutter**: Explain everything in beginner-friendly terms, provide exact commands
 
 ---
 
-**Last Updated:** November 30, 2025
+**Last Updated:** December 5, 2025
 
 **For comprehensive details, see the documentation files linked above.**

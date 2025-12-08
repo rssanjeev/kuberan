@@ -41,6 +41,7 @@ class TransactionService:
             "count": len(transactions),
             "transactions": [
                 {
+                    "_id": str(txn.id),  # Include MongoDB ObjectId for editing
                     "date": f"{txn.statement_year}/{txn.statement_month:02d}/{txn.transaction_date}",
                     "merchant": txn.merchant_name,
                     "location": txn.merchant_location,

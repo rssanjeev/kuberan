@@ -46,6 +46,9 @@ build/
 category_mapping.json
 backend/*.pdf
 backend/**/*.pdf
-backend/*_extracted.json        
+backend/*_extracted.json
+
+# Manual entries - User's private income/expense data
+backend/data/manual_entries.json        
 
 .github/

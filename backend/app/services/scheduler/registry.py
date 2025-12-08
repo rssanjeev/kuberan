@@ -291,25 +291,25 @@ def register_all_jobs():
     # )
     
     # ============================================================================
-    # MASSIVE Foundation Builder: ENABLED (Dec 5, 2025)
+    # MASSIVE Foundation Builder: ENABLED (Dec 5, 2025) - OPTIMIZED (Dec 6, 2025)
     # ============================================================================
     # Purpose: Collect foundational metadata (CIK, FIGI, logos, etc.) for all tickers
     # Rate: 5 calls/min (Polygon.io free tier limit)
-    # Schedule: Every minute, processing 5 tickers per run
-    # Throughput: 300 tickers/hour = 7,200 tickers/day
-    # Progress: 4,463/12,147 enriched (36.7%)
-    # Remaining: 7,464 tickers (~24.9 hours to completion)
-    # Benefits: Frequent updates, better rate limit adherence, market cap prioritization
+    # Schedule: Every 2 minutes, processing 10 tickers per run with 12-second delays
+    # Throughput: 10 tickers/2 min = 5 tickers/min = 300 tickers/hour = 7,200 tickers/day
+    # Progress: 4,532/12,147 enriched (37.3%)
+    # Remaining: 7,344 tickers (~24.5 hours to completion)
+    # Benefits: Full rate utilization, efficient batch processing, market cap prioritization
     
     job_scheduler.add_job(
         func=massive_foundation_builder_job.run,
         trigger=CronTrigger(
-            minute='*',  # Every minute
+            minute='*/2',  # Every 2 minutes (allows 10 tickers with 12-sec delays)
             second='0',
             timezone='US/Eastern'  # EST/EDT timezone
         ),
         job_id='massive_foundation_per_minute',
-        name='MASSIVE Foundation Collection (Every Minute)'
+        name='MASSIVE Foundation Collection (Every 2 Minutes)'
     )
     
     logger.info(

@@ -41,7 +41,9 @@ class CreditCardTransaction(Document):
     Focus: Transaction-level data only for expense analysis.
     """
     # Transaction identification (no account info)
-    transaction_date: str  # MM/DD format from statement
+    transaction_date: str  # MM/DD format from statement (where MM=month, DD=day)
+    transaction_year: int  # Actual year of transaction (inferred from statement period)
+    transaction_month: int  # Actual month of transaction (from MM in MM/DD)
     statement_year: int  # Year of statement
     statement_month: int  # Month of statement (for grouping)
     
@@ -81,6 +83,7 @@ class FinancialDocumentMetadata(Document):
     Security: PDF file itself is NEVER stored, only processing metadata.
     """
     file_hash: str  # SHA256 hash of PDF (for deduplication)
+    statement_period: Optional[str] = None  # "MM/DD/YY - MM/DD/YY" (unique identifier for each statement)
     document_type: str  # "credit_card_statement", "payslip", etc.
     bank: Optional[str] = None  # Bank name if credit card
     

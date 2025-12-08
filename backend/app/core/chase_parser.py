@@ -179,8 +179,9 @@ def parse_chase_statement(pdf_path: str, include_account_info: bool = False) -> 
     # Extract raw data
     print("Step 1: Extracting raw text...")
     raw_text = extract_text(pdf_path)
-    cleaned_text = clean_chase_text(raw_text)
-    print(f"✓ Extracted and cleaned {len(cleaned_text)} characters\n")
+    # TEMPORARILY DISABLED: cleaned_text = clean_chase_text(raw_text)
+    cleaned_text = raw_text  # Use raw text directly without cleaning
+    print(f"✓ Extracted {len(cleaned_text)} characters\n")
     
     print("Step 2: Extracting tables...")
     tables = extract_tables(pdf_path)
@@ -236,11 +237,18 @@ def extract_chase_account_info(text: str) -> Dict[str, str]:
     if account_match:
         account_info['account_number_last4'] = account_match.group(1)
     
-    # Statement period
-    period_match = re.search(r'(?:Statement\s+Period|Closing\s+Date)[:\s]+(\d{2}/\d{2}/\d{2,4})\s*(?:to|-)\s*(\d{2}/\d{2}/\d{2,4})', text, re.IGNORECASE)
+    # Statement period - Try multiple patterns
+    # Pattern 1: "Opening/Closing Date MM/DD/YY - MM/DD/YY"
+    period_match = re.search(r'Opening/Closing\s+Date\s+(\d{2}/\d{2}/\d{2,4})\s*-\s*(\d{2}/\d{2}/\d{2,4})', text, re.IGNORECASE)
+    if not period_match:
+        # Pattern 2: "Statement Period MM/DD/YY to MM/DD/YY"
+        period_match = re.search(r'(?:Statement\s+Period|Closing\s+Date)[:\s]+(\d{2}/\d{2}/\d{2,4})\s*(?:to|-)\s*(\d{2}/\d{2}/\d{2,4})', text, re.IGNORECASE)
+    
     if period_match:
         account_info['statement_period_start'] = period_match.group(1)
         account_info['statement_period_end'] = period_match.group(2)
+        # Create unique statement period identifier
+        account_info['statement_period'] = f"{period_match.group(1)} - {period_match.group(2)}"
     
     # Statement date
     date_match = re.search(r'(?:Statement\s+(?:Closing\s+)?Date|Opening/Closing\s+Date)[:\s]+(\d{2}/\d{2}/\d{2,4})', text, re.IGNORECASE)
@@ -352,7 +360,8 @@ def extract_chase_transactions_from_text(text: str) -> List[Dict[str, Any]]:
     
     # Pattern: MM/DD followed by text, ending with amount
     # Amount can be negative (credits/payments) or positive (charges)
-    pattern = r'^(\d{2}/\d{2})\s+(.+?)\s+([\-]?[\d,]+\.\d{2})$'
+    # Using greedy match (.+) to capture full merchant names with special chars
+    pattern = r'^(\d{2}/\d{2})\s+(.+)\s+([\-]?[\d,]+\.\d{2})$'
     
     for line_num, line in enumerate(lines):
         line = line.strip()

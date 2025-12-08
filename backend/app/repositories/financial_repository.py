@@ -16,7 +16,9 @@ from app.models import (
     MerchantCategory,
     FinancialDocumentMetadata
 )
+from app.core.logging_config import get_logger
 
+logger = get_logger(__name__)
 
 class FinancialRepository:
     """Repository for financial document operations."""
@@ -43,9 +45,29 @@ class FinancialRepository:
         transaction_docs = []
         
         for txn in transactions:
+            # Parse transaction date to determine actual year/month
+            # Transaction date format: MM/DD
+            date_parts = txn['date'].split('/')
+            if len(date_parts) == 2:
+                txn_month = int(date_parts[0])
+                
+                # Infer transaction year based on statement period
+                # If transaction month > statement month, it's from previous year
+                # (e.g., Nov statement with Oct transactions when due date is 23rd)
+                if txn_month > statement_month:
+                    txn_year = statement_year - 1
+                else:
+                    txn_year = statement_year
+            else:
+                # Fallback: use statement month/year
+                txn_month = statement_month
+                txn_year = statement_year
+            
             # Create transaction document (no account info)
             doc = CreditCardTransaction(
                 transaction_date=txn['date'],
+                transaction_year=txn_year,
+                transaction_month=txn_month,
                 statement_year=statement_year,
                 statement_month=statement_month,
                 merchant_name=txn['description'],
@@ -127,17 +149,36 @@ class FinancialRepository:
         
         transactions = await CreditCardTransaction.find(query).to_list()
         
-        # Group by category (only charges, not credits)
+        # Group by category (only charges/expenses, not credits/income)
+        # For credit cards: transaction_type == 'charge' (positive amounts)
+        # For checking accounts: amount < 0 (expenses/withdrawals, stored as negative)
+        # EXCLUDE: Income, Zelle Received, Investments (not spending categories)
         category_totals: Dict[str, float] = {}
         for txn in transactions:
-            if txn.transaction_type == 'charge' and txn.category:
-                category_totals[txn.category] = category_totals.get(txn.category, 0) + txn.amount
+            if not txn.category:
+                continue
+            
+            # Exclude non-spending categories
+            excluded_categories = {'Income', 'Zelle Received', 'Investments'}
+            if txn.category in excluded_categories:
+                continue
+            
+            # Include if:
+            # 1. Credit card charge (positive amount)
+            # 2. Checking account expense (negative amount)
+            is_charge = txn.transaction_type == 'charge'
+            is_checking_expense = (txn.amount < 0)
+            
+            if is_charge or is_checking_expense:
+                # Use absolute value for spending totals
+                category_totals[txn.category] = category_totals.get(txn.category, 0) + abs(txn.amount)
         
         return category_totals
     
     async def save_document_metadata(
         self,
         file_hash: str,
+        statement_period: Optional[str],  # Add statement period (PRIMARY duplicate detection)
         document_type: str,
         bank: Optional[str],
         statement_year: int,
@@ -152,7 +193,8 @@ class FinancialRepository:
         Save financial document metadata (no actual PDF stored).
         
         Args:
-            file_hash: SHA256 hash of PDF
+            file_hash: SHA256 hash of PDF (FALLBACK for duplicate detection)
+            statement_period: Statement period string (PRIMARY for duplicate detection, e.g., "10/27/25 - 11/26/25")
             document_type: Type of document
             bank: Bank name
             statement_year: Year
@@ -166,16 +208,24 @@ class FinancialRepository:
         Returns:
             Created metadata document
         """
-        # Check if already processed
-        existing = await FinancialDocumentMetadata.find_one(
-            FinancialDocumentMetadata.file_hash == file_hash
-        )
+        # Check if already processed (by period first, then hash)
+        existing = None
+        if statement_period:
+            existing = await FinancialDocumentMetadata.find_one(
+                FinancialDocumentMetadata.statement_period == statement_period
+            )
+        
+        if not existing:
+            existing = await FinancialDocumentMetadata.find_one(
+                FinancialDocumentMetadata.file_hash == file_hash
+            )
         
         if existing:
             return existing
         
         metadata = FinancialDocumentMetadata(
             file_hash=file_hash,
+            statement_period=statement_period,  # Store statement period
             document_type=document_type,
             bank=bank,
             statement_year=statement_year,
@@ -191,6 +241,61 @@ class FinancialRepository:
         await metadata.insert()
         return metadata
     
+    async def get_income_from_payroll(
+        self,
+        year: Optional[int] = None,
+        month: Optional[int] = None
+    ) -> float:
+        """
+        Calculate total income from payroll deposits.
+        
+        Args:
+            year: Filter by year
+            month: Filter by month
+            
+        Returns:
+            Total income from payroll deposits
+        """
+        query = {'category': 'Income'}
+        if year:
+            query['statement_year'] = year
+        if month:
+            query['statement_month'] = month
+        
+        transactions = await CreditCardTransaction.find(query).to_list()
+        total_income = sum(abs(txn.amount) for txn in transactions if txn.amount > 0)
+        
+        return total_income
+    
+    async def get_investment_transactions(
+        self,
+        year: Optional[int] = None,
+        month: Optional[int] = None,
+        months_back: int = 12
+    ) -> List[CreditCardTransaction]:
+        """
+        Get investment transactions for rolling analysis.
+        
+        Args:
+            year: Filter by year
+            month: Filter by month
+            months_back: Number of months to look back (default 12)
+            
+        Returns:
+            List of investment transactions
+        """
+        query = {'category': 'Investments'}
+        if year:
+            query['statement_year'] = year
+        if month:
+            query['statement_month'] = month
+        
+        transactions = await CreditCardTransaction.find(
+            query
+        ).sort('-statement_year', '-statement_month').limit(months_back * 50).to_list()
+        
+        return transactions
+    
     async def is_document_processed(self, file_hash: str) -> bool:
         """
         Check if document has already been processed.
@@ -205,6 +310,194 @@ class FinancialRepository:
             FinancialDocumentMetadata.file_hash == file_hash
         )
         return existing is not None
+    
+    async def get_document_by_hash(self, file_hash: str) -> Optional[FinancialDocumentMetadata]:
+        """
+        Get document metadata by file hash.
+        
+        Args:
+            file_hash: SHA256 hash of PDF
+            
+        Returns:
+            Document metadata or None
+        """
+        return await FinancialDocumentMetadata.find_one(
+            FinancialDocumentMetadata.file_hash == file_hash
+        )
+    
+    async def get_document_by_period(self, statement_period: str) -> Optional[FinancialDocumentMetadata]:
+        """
+        Get document metadata by statement period (PRIMARY duplicate detection method).
+        
+        Args:
+            statement_period: Statement period string (e.g., "10/27/25 - 11/26/25")
+            
+        Returns:
+            Document metadata or None
+        """
+        return await FinancialDocumentMetadata.find_one(
+            FinancialDocumentMetadata.statement_period == statement_period
+        )
+    
+    async def count_transactions_by_statement(self, year: int, month: int) -> int:
+        """
+        Count transactions for a specific statement period.
+        
+        Args:
+            year: Statement year
+            month: Statement month
+            
+        Returns:
+            Number of transactions
+        """
+        return await CreditCardTransaction.find(
+            CreditCardTransaction.statement_year == year,
+            CreditCardTransaction.statement_month == month
+        ).count()
+    
+    async def delete_document_metadata(self, file_hash: str) -> bool:
+        """
+        Delete document metadata by file hash.
+        
+        Args:
+            file_hash: SHA256 hash of PDF
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        doc = await FinancialDocumentMetadata.find_one(
+            FinancialDocumentMetadata.file_hash == file_hash
+        )
+        if doc:
+            await doc.delete()
+            return True
+        return False
+    
+    async def update_transaction_category(
+        self,
+        transaction_id: str,
+        new_category: str,
+        update_all_from_merchant: bool = False
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Update the category of a specific transaction.
+        Optionally update all transactions from the same merchant.
+        
+        Args:
+            transaction_id: MongoDB ObjectId string of transaction
+            new_category: New category name to assign
+            update_all_from_merchant: If True, update all transactions from same merchant
+            
+        Returns:
+            Dictionary with updated transaction and count of updates
+            
+        Raises:
+            ValueError: If transaction_id is invalid or category is empty
+        """
+        from bson import ObjectId
+        from bson.errors import InvalidId
+        
+        # Validate inputs
+        if not new_category or not new_category.strip():
+            raise ValueError("Category cannot be empty")
+        
+        try:
+            obj_id = ObjectId(transaction_id)
+        except InvalidId:
+            raise ValueError(f"Invalid transaction ID format: {transaction_id}")
+        
+        # Find and update transaction
+        transaction = await CreditCardTransaction.find_one(
+            CreditCardTransaction.id == obj_id
+        )
+        
+        if not transaction:
+            return None
+        
+        # Update category
+        transaction.category = new_category.strip()
+        await transaction.save()
+        
+        updated_count = 1
+        
+        # If requested, update all transactions from same merchant
+        if update_all_from_merchant:
+            merchant_name = transaction.merchant_name
+            
+            # Update all other transactions from this merchant
+            other_transactions = await CreditCardTransaction.find(
+                CreditCardTransaction.merchant_name == merchant_name,
+                CreditCardTransaction.id != obj_id
+            ).to_list()
+            
+            for txn in other_transactions:
+                txn.category = new_category.strip()
+                await txn.save()
+                updated_count += 1
+            
+            logger.info(
+                "Bulk updated transactions from merchant",
+                extra={
+                    "merchant": merchant_name,
+                    "category": new_category,
+                    "count": updated_count
+                }
+            )
+            
+            # Also update the merchant mapping for future transactions
+            # Import at runtime to avoid circular reference issue
+            try:
+                logger.info(
+                    "Saving merchant mapping",
+                    extra={"merchant": merchant_name, "category": new_category.strip()}
+                )
+                
+                # Create or update merchant mapping directly
+                existing_mapping = await MerchantCategory.find_one(
+                    MerchantCategory.merchant_name == merchant_name
+                )
+                
+                if existing_mapping:
+                    existing_mapping.category = new_category.strip()
+                    existing_mapping.confidence = 1.0
+                    existing_mapping.source = "manual"
+                    existing_mapping.updated_at = datetime.utcnow()
+                    await existing_mapping.save()
+                    logger.info(
+                        "Updated existing merchant mapping",
+                        extra={"merchant": merchant_name, "mapping_id": str(existing_mapping.id)}
+                    )
+                else:
+                    new_mapping = MerchantCategory(
+                        merchant_name=merchant_name,
+                        category=new_category.strip(),
+                        confidence=1.0,
+                        source="manual"
+                    )
+                    await new_mapping.insert()
+                    logger.info(
+                        "Created new merchant mapping",
+                        extra={"merchant": merchant_name, "mapping_id": str(new_mapping.id)}
+                    )
+                    
+            except Exception as e:
+                logger.error(
+                    "Failed to save merchant mapping",
+                    extra={
+                        "merchant": merchant_name,
+                        "category": new_category.strip(),
+                        "error": str(e)
+                    },
+                    exc_info=True
+                )
+                # Don't fail the whole operation - transactions already updated successfully
+        
+        return {
+            "transaction": transaction,
+            "updated_count": updated_count,
+            "merchant": transaction.merchant_name,
+            "updated_all_from_merchant": update_all_from_merchant
+        }
 
 
 class MerchantCategoryRepository:

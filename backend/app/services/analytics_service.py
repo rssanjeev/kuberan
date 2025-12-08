@@ -38,6 +38,7 @@ import seaborn as sns
 
 from app.repositories.financial_repository import financial_repository
 from app.models import CreditCardTransaction
+from app.services.manual_entries_service import manual_entries_service
 
 
 # ============================================================================
@@ -48,19 +49,26 @@ def calculate_cash_flow(transactions: List[CreditCardTransaction]) -> Dict[str, 
     """
     Calculate income, expenses, and net cash flow.
     
+    Income is calculated from transactions with category='Income' and positive amounts.
+    Expenses are all positive transaction amounts (charges, withdrawals).
+    
     Args:
         transactions: List of transactions
         
     Returns:
         Dict with income, expenses, and net_cash_flow
     """
-    income = sum(txn.amount for txn in transactions if txn.amount < 0)  # Negative = credits
-    expenses = sum(txn.amount for txn in transactions if txn.amount > 0)  # Positive = charges
+    # Calculate actual income from Income category deposits
+    income_txns = [txn for txn in transactions if txn.category == 'Income' and txn.amount > 0]
+    income = sum(abs(txn.amount) for txn in income_txns)
+    
+    # Only expenses - exclude Income category
+    expenses = sum(txn.amount for txn in transactions if txn.amount > 0 and txn.category != 'Income')
     
     return {
-        "total_income": abs(income),
+        "total_income": income,
         "total_expenses": expenses,
-        "net_cash_flow": abs(income) - expenses
+        "net_cash_flow": income - expenses
     }
 
 
@@ -70,19 +78,26 @@ def calculate_monthly_cash_flow(
     """
     Calculate cash flow breakdown by month.
     
+    Income is calculated from transactions with category='Income' and positive amounts.
+    Expenses are all positive transaction amounts (charges, withdrawals).
+    
     Args:
         transactions: List of transactions
         
     Returns:
         List of monthly cash flow summaries
     """
-    monthly_data = defaultdict(lambda: {"income": 0, "expenses": 0})
+    monthly_data: Dict[str, Dict[str, float]] = defaultdict(lambda: {"income": 0, "expenses": 0})
     
     for txn in transactions:
         month_key = f"{txn.statement_year}-{txn.statement_month:02d}"
-        if txn.amount < 0:
+        
+        # Track income from Income category
+        if txn.category == 'Income' and txn.amount > 0:
             monthly_data[month_key]["income"] += abs(txn.amount)
-        else:
+        
+        # Track expenses from all positive amounts
+        if txn.amount > 0:
             monthly_data[month_key]["expenses"] += txn.amount
     
     # Sort by month and format
@@ -122,7 +137,8 @@ def calculate_category_breakdown(
     category_counts = defaultdict(int)
     
     for txn in transactions:
-        if txn.amount > 0:  # Only expenses
+        # Only expenses - exclude Income category and negative amounts
+        if txn.amount > 0 and txn.category != 'Income':
             category = txn.category or "Uncategorized"
             category_totals[category] += txn.amount
             category_counts[category] += 1
@@ -158,7 +174,8 @@ def calculate_monthly_category_spending(
     monthly_categories = defaultdict(lambda: defaultdict(float))
     
     for txn in transactions:
-        if txn.amount > 0:  # Only expenses
+        # Only expenses - exclude Income category and negative amounts
+        if txn.amount > 0 and txn.category != 'Income':
             month_key = f"{txn.statement_year}-{txn.statement_month:02d}"
             category = txn.category or "Uncategorized"
             monthly_categories[month_key][category] += txn.amount
@@ -214,14 +231,18 @@ def detect_outliers_zscore(
         if txn.amount > 0:
             z_score = abs((txn.amount - mean) / stdev)
             if z_score > threshold:
-                outliers.append({
+                outlier_data = {
                     "transaction_date": txn.transaction_date,
                     "merchant": txn.merchant_name,
                     "amount": round(txn.amount, 2),
                     "category": txn.category,
                     "z_score": round(z_score, 2),
                     "deviation_from_average": round(txn.amount - mean, 2)
-                })
+                }
+                # Only include _id for MongoDB documents (not manual entries)
+                if hasattr(txn, 'id'):
+                    outlier_data["_id"] = str(txn.id)
+                outliers.append(outlier_data)
     
     return sorted(outliers, key=lambda x: x["z_score"], reverse=True)
 
@@ -400,10 +421,13 @@ def calculate_financial_health(
         Financial health metrics
     """
     # Separate income and expenses
-    income_txns = [txn for txn in transactions if txn.amount < 0]
-    expense_txns = [txn for txn in transactions if txn.amount > 0]
+    expense_txns = [txn for txn in transactions if txn.amount > 0 and txn.category != 'Income']
     
+    # Calculate actual income from payroll deposits (Income category with positive amounts)
+    income_txns = [txn for txn in transactions if txn.category == 'Income' and txn.amount > 0]
     total_income = sum(abs(txn.amount) for txn in income_txns)
+    
+    # If no income found in this period, return None for income-dependent metrics
     total_expenses = sum(txn.amount for txn in expense_txns)
     
     # Calculate savings rate (if income exists)
@@ -695,13 +719,62 @@ class AnalyticsService:
         Returns:
             Complete analysis with all metrics
         """
-        # Fetch transactions
+        # Fetch transactions from database
         transactions = await financial_repository.get_transactions(
             year=year,
             month=month,
             category=category,
             limit=100000  # Get all for analysis
         )
+        
+        # Add manual entries (recurring income + recurring expenses + adhoc expenses)
+        if year and month:
+            try:
+                # Get all manual transactions (already in transaction format)
+                manual_transactions = manual_entries_service.get_all_manual_transactions(
+                    year=year,
+                    month=month
+                )
+                
+                # Create simple objects that work with analytics functions
+                from types import SimpleNamespace
+                for txn_data in manual_transactions:
+                    # Create object with attributes (analytics functions expect object.attribute, not dict["key"])
+                    manual_txn = SimpleNamespace(
+                        merchant_name=txn_data["merchant_name"],
+                        merchant_location=txn_data["merchant_location"],
+                        amount=txn_data["amount"],
+                        transaction_type=txn_data["transaction_type"],
+                        category=txn_data["category"],
+                        transaction_date=txn_data["transaction_date"],
+                        statement_year=txn_data["statement_year"],
+                        statement_month=txn_data["statement_month"],
+                        bank=txn_data["bank"]
+                    )
+                    transactions.append(manual_txn)
+                
+                # Log integration
+                if len(manual_transactions) > 0:
+                    from app.core.logging_config import get_logger
+                    logger = get_logger(__name__)
+                    logger.info(
+                        "Integrated manual entries into analysis",
+                        extra={
+                            "year": year,
+                            "month": month,
+                            "manual_count": len(manual_transactions),
+                            "total_count": len(transactions)
+                        }
+                    )
+            except Exception as e:
+                # Don't fail analysis if manual entries fail to load
+                from app.core.logging_config import get_logger
+                logger = get_logger(__name__)
+                logger.error(
+                    "Failed to load manual entries, continuing with database transactions only",
+                    extra={"error": str(e), "error_type": type(e).__name__},
+                    exc_info=True
+                )
         
         if not transactions:
             return {
@@ -733,6 +806,155 @@ class AnalyticsService:
             "trend_analysis": trend,
             "recurring_payments": recurring,
             "financial_health": health
+        }
+    
+    async def get_monthly_trends(
+        self,
+        period: str = "6m",
+        year: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        Get monthly expense and cash flow trends for the specified time period.
+        
+        This method aggregates transaction data by month and includes manual entries
+        (recurring income, recurring expenses, adhoc expenses) to provide complete
+        financial trends over time.
+        
+        Args:
+            period: Time period selector
+                - '2m': Last 2 months
+                - '6m': Last 6 months (default)
+                - 'ytd': Year to date (Jan to current month)
+            year: Year for YTD calculation (default: current year)
+            
+        Returns:
+            {
+                "period": "6m",
+                "months": ["2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12"],
+                "labels": ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                "expenses": [2100.50, 2450.75, ...],
+                "income": [6827.24, 10240.86, ...],  # Note: Aug has 3 paydays!
+                "cashflow": [4726.74, 7790.11, ...]
+            }
+            
+        Note:
+            Income variations are normal! August 2025 shows higher income because
+            there are 3 biweekly paydays in that month ($3,413.62 × 3 = $10,240.86)
+            instead of the usual 2 paydays.
+        """
+        from datetime import datetime, timedelta
+        from calendar import month_abbr
+        
+        # Determine date range based on period
+        now = datetime.now()
+        current_year = year if year else now.year
+        
+        if period == "ytd":
+            # Year to date: Jan to current month
+            start_year = current_year
+            start_month = 1
+            end_year = current_year
+            end_month = now.month
+        elif period == "2m":
+            # Last 2 months
+            end_date = datetime(now.year, now.month, 1)
+            start_date = end_date - timedelta(days=60)  # Approximately 2 months
+            start_year = start_date.year
+            start_month = start_date.month
+            end_year = end_date.year
+            end_month = end_date.month
+        else:  # Default: 6m
+            # Last 6 months
+            end_date = datetime(now.year, now.month, 1)
+            start_date = end_date - timedelta(days=180)  # Approximately 6 months
+            start_year = start_date.year
+            start_month = start_date.month
+            end_year = end_date.year
+            end_month = end_date.month
+        
+        # Fetch all transactions in date range
+        all_transactions = await financial_repository.get_transactions(
+            limit=100000  # Get all for aggregation
+        )
+        
+        # Filter by date range
+        transactions = [
+            txn for txn in all_transactions
+            if (txn.statement_year > start_year or 
+                (txn.statement_year == start_year and txn.statement_month >= start_month))
+            and (txn.statement_year < end_year or 
+                 (txn.statement_year == end_year and txn.statement_month <= end_month))
+        ]
+        
+        # Aggregate by month with manual entries
+        monthly_data = {}
+        
+        # Generate month keys in range
+        current_date = datetime(start_year, start_month, 1)
+        end_date = datetime(end_year, end_month, 1)
+        
+        while current_date <= end_date:
+            month_key = f"{current_date.year}-{current_date.month:02d}"
+            
+            # Get transactions for this month
+            month_txns = [
+                txn for txn in transactions
+                if txn.statement_year == current_date.year 
+                and txn.statement_month == current_date.month
+            ]
+            
+            # Add manual entries for this month
+            try:
+                from types import SimpleNamespace
+                manual_transactions = manual_entries_service.get_all_manual_transactions(
+                    year=current_date.year,
+                    month=current_date.month
+                )
+                
+                for txn_data in manual_transactions:
+                    manual_txn = SimpleNamespace(
+                        merchant_name=txn_data["merchant_name"],
+                        amount=txn_data["amount"],
+                        category=txn_data["category"],
+                        statement_year=txn_data["statement_year"],
+                        statement_month=txn_data["statement_month"]
+                    )
+                    month_txns.append(manual_txn)
+            except Exception:
+                # Continue without manual entries if they fail to load
+                pass
+            
+            # Calculate metrics
+            income = sum(abs(txn.amount) for txn in month_txns if txn.category == 'Income' and txn.amount > 0)
+            expenses = sum(txn.amount for txn in month_txns if txn.amount > 0 and txn.category != 'Income')
+            cashflow = income - expenses
+            
+            monthly_data[month_key] = {
+                "income": round(income, 2),
+                "expenses": round(expenses, 2),
+                "cashflow": round(cashflow, 2)
+            }
+            
+            # Move to next month
+            if current_date.month == 12:
+                current_date = datetime(current_date.year + 1, 1, 1)
+            else:
+                current_date = datetime(current_date.year, current_date.month + 1, 1)
+        
+        # Format for chart
+        months = sorted(monthly_data.keys())
+        labels = [month_abbr[int(m.split('-')[1])] for m in months]
+        expenses = [monthly_data[m]["expenses"] for m in months]
+        income = [monthly_data[m]["income"] for m in months]
+        cashflow = [monthly_data[m]["cashflow"] for m in months]
+        
+        return {
+            "period": period,
+            "months": months,
+            "labels": labels,
+            "expenses": expenses,
+            "income": income,
+            "cashflow": cashflow
         }
     
     async def get_visualizations(

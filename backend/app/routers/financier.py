@@ -5,25 +5,30 @@ Security: All endpoints designed to handle financial data discreetly.
 No account information is exposed or stored.
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Body
 from fastapi.responses import JSONResponse
 from typing import Optional, List
 
+from app.core.logging_config import get_logger
 from app.services.financier.document_processor_service import document_processor
 from app.services.financier.transaction_service import transaction_service
 from app.services.financier.merchant_service import merchant_service
+from app.services.financier.investment_analysis_service import investment_analysis_service
 from app.services.analytics_service import analytics_service
+from app.repositories.financial_repository import financial_repository
 
+logger = get_logger(__name__)
 router = APIRouter(prefix="/financier", tags=["Financier"])
 
 
 @router.post("/upload")
 async def upload_financial_document(
     file: UploadFile = File(...),
-    bank: str = Query(default="Chase", description="Bank name (Chase, Amex, etc.)")
+    bank: str = Query(default="Chase", description="Bank name (Chase, Amex, etc.)"),
+    statement_type: str = Query(default="credit_card", description="Statement type (credit_card or checking_account)")
 ):
     """
-    Upload and process a single credit card statement PDF.
+    Upload and process a single bank statement PDF.
     
     Security Features:
     - PDF is processed in-memory only, never stored
@@ -34,10 +39,21 @@ async def upload_financial_document(
     Args:
         file: PDF file upload
         bank: Bank name (default: Chase)
+        statement_type: Type of statement - credit_card or checking_account (default: credit_card)
         
     Returns:
         Processing summary with transaction counts
     """
+    # DEBUG: Log upload attempt
+    logger.info(
+        "📄 Upload request received",
+        extra={
+            "file_name": file.filename,  # Note: 'filename' is reserved in LogRecord
+            "bank": bank,
+            "statement_type": statement_type
+        }
+    )
+    
     # Validate file type
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
@@ -45,7 +61,8 @@ async def upload_financial_document(
     try:
         result = await document_processor.process_credit_card_statement(
             file=file,
-            bank=bank
+            bank=bank,
+            statement_type=statement_type
         )
         return result
     
@@ -62,10 +79,11 @@ async def upload_financial_document(
 @router.post("/upload/batch")
 async def upload_multiple_financial_documents(
     files: List[UploadFile] = File(...),
-    bank: str = Query(default="Chase", description="Bank name (Chase, Amex, etc.)")
+    bank: str = Query(default="Chase", description="Bank name (Chase, Amex, etc.)"),
+    statement_type: str = Query(default="credit_card", description="Statement type (credit_card or checking_account)")
 ):
     """
-    Upload and process multiple credit card statement PDFs in a single request.
+    Upload and process multiple bank statement PDFs in a single request.
     
     Security Features:
     - All PDFs are processed in-memory only, never stored
@@ -76,6 +94,7 @@ async def upload_multiple_financial_documents(
     Args:
         files: List of PDF file uploads
         bank: Bank name (default: Chase)
+        statement_type: Type of statement - applies to all files (default: credit_card)
         
     Returns:
         Processing summary for each file with transaction counts
@@ -98,7 +117,8 @@ async def upload_multiple_financial_documents(
         try:
             result = await document_processor.process_credit_card_statement(
                 file=file,
-                bank=bank
+                bank=bank,
+                statement_type=statement_type
             )
             results.append({
                 "filename": file.filename,
@@ -399,6 +419,100 @@ async def get_comprehensive_analysis(
         )
 
 
+@router.get("/analytics/monthly-trends")
+async def get_monthly_trends(
+    period: str = Query("6m", description="Time period: 2m (2 months), 6m (6 months), ytd (year to date)"),
+    year: Optional[int] = Query(None, description="Year for YTD calculation (default: current year)")
+):
+    """
+    Get monthly expense and cash flow trends for charting.
+    
+    Returns aggregated data by month for the specified time period.
+    Used by frontend to render line/bar charts showing spending trends.
+    
+    Args:
+        period: Time period selector
+            - '2m': Last 2 months
+            - '6m': Last 6 months (default)
+            - 'ytd': Year to date (Jan to current month)
+        year: Year for YTD calculation (default: current year)
+        
+    Returns:
+        {
+            "months": ["2025-07", "2025-08", ...],
+            "labels": ["Jul", "Aug", ...],
+            "expenses": [2100.50, 2450.75, ...],
+            "income": [6827.24, 10240.86, ...],
+            "cashflow": [4726.74, 7790.11, ...]
+        }
+    """
+    try:
+        result = await analytics_service.get_monthly_trends(
+            period=period,
+            year=year
+        )
+        return result
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching monthly trends: {str(e)}"
+        )
+
+
+@router.put("/transactions/{transaction_id}/category")
+async def update_transaction_category(
+    transaction_id: str,
+    new_category: str = Body(..., embed=True),
+    update_all_from_merchant: bool = Body(False, embed=True)
+):
+    """
+    Update the category of a specific transaction.
+    
+    Args:
+        transaction_id: MongoDB ObjectId string of the transaction
+        new_category: New category name to assign
+        update_all_from_merchant: If True, update all past and future transactions from same merchant
+    
+    Returns:
+        Updated transaction object with count of updated transactions
+    
+    Example:
+        PUT /transactions/507f1f77bcf86cd799439011/category
+        Body: {"new_category": "Food", "update_all_from_merchant": true}
+    
+    Use cases:
+        - Correct miscategorized transactions
+        - Reclassify purchases for better analysis
+        - Fix automatic categorization errors
+        - Update all transactions from same merchant in one action
+    """
+    try:
+        result = await financial_repository.update_transaction_category(
+            transaction_id=transaction_id,
+            new_category=new_category,
+            update_all_from_merchant=update_all_from_merchant
+        )
+        
+        if not result:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Transaction with id '{transaction_id}' not found"
+            )
+        
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error updating transaction category: {str(e)}"
+        )
+
+
 @router.get("/analytics/visualizations")
 async def get_visualizations(
     year: Optional[int] = Query(None, description="Filter by year"),
@@ -445,5 +559,80 @@ async def get_visualizations(
         raise HTTPException(
             status_code=500,
             detail=f"Error generating visualizations: {str(e)}"
+        )
+
+
+@router.get("/investments/rolling-analysis")
+async def get_rolling_investment_analysis(
+    year: Optional[int] = Query(None, description="Current year for analysis"),
+    month: Optional[int] = Query(None, description="Current month for analysis (1-12)"),
+    months_back: int = Query(12, description="Number of months to analyze (default 12)")
+):
+    """
+    Get rolling investment analysis over specified period.
+    
+    Provides comprehensive analysis of investment contributions including:
+    - Total contributions over period
+    - Monthly average and median contributions
+    - Contribution trends (increasing/decreasing)
+    - Consistency metrics
+    - Top investment destinations
+    - Projected annual contributions
+    - Actionable insights
+    
+    Args:
+        year: Current year (optional, uses current if not provided)
+        month: Current month (optional, uses current if not provided)
+        months_back: Number of months to look back (default 12)
+        
+    Returns:
+        Comprehensive investment analysis with metrics, trends, and insights
+        
+    Example Response:
+        {
+            "period": {
+                "months_analyzed": 12,
+                "date_range": {"start": "2024-03", "end": "2025-02"}
+            },
+            "summary": {
+                "total_contributions": 15000.00,
+                "transaction_count": 60,
+                "average_monthly": 1250.00,
+                "median_monthly": 1200.00,
+                "projected_annual": 15000.00
+            },
+            "trends": {
+                "direction": "increasing",
+                "change_percentage": 15.5,
+                "consistency_score": 85.0,
+                "standard_deviation": 187.50
+            },
+            "monthly_breakdown": [
+                {"month": "2025-02", "amount": 1526.00, "transaction_count": 5},
+                ...
+            ],
+            "top_destinations": [
+                {"destination": "Charles Schwab", "amount": 10000.00},
+                {"destination": "Webull", "amount": 5000.00}
+            ],
+            "insights": [
+                "✓ Excellent consistency! Your investments vary by less than 15%.",
+                "📈 Great! Your investments are increasing by 15.5%.",
+                "💰 At current rate, you'll invest $15,000.00 annually."
+            ]
+        }
+    """
+    try:
+        result = await investment_analysis_service.get_rolling_investment_analysis(
+            year=year,
+            month=month,
+            months_back=months_back
+        )
+        return result
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error calculating rolling investment analysis: {str(e)}"
         )
 

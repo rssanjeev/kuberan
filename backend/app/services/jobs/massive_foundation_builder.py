@@ -5,9 +5,9 @@ Purpose: Collect foundational metadata for all tickers at scale using MASSIVE pr
 
 Strategy:
 - Rate limit: 5 calls/min = 300 calls/hour = 7,200 calls/day
-- Schedule: Every minute for continuous collection
-- Batch size: 5 tickers per job (matches rate limit exactly)
-- Target: Complete ~10,000 NYSE/NASDAQ tickers in ~33 hours
+- Schedule: Every 1 minute
+- Batch size: 10 tickers per job with 12-second delays
+- Delays: 12 seconds between calls = 5 calls/minute (full rate utilization)
 
 Architecture: Hybrid functional/OOP
 - Pure functions for core logic (testable)
@@ -18,6 +18,7 @@ from datetime import datetime
 from typing import List, Optional
 import time
 import re
+import asyncio
 
 from app.core.logging_config import get_logger
 from app.services.stock.metadata_enrichment_service import metadata_enrichment_service
@@ -100,7 +101,7 @@ async def collect_foundation_for_ticker(ticker: str) -> bool:
                 extra={
                     "ticker": ticker,
                     "enrichment_status": saved.enrichment_status,
-                    "source": saved.data_source,
+                    "sources": saved.metadata_sources if hasattr(saved, 'metadata_sources') else [],
                     "has_cik": bool(saved.cik),
                     "has_figi": bool(saved.composite_figi)
                 }
@@ -118,7 +119,7 @@ async def collect_foundation_for_ticker(ticker: str) -> bool:
         return False
 
 
-async def get_tickers_needing_foundation(limit: int = 5) -> List[str]:
+async def get_tickers_needing_foundation(limit: int = 10) -> List[str]:
     """
     Get tickers that need foundation metadata collection.
     
@@ -128,7 +129,7 @@ async def get_tickers_needing_foundation(limit: int = 5) -> List[str]:
     Excludes tickers with enrichment_status == "failed" (not found, delisted, etc.)
     
     Args:
-        limit: Maximum number of tickers to return (default 5 for per-minute jobs)
+        limit: Maximum number of tickers to return (default 10 for per-minute jobs)
         
     Returns:
         List of ticker symbols
@@ -200,19 +201,19 @@ async def get_tickers_needing_foundation(limit: int = 5) -> List[str]:
 
 async def collect_foundation_batch(
     tickers: List[str],
-    batch_size: int = 5
+    batch_size: int = 10
 ) -> dict:
     """
     Collect foundation metadata for a batch of tickers.
     
     Rate limiting:
     - 5 calls/min limit from Polygon.io
-    - Process 5 tickers per minute (matches rate limit exactly)
-    - Job runs every minute via scheduler, providing natural pacing
+    - Process 10 tickers per execution with 12-second delays
+    - 12 seconds × 10 tickers = 120 seconds = 5 calls/minute average
     
     Args:
         tickers: List of ticker symbols
-        batch_size: Maximum tickers per batch (default 5 for per-minute execution)
+        batch_size: Maximum tickers per batch (default 10 for optimized rate usage)
         
     Returns:
         Statistics dictionary
@@ -244,10 +245,13 @@ async def collect_foundation_batch(
             else:
                 stats["failed"] += 1
             
-            # No artificial delays needed - per-minute scheduling provides natural rate limiting
-            # Job processes 5 tickers immediately, exits, then APScheduler waits until next minute
+            # Rate limiting: 12-second delay between calls = 5 calls/minute
+            # 10 tickers × 12 seconds = 120 seconds = 2 minutes total
+            # This uses full rate capacity efficiently
+            if idx < len(tickers[:batch_size]):
+                await asyncio.sleep(12)
             
-            # Progress logging every 5 tickers (logs at end of each batch)
+            # Progress logging every 5 tickers
             if idx % 5 == 0:
                 elapsed = (datetime.now() - stats["start_time"]).total_seconds() / 60
                 logger.info(
@@ -318,14 +322,14 @@ class MassiveFoundationBuilderJob:
         
         try:
             # Get tickers needing foundation metadata
-            tickers = await get_tickers_needing_foundation(limit=300)
+            tickers = await get_tickers_needing_foundation(limit=10)
             
             if not tickers:
                 logger.info("No tickers need foundation metadata - all up to date")
                 return
             
             # Collect foundation metadata batch
-            stats = await collect_foundation_batch(tickers, batch_size=300)
+            stats = await collect_foundation_batch(tickers, batch_size=10)
             
             # Update job statistics
             self.run_count += 1

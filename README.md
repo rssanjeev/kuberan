@@ -30,6 +30,11 @@ Financial management system with Stock Tracker, Financier, and ETF Analysis doma
 - **Reference Endpoints Guide:** [docs/MASSIVE_REFERENCE_ENDPOINTS_GUIDE.md](docs/MASSIVE_REFERENCE_ENDPOINTS_GUIDE.md)
 - **Phase 0 Audit Report:** [docs/PHASE_0_AUDIT_REPORT.md](docs/PHASE_0_AUDIT_REPORT.md)
 
+### Frontend Development
+- **Frontend Implementation Plan:** [docs/FRONTEND_IMPLEMENTATION_PLAN.md](docs/FRONTEND_IMPLEMENTATION_PLAN.md)
+- **Design Reference:** [Budget App](https://github.com/theReynald/Budget-App) (TypeScript/React)
+- **Status:** Phase 0 - Setup (Ready to begin)
+
 See [docs/README.md](docs/README.md) for complete documentation index.
 
 ## Getting Started
