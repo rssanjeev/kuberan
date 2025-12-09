@@ -9,6 +9,22 @@ class TickerInfo {
   final int? totalEmployees;
   final String enrichmentStatus;
   final List<String> metadataSources;
+  
+  // Additional fields from /stocks/complete endpoint
+  final String? phoneNumber;
+  final String? address;
+  final String? sicCode;
+  final String? sicDescription;
+  final String? logoUrl;
+  final String? iconUrl;
+  final String? listDate;
+  final int? weightedSharesOutstanding;
+  final String? cik;
+  final String? compositeFigi;
+  final String? homepageUrl;
+  final String? primaryExchange;
+  final double? currentPrice;
+  final String? currency;
 
   TickerInfo({
     required this.ticker,
@@ -20,6 +36,20 @@ class TickerInfo {
     this.totalEmployees,
     required this.enrichmentStatus,
     required this.metadataSources,
+    this.phoneNumber,
+    this.address,
+    this.sicCode,
+    this.sicDescription,
+    this.logoUrl,
+    this.iconUrl,
+    this.listDate,
+    this.weightedSharesOutstanding,
+    this.cik,
+    this.compositeFigi,
+    this.homepageUrl,
+    this.primaryExchange,
+    this.currentPrice,
+    this.currency,
   });
 
   factory TickerInfo.fromJson(Map<String, dynamic> json) {
@@ -33,6 +63,20 @@ class TickerInfo {
       totalEmployees: json['total_employees'],
       enrichmentStatus: json['enrichment_status'] ?? 'base',
       metadataSources: List<String>.from(json['metadata_sources'] ?? []),
+      phoneNumber: json['phone_number'],
+      address: json['address'],
+      sicCode: json['sic_code'],
+      sicDescription: json['sic_description'],
+      logoUrl: json['logo_url'],
+      iconUrl: json['icon_url'],
+      listDate: json['list_date'],
+      weightedSharesOutstanding: json['weighted_shares_outstanding'],
+      cik: json['cik'],
+      compositeFigi: json['composite_figi'],
+      homepageUrl: json['homepage_url'],
+      primaryExchange: json['primary_exchange'],
+      currentPrice: json['current_price'] != null ? (json['current_price'] as num).toDouble() : null,
+      currency: json['currency'],
     );
   }
 

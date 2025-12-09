@@ -105,64 +105,172 @@ class _StockTrackerTabState extends State<StockTrackerTab> {
     }
   }
 
-  void _showTickerDetails(TickerInfo ticker) {
-    showModalBottomSheet(
+  void _showTickerDetails(TickerInfo ticker) async {
+    // Show loading indicator
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(24),
-          child: ListView(
-            controller: scrollController,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Fetch complete ticker data from /stocks/complete endpoint
+      final completeTickerInfo = await _stockService.getCompleteTickerInfo(ticker.ticker);
+      
+      // Close loading indicator
+      if (mounted) Navigator.pop(context);
+      
+      // Show modal with complete data
+      if (mounted) {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) => DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            maxChildSize: 0.95,
+            minChildSize: 0.5,
+            expand: false,
+            builder: (context, scrollController) => Container(
+              padding: const EdgeInsets.all(24),
+              child: ListView(
+                controller: scrollController,
                 children: [
-                  Text(
-                    ticker.ticker,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          completeTickerInfo.ticker,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
+                  Text(
+                    completeTickerInfo.name,
+                    style: TextStyle(fontSize: 18, color: Colors.grey.shade700),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Company logo if available
+                  if (completeTickerInfo.logoUrl != null) ...[
+                    Center(
+                      child: Image.network(
+                        completeTickerInfo.logoUrl!,
+                        height: 60,
+                        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // Description
+                  if (completeTickerInfo.description != null) ...[
+                    const Text(
+                      'Description',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(completeTickerInfo.description!),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // Basic Information Section
+                  const Text(
+                    'Company Information',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildDetailRow('Sector', completeTickerInfo.sector ?? 'N/A'),
+                  _buildDetailRow('Industry', completeTickerInfo.industry ?? completeTickerInfo.sicDescription ?? 'N/A'),
+                  if (completeTickerInfo.sicCode != null)
+                    _buildDetailRow('SIC Code', '${completeTickerInfo.sicCode} - ${completeTickerInfo.sicDescription ?? "N/A"}'),
+                  _buildDetailRow('Market Cap', completeTickerInfo.formattedMarketCap),
+                  _buildDetailRow('Employees', completeTickerInfo.formattedEmployees),
+                  if (completeTickerInfo.listDate != null)
+                    _buildDetailRow('Listed Since', completeTickerInfo.listDate!),
+                  _buildDetailRow('Exchange', completeTickerInfo.primaryExchange ?? 'N/A'),
+                  const SizedBox(height: 16),
+                  
+                  // Contact Information Section
+                  if (completeTickerInfo.homepageUrl != null || completeTickerInfo.phoneNumber != null || completeTickerInfo.address != null) ...[
+                    const Text(
+                      'Contact Information',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    if (completeTickerInfo.homepageUrl != null)
+                      _buildDetailRow('Website', completeTickerInfo.homepageUrl!),
+                    if (completeTickerInfo.phoneNumber != null)
+                      _buildDetailRow('Phone', completeTickerInfo.phoneNumber!),
+                    if (completeTickerInfo.address != null)
+                      _buildDetailRow('Address', completeTickerInfo.address!),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // Financial Identifiers Section
+                  if (completeTickerInfo.cik != null || completeTickerInfo.compositeFigi != null) ...[
+                    const Text(
+                      'Identifiers',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    if (completeTickerInfo.cik != null)
+                      _buildDetailRow('CIK', completeTickerInfo.cik!),
+                    if (completeTickerInfo.compositeFigi != null)
+                      _buildDetailRow('FIGI', completeTickerInfo.compositeFigi!),
+                    if (completeTickerInfo.weightedSharesOutstanding != null)
+                      _buildDetailRow('Shares Outstanding', '${(completeTickerInfo.weightedSharesOutstanding! / 1000000000).toStringAsFixed(2)}B'),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // Metadata Section
+                  const Text(
+                    'Metadata',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildDetailRow('Status', completeTickerInfo.enrichmentStatus),
+                  _buildDetailRow(
+                    'Sources',
+                    completeTickerInfo.metadataSources.join(', '),
                   ),
                 ],
               ),
-              Text(
-                ticker.name,
-                style: TextStyle(fontSize: 18, color: Colors.grey.shade700),
-              ),
-              const SizedBox(height: 24),
-              if (ticker.description != null) ...[
-                const Text(
-                  'Description',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(ticker.description!),
-                const SizedBox(height: 16),
-              ],
-              _buildDetailRow('Sector', ticker.sector ?? 'N/A'),
-              _buildDetailRow('Industry', ticker.industry ?? 'N/A'),
-              _buildDetailRow('Market Cap', ticker.formattedMarketCap),
-              _buildDetailRow('Employees', ticker.formattedEmployees),
-              _buildDetailRow('Status', ticker.enrichmentStatus),
-              _buildDetailRow(
-                'Sources',
-                ticker.metadataSources.join(', '),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading indicator
+      if (mounted) Navigator.pop(context);
+      
+      // Show error dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('Failed to load complete ticker information: $e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
               ),
             ],
           ),
-        ),
-      ),
-    );
+        );
+      }
+    }
   }
 
   Widget _buildDetailRow(String label, String value) {

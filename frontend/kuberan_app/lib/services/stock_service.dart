@@ -55,6 +55,29 @@ class StockService {
     }
   }
 
+  /// Fetch complete ticker information with all MASSIVE and YFinance data
+  /// 
+  /// Returns comprehensive data including:
+  /// - Real-time pricing (price, volume, market cap)
+  /// - MASSIVE metadata (CIK, FIGI, SIC codes, branding)
+  /// - Company info (sector, industry, employees, description)
+  /// - Contact details (phone, address, website)
+  Future<TickerInfo> getCompleteTickerInfo(String ticker) async {
+    try {
+      final uri = Uri.parse('$baseUrl/stocks/complete/${ticker.toUpperCase()}');
+      final response = await _client.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return TickerInfo.fromJson(data);
+      } else {
+        throw Exception('Failed to load ticker: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching complete ticker info: $e');
+    }
+  }
+
   void dispose() {
     _client.close();
   }
