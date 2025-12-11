@@ -311,6 +311,110 @@ curl http://localhost:8000/endpoint
 - **Features**: Profile, comparison, screening, portfolio, risk, tax, backtesting
 - See [DOMAINS.md](docs/DOMAINS.md#etf-analysis-domain) for details
 
+### Financial Statements Extraction (S&P 500)
+
+**CRITICAL**: MASSIVE Financials API deprecated on **February 23, 2026** (73 days remaining).
+
+**Overview:**
+- **Target**: S&P 500 top 500 companies by market cap
+- **Current Progress**: 5/500 tickers (1.0% complete)
+- **Extracted**: 976 statements across 5 tickers (AAPL, GOOG, GOOGL, MSFT, NVDA)
+- **Coverage**: 2013 to 2025 (12+ years of historical data)
+
+**Four Statement Types Extracted:**
+
+1. **income** - Income Statement (P&L)
+   - Revenue, operating income, net income, EPS
+   - Use: Profitability analysis, earnings quality
+
+2. **balance_sheet** - Balance Sheet
+   - Assets, liabilities, shareholders equity
+   - Use: Financial position, liquidity ratios
+
+3. **cash_flow** - Cash Flow Statement
+   - Operating, investing, financing activities
+   - Use: Cash generation, free cash flow analysis
+
+4. **comprehensive_income** - Comprehensive Income Statement
+   - Other comprehensive income/loss, currency translation
+   - Use: Hidden gains/losses, full income picture
+
+**Three Timeframes Collected:**
+- **annual**: Full fiscal year (FY) statements
+- **quarterly**: Q1, Q2, Q3, Q4 statements
+- **ttm**: Trailing Twelve Months (most current annual view)
+
+**Scheduled Extraction Job:**
+- **Location**: `backend/app/services/jobs/financials_extraction_job.py`
+- **Schedule**: Every 3 minutes via CronTrigger (optimal for 2-minute execution time)
+- **Batch Size**: 10 tickers per run
+- **Rate Limiting**: 12-second delays (5 calls/min MASSIVE limit)
+- **Timeline**: ~2.5 hours for all 500 tickers (was 25 hours with 30-min schedule)
+- **Self-Terminating**: Stops automatically when 500 tickers complete
+- **Resume Capability**: Skips already processed tickers
+
+**Key Features:**
+- ✅ Single API call per ticker (50 statements limit)
+- ✅ All timeframes in one request (annual + quarterly + TTM)
+- ✅ ~200 statements per ticker (vs 12 before optimization)
+- ✅ JSON backups saved to `backend/extracted_financials/{ticker}.json`
+- ✅ Graceful error handling with retry logic
+- ✅ Progress logging every 50 tickers
+
+**API Endpoints:**
+
+```bash
+# Extraction statistics
+GET /stocks/financials/stats
+
+# All statements for ticker
+GET /stocks/financials/{ticker}?limit=20
+
+# Filter by statement type
+GET /stocks/financials/{ticker}?statement_type=income
+GET /stocks/financials/{ticker}?statement_type=balance_sheet
+GET /stocks/financials/{ticker}?statement_type=cash_flow
+GET /stocks/financials/{ticker}?statement_type=comprehensive_income
+
+# Filter by timeframe
+GET /stocks/financials/{ticker}?timeframe=annual
+GET /stocks/financials/{ticker}?timeframe=quarterly
+GET /stocks/financials/{ticker}?timeframe=ttm
+
+# Filter by year
+GET /stocks/financials/{ticker}?fiscal_year=2024
+```
+
+**Monitoring Job Progress:**
+
+```bash
+# Check job logs
+docker logs kuberan-backend-1 | grep "Financials extraction"
+
+# Check MongoDB collection
+docker exec -it kuberan-mongodb mongosh kuberan --eval "
+  db.financial_statements.countDocuments()
+"
+
+# Check stats endpoint
+curl http://localhost:8000/stocks/financials/stats | python3 -m json.tool
+```
+
+**Database Schema:**
+- **Collection**: `financial_statements`
+- **Indexes**: `(ticker, fiscal_year, statement_type)`, `(ticker, timeframe)`
+- **Fields**: ticker, statement_type, fiscal_year, fiscal_period, timeframe, data, key metrics
+
+**Use Cases:**
+- DCF modeling (using all 4 statements together)
+- Earnings quality analysis (income vs cash flow comparison)
+- Balance sheet health checks (liquidity/solvency ratios)
+- Comprehensive income analysis (detecting hidden gains/losses)
+
+**Complete Documentation:**
+- See [FINANCIALS_EXTRACTION_COMPLETE_GUIDE.md](../docs/FINANCIALS_EXTRACTION_COMPLETE_GUIDE.md) for comprehensive details
+- Postman collection: 10 endpoints fully documented in `docs/FINANCIALS_POSTMAN_UPDATE.json`
+
 ## When Working on This Project
 
 ### Before Implementing Features
@@ -610,6 +714,6 @@ See [FRONTEND_IMPLEMENTATION_PLAN.md](../docs/FRONTEND_IMPLEMENTATION_PLAN.md#pr
 
 ---
 
-**Last Updated:** December 5, 2025
+**Last Updated:** December 10, 2025
 
 **For comprehensive details, see the documentation files linked above.**

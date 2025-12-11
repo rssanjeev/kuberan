@@ -760,7 +760,7 @@ curl "https://api.massive.com/v3/reference/dividends?pay_date.gte=2021-01-01&pay
 **Example Request:**
 ```bash
 # Get Apple's financials
-curl "https://api.massive.com/vX/reference/financials?ticker=AAPL&limit=10"
+curl -X GET "https://api.massive.com/vX/reference/financials?ticker=AAPL&order=asc&sort=filing_date&apiKey=MASSIVE_API"
 
 # Get annual financials for 2022
 curl "https://api.massive.com/vX/reference/financials?timeframe=annual&filing_date.gte=2022-01-01&filing_date.lt=2023-01-01"

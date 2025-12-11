@@ -64,7 +64,6 @@ from app.models.provider import (
     
     # Fundamental Data models
     CompanyOverview,
-    FinancialStatement,
     
     # News & Analyst models
     NewsArticle,
@@ -134,7 +133,6 @@ __all__ = [
     
     # Provider Fundamental Data
     "CompanyOverview",
-    "FinancialStatement",
     
     # Provider News & Analyst
     "NewsArticle",
@@ -199,7 +197,6 @@ DOCUMENT_MODELS = [
     StockEarnings,
     TechnicalIndicator,
     CompanyOverview,
-    FinancialStatement,
     NewsArticle,
     AnalystRating,
     PriceTarget,

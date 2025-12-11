@@ -1,10 +1,10 @@
 """
 Repository for multi-provider data models.
 
-Handles CRUD operations for all 17 provider data models:
+Handles CRUD operations for all provider data models:
 - Stock models: StockQuote, StockHistoricalPrice, StockDividend, StockSplit, StockEarnings
 - Technical indicators: TechnicalIndicator
-- Fundamental data: CompanyOverview, FinancialStatement
+- Fundamental data: CompanyOverview
 - News & analyst: NewsArticle, AnalystRating, PriceTarget
 - Forex/Crypto/Commodity: ForexRate, CryptoPrice, CommodityPrice
 - Economic: EconomicIndicator
@@ -27,7 +27,6 @@ from app.models.provider import (
     StockEarnings,
     TechnicalIndicator,
     CompanyOverview,
-    FinancialStatement,
     NewsArticle,
     AnalystRating,
     PriceTarget,

@@ -57,7 +57,7 @@ class MassiveProvider(BaseProvider):
     - EXCELLENT for building comprehensive market database
     """
     
-    BASE_URL = "https://api.polygon.io"
+    BASE_URL = "https://api.massive.com"
     
     def __init__(
         self,
@@ -250,7 +250,7 @@ class MassiveProvider(BaseProvider):
                     "quote_timestamp": datetime.fromtimestamp(result.get("t", 0) / 1000).isoformat(),
                     "change": result.get("c", 0.0) - result.get("o", 0.0),
                     "change_percent": ((result.get("c", 0.0) - result.get("o", 0.0)) / result.get("o", 1.0) * 100) if result.get("o", 0.0) > 0 else 0.0,
-                    "provider": DataSource.POLYGON.value
+                    "provider": DataSource.MASSIVE.value
                 }
                 
                 self.record_success()
@@ -366,7 +366,7 @@ class MassiveProvider(BaseProvider):
                         "volume": bar.get("v", 0),
                         "vwap": bar.get("vw", 0.0),  # Volume-weighted average price
                         "transactions": bar.get("n", 0),
-                        "provider": DataSource.POLYGON.value
+                        "provider": DataSource.MASSIVE.value
                     })
                 
                 self.record_success()
@@ -458,7 +458,7 @@ class MassiveProvider(BaseProvider):
                         "declaration_date": div.get("declaration_date"),
                         "amount": div.get("cash_amount", 0.0),
                         "frequency": div.get("frequency", ""),
-                        "provider": DataSource.POLYGON.value
+                        "provider": DataSource.MASSIVE.value
                     })
                 
                 self.record_success()
@@ -548,7 +548,7 @@ class MassiveProvider(BaseProvider):
                         "split_from": split.get("split_from", 1),
                         "split_to": split.get("split_to", 1),
                         "ratio": split.get("split_to", 1) / split.get("split_from", 1),
-                        "provider": DataSource.POLYGON.value
+                        "provider": DataSource.MASSIVE.value
                     })
                 
                 self.record_success()
@@ -633,7 +633,7 @@ class MassiveProvider(BaseProvider):
                     "market": data.get("market", "unknown"),
                     "server_time": data.get("serverTime", ""),
                     "exchanges": data.get("exchanges", {}),
-                    "provider": DataSource.POLYGON.value
+                    "provider": DataSource.MASSIVE.value
                 }
         except Exception as e:
             logger.error(
@@ -748,7 +748,7 @@ class MassiveProvider(BaseProvider):
                     "last_updated_utc": result.get("last_updated_utc"),
                     
                     # ==================== Metadata ====================
-                    "provider": DataSource.POLYGON.value,
+                    "provider": DataSource.MASSIVE.value,
                     "metadata_sources": ["MASSIVE"],  # Track data source
                     
                     # ==================== Extended Data ====================
@@ -913,8 +913,8 @@ class MassiveProvider(BaseProvider):
     async def fetch_financials(
         self,
         ticker: str,
-        timeframe: str = "annual",
-        limit: int = 4
+        timeframe: Optional[str] = None,  # None = all timeframes, "annual", "quarterly", "ttm"
+        limit: int = 50  # Increased default to get more historical data
     ) -> Optional[List[Dict]]:
         """
         Fetch financial statements (income, balance sheet, cash flow) for a ticker.
@@ -973,11 +973,14 @@ class MassiveProvider(BaseProvider):
                 params = {
                     "apikey": self.api_key,
                     "ticker": ticker,
-                    "timeframe": timeframe,
                     "limit": limit,
                     "sort": "filing_date",
                     "order": "desc"
                 }
+                
+                # Only add timeframe if specified (None = get all timeframes)
+                if timeframe:
+                    params["timeframe"] = timeframe
                 
                 response = await client.get(
                     f"{self.base_url}/vX/reference/financials",
@@ -1066,6 +1069,24 @@ class MassiveProvider(BaseProvider):
                                 ),
                                 "net_change_in_cash": self._get_financial_value(
                                     cash_flow, "net_cash_flow"
+                                )
+                            }
+                        
+                        # Comprehensive Income Statement
+                        if "comprehensive_income" in financials_dict:
+                            comp_income = financials_dict["comprehensive_income"]
+                            financial_data["comprehensive_income"] = {
+                                "comprehensive_income_loss": self._get_financial_value(
+                                    comp_income, "comprehensive_income_loss"
+                                ),
+                                "other_comprehensive_income_loss": self._get_financial_value(
+                                    comp_income, "other_comprehensive_income_loss"
+                                ),
+                                "comprehensive_income_loss_attributable_to_parent": self._get_financial_value(
+                                    comp_income, "comprehensive_income_loss_attributable_to_parent"
+                                ),
+                                "comprehensive_income_loss_attributable_to_noncontrolling_interest": self._get_financial_value(
+                                    comp_income, "comprehensive_income_loss_attributable_to_noncontrolling_interest"
                                 )
                             }
                     
@@ -1162,7 +1183,7 @@ class MassiveProvider(BaseProvider):
                         "cik": ticker.get("cik", ""),
                         "composite_figi": ticker.get("composite_figi", ""),
                         "last_updated_utc": ticker.get("last_updated_utc", ""),
-                        "provider": DataSource.POLYGON.value
+                        "provider": DataSource.MASSIVE.value
                     })
                 
                 logger.info(

@@ -28,6 +28,7 @@ class DataSource(str, Enum):
     YFINANCE = "yfinance"
     FINNHUB = "finnhub"
     POLYGON = "polygon"
+    MASSIVE = "massive"  # MASSIVE API (Polygon-compatible structure)
     IEX = "iex"
     MANUAL = "manual"
 
@@ -458,62 +459,6 @@ class CompanyOverview(Document):
             "timeField": "fetched_at",
             "granularity": "hours",
             "expireAfterSeconds": 7776000  # 90 days
-        }
-
-
-class FinancialStatement(Document):
-    """
-    Financial statement data (income, balance sheet, cash flow).
-    
-    TTL: Keep for 5 years
-    Source providers: Alpha Vantage (EXCELLENT)
-    
-    Flexible schema to support all statement types.
-    """
-    # Company identification
-    ticker: str
-    
-    # Statement type
-    statement_type: str  # "income", "balance_sheet", "cash_flow"
-    
-    # Period
-    fiscal_year: int
-    fiscal_quarter: Optional[int] = None  # None for annual statements
-    fiscal_date_ending: str  # YYYY-MM-DD
-    report_date: Optional[str] = None  # When statement was filed
-    
-    # Currency
-    currency: str = "USD"
-    
-    # Statement data (flexible JSON)
-    data: Dict[str, Any] = Field(default_factory=dict)  # All line items
-    
-    # Common metrics (extracted for easy querying)
-    revenue: Optional[float] = None
-    net_income: Optional[float] = None
-    total_assets: Optional[float] = None
-    total_liabilities: Optional[float] = None
-    shareholders_equity: Optional[float] = None
-    operating_cash_flow: Optional[float] = None
-    
-    # Metadata
-    source_provider: DataSource
-    fetched_at: datetime = Field(default_factory=datetime.utcnow)
-    
-    class Settings:
-        name = "financial_statements"
-        indexes = [
-            "ticker",
-            "statement_type",
-            [("ticker", 1), ("statement_type", 1), ("fiscal_year", -1), ("fiscal_quarter", -1)],
-            [("ticker", 1), ("fiscal_date_ending", -1)],
-            "source_provider",
-        ]
-        # TTL: Keep financials for 5 years
-        timeseries_options = {
-            "timeField": "fetched_at",
-            "granularity": "hours",
-            "expireAfterSeconds": 157680000  # 5 years
         }
 
 

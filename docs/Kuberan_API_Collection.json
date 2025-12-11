@@ -532,37 +532,35 @@
           ]
         },
         {
-          "name": "GET - MASSIVE Tier 1 Phase 5 (Financials - DEPRECATED)",
+          "name": "GET - Financial Statements (Archived Data)",
           "item": [
             {
-              "name": "Get Financials (AAPL - Quarterly)",
+              "name": "Get Financial Statements (All Types)",
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/stocks/financials/AAPL?timeframe=quarterly&limit=4",
+                  "raw": "{{baseUrl}}/stocks/financials/AAPL?limit=10",
                   "host": ["{{baseUrl}}"],
                   "path": ["stocks", "financials", "AAPL"],
                   "query": [
-                    {"key": "timeframe", "value": "quarterly", "description": "annual, quarterly, or all"},
-                    {"key": "limit", "value": "4", "description": "Number of periods (1-20)"}
+                    {"key": "limit", "value": "10", "description": "Number of statements to return (1-50, default 10)"}
                   ]
                 },
-                "description": "⚠️ DEPRECATION WARNING: This endpoint uses MASSIVE API data that will be removed on February 23, 2026 (79 days remaining).\n\nUse for archival purposes only. Returns historical financial statements (10-K, 10-Q data).\n\nArchival Status:\n- ✅ Endpoint operational with deprecation warning\n- ⏳ S&P 500 archival (500 tickers): URGENT - Start Dec 6, 2025\n- ⏳ Full dataset archival (12,140 tickers): Start Jan 1, 2026\n\nKnown Limitations:\n- Revenue and financial metrics may be null (XBRL parsing complexity)\n- Raw data dict preserved for future re-parsing\n- Endpoint will be READ-ONLY after full archival complete\n\nMigration Plan: After Feb 23, 2026, use Alpha Vantage MCP integration for new statements. Historical data remains available from MongoDB (5-year retention) and JSON backups."
+                "description": "⚠️ ARCHIVED DATA: Returns financial statements extracted before MASSIVE API deprecation (Feb 23, 2026).\n\nReturns comprehensive financial statements for a ticker with real-time extraction progress tracking.\n\nData Structure:\n- Each fiscal period has 3 statements: income, balance_sheet, cash_flow\n- Full statement data preserved in 'data' field (all line items)\n- Sorted by fiscal_year DESC, statement_type ASC\n\nQuery Parameters:\n- statement_type: Filter by income, balance_sheet, or cash_flow\n- fiscal_year: Filter by year (2000-2030)\n- limit: Number of statements (1-50, default 10)\n\nExtraction Status (Real-time):\n- S&P 500 collection in progress (500 tickers)\n- Shows sp500_extracted / sp500_total with percentage\n- Includes deprecation countdown (days remaining until Feb 23, 2026)\n\nUse Cases:\n- Historical fundamental analysis\n- Financial modeling and DCF calculations\n- Trend analysis across multiple years\n- Comparing statement types side-by-side"
               },
               "response": [
                 {
-                  "name": "Success - AAPL Quarterly (4 statements)",
+                  "name": "Success - All Statements (AAPL)",
                   "originalRequest": {
                     "method": "GET",
                     "header": [],
                     "url": {
-                      "raw": "{{baseUrl}}/stocks/financials/AAPL?timeframe=quarterly&limit=4",
+                      "raw": "{{baseUrl}}/stocks/financials/AAPL?limit=10",
                       "host": ["{{baseUrl}}"],
                       "path": ["stocks", "financials", "AAPL"],
                       "query": [
-                        {"key": "timeframe", "value": "quarterly"},
-                        {"key": "limit", "value": "4"}
+                        {"key": "limit", "value": "10"}
                       ]
                     }
                   },
@@ -571,61 +569,136 @@
                   "_postman_previewlanguage": "json",
                   "header": [{"key": "Content-Type", "value": "application/json"}],
                   "cookie": [],
-                  "body": "{\n  \"ticker\": \"AAPL\",\n  \"timeframe\": \"quarterly\",\n  \"count\": 4,\n  \"statement_type_filter\": null,\n  \"deprecation_warning\": \"⚠️ This API is deprecated and will be removed on Feb 23, 2026 (79 days remaining)\",\n  \"statements\": [\n    {\n      \"fiscal_year\": 2025,\n      \"fiscal_quarter\": 3,\n      \"period\": \"FY2025 Q3\",\n      \"fiscal_date_ending\": \"2025-06-28\",\n      \"statement_type\": \"comprehensive\",\n      \"currency\": \"USD\",\n      \"revenue\": null,\n      \"net_income\": null,\n      \"total_assets\": null,\n      \"total_liabilities\": null,\n      \"shareholders_equity\": null,\n      \"operating_cash_flow\": null,\n      \"investing_cash_flow\": null,\n      \"financing_cash_flow\": null,\n      \"data\": {},\n      \"source_provider\": \"polygon\",\n      \"fetched_at\": \"2025-12-05T16:43:22.197000\"\n    }\n  ]\n}"
+                  "body": "{\n  \"ticker\": \"AAPL\",\n  \"count\": 10,\n  \"filters\": {\n    \"statement_type\": null,\n    \"fiscal_year\": null,\n    \"limit\": 10\n  },\n  \"deprecation_warning\": \"MASSIVE API deprecated Feb 23, 2026 (75 days remaining)\",\n  \"collection_status\": {\n    \"sp500_extracted\": 1,\n    \"sp500_total\": 500,\n    \"sp500_progress_pct\": 0.2,\n    \"total_tickers_target\": 12190,\n    \"extraction_active\": true\n  },\n  \"statements\": [\n    {\n      \"fiscal_year\": 2024,\n      \"fiscal_date_ending\": \"2024-09-28\",\n      \"statement_type\": \"balance_sheet\",\n      \"data\": {\n        \"assets\": {\n          \"current_assets\": {\n            \"cash_and_cash_equivalents\": {\"value\": 29943000000, \"unit\": \"USD\"},\n            \"marketable_securities\": {\"value\": 35228000000, \"unit\": \"USD\"},\n            \"accounts_receivable_net\": {\"value\": 33410000000, \"unit\": \"USD\"},\n            \"inventories\": {\"value\": 7286000000, \"unit\": \"USD\"},\n            \"other_current_assets\": {\"value\": 14287000000, \"unit\": \"USD\"}\n          },\n          \"noncurrent_assets\": {\n            \"property_plant_equipment_net\": {\"value\": 44291000000, \"unit\": \"USD\"},\n            \"other_noncurrent_assets\": {\"value\": 200450000000, \"unit\": \"USD\"}\n          }\n        },\n        \"liabilities\": {\n          \"current_liabilities\": {\n            \"accounts_payable\": {\"value\": 64309000000, \"unit\": \"USD\"},\n            \"other_current_liabilities\": {\"value\": 66548000000, \"unit\": \"USD\"}\n          },\n          \"noncurrent_liabilities\": {\n            \"term_debt_noncurrent\": {\"value\": 97750000000, \"unit\": \"USD\"},\n            \"other_noncurrent_liabilities\": {\"value\": 61552000000, \"unit\": \"USD\"}\n          }\n        },\n        \"equity\": {\n          \"stockholders_equity\": {\"value\": 56956000000, \"unit\": \"USD\"}\n        }\n      },\n      \"source_provider\": \"polygon\",\n      \"fetched_at\": \"2025-12-10T20:59:14.863000\"\n    },\n    {\n      \"fiscal_year\": 2024,\n      \"fiscal_date_ending\": \"2024-09-28\",\n      \"statement_type\": \"cash_flow\",\n      \"data\": {\n        \"operating_activities\": {\n          \"net_cash_operating_activities\": {\"value\": 118254000000, \"unit\": \"USD\"}\n        },\n        \"investing_activities\": {\n          \"net_cash_investing_activities\": {\"value\": 8359000000, \"unit\": \"USD\"}\n        },\n        \"financing_activities\": {\n          \"net_cash_financing_activities\": {\"value\": -103134000000, \"unit\": \"USD\"}\n        }\n      },\n      \"source_provider\": \"polygon\",\n      \"fetched_at\": \"2025-12-10T20:59:14.885000\"\n    },\n    {\n      \"fiscal_year\": 2024,\n      \"fiscal_date_ending\": \"2024-09-28\",\n      \"statement_type\": \"income\",\n      \"data\": {\n        \"revenues\": {\n          \"revenues\": {\"value\": 391035000000, \"unit\": \"USD\", \"label\": \"Revenues\"}\n        },\n        \"costs_and_expenses\": {\n          \"cost_of_revenue\": {\"value\": 210352000000, \"unit\": \"USD\"},\n          \"operating_expenses\": {\"value\": 61434000000, \"unit\": \"USD\"}\n        },\n        \"operating_income_loss\": {\"value\": 119249000000, \"unit\": \"USD\"},\n        \"net_income_loss\": {\"value\": 100389000000, \"unit\": \"USD\"},\n        \"basic_earnings_per_share\": {\"value\": 6.11, \"unit\": \"USD / shares\"},\n        \"diluted_earnings_per_share\": {\"value\": 6.08, \"unit\": \"USD / shares\"}\n      },\n      \"source_provider\": \"polygon\",\n      \"fetched_at\": \"2025-12-10T20:59:14.746000\"\n    }\n  ]\n}"
                 }
               ]
             },
             {
-              "name": "Get Financials (AAPL - Annual)",
+              "name": "Get Income Statements Only (AAPL)",
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/stocks/financials/AAPL?timeframe=annual&limit=2",
+                  "raw": "{{baseUrl}}/stocks/financials/AAPL?statement_type=income&limit=5",
                   "host": ["{{baseUrl}}"],
                   "path": ["stocks", "financials", "AAPL"],
                   "query": [
-                    {"key": "timeframe", "value": "annual", "description": "annual, quarterly, or all"},
-                    {"key": "limit", "value": "2", "description": "Number of periods (1-20)"}
+                    {"key": "statement_type", "value": "income", "description": "Filter: income, balance_sheet, or cash_flow"},
+                    {"key": "limit", "value": "5", "description": "Number of statements (1-50)"}
                   ]
                 },
-                "description": "Get 2 most recent annual financial statements for AAPL"
+                "description": "Get only income statements for AAPL (P&L data). Shows revenues, expenses, operating income, net income, EPS."
+              },
+              "response": [
+                {
+                  "name": "Success - Income Statements",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/stocks/financials/AAPL?statement_type=income&limit=5",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["stocks", "financials", "AAPL"],
+                      "query": [
+                        {"key": "statement_type", "value": "income"},
+                        {"key": "limit", "value": "5"}
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [{"key": "Content-Type", "value": "application/json"}],
+                  "cookie": [],
+                  "body": "{\n  \"ticker\": \"AAPL\",\n  \"count\": 4,\n  \"filters\": {\n    \"statement_type\": \"income\",\n    \"fiscal_year\": null,\n    \"limit\": 5\n  },\n  \"deprecation_warning\": \"MASSIVE API deprecated Feb 23, 2026 (75 days remaining)\",\n  \"collection_status\": {\n    \"sp500_extracted\": 1,\n    \"sp500_total\": 500,\n    \"sp500_progress_pct\": 0.2,\n    \"total_tickers_target\": 12190,\n    \"extraction_active\": true\n  },\n  \"statements\": [\n    {\n      \"fiscal_year\": 2024,\n      \"fiscal_date_ending\": \"2024-09-28\",\n      \"statement_type\": \"income\",\n      \"data\": {\n        \"revenues\": {\"revenues\": {\"value\": 391035000000, \"unit\": \"USD\"}},\n        \"operating_income_loss\": {\"value\": 119249000000, \"unit\": \"USD\"},\n        \"net_income_loss\": {\"value\": 100389000000, \"unit\": \"USD\"},\n        \"basic_earnings_per_share\": {\"value\": 6.11, \"unit\": \"USD / shares\"}\n      },\n      \"source_provider\": \"polygon\",\n      \"fetched_at\": \"2025-12-10T20:59:14.746000\"\n    }\n  ]\n}"
+                }
+              ]
+            },
+            {
+              "name": "Get Balance Sheets Only (AAPL)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/financials/AAPL?statement_type=balance_sheet&limit=5",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stocks", "financials", "AAPL"],
+                  "query": [
+                    {"key": "statement_type", "value": "balance_sheet", "description": "Filter: income, balance_sheet, or cash_flow"},
+                    {"key": "limit", "value": "5", "description": "Number of statements (1-50)"}
+                  ]
+                },
+                "description": "Get only balance sheets for AAPL. Shows assets, liabilities, shareholders equity."
               },
               "response": []
             },
             {
-              "name": "Get Financials (AAPL - All Statements)",
+              "name": "Get Cash Flow Statements Only (AAPL)",
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/stocks/financials/AAPL?timeframe=all&limit=20",
+                  "raw": "{{baseUrl}}/stocks/financials/AAPL?statement_type=cash_flow&limit=5",
                   "host": ["{{baseUrl}}"],
                   "path": ["stocks", "financials", "AAPL"],
                   "query": [
-                    {"key": "timeframe", "value": "all", "description": "Returns both annual and quarterly"},
-                    {"key": "limit", "value": "20", "description": "Max 20 statements"}
+                    {"key": "statement_type", "value": "cash_flow", "description": "Filter: income, balance_sheet, or cash_flow"},
+                    {"key": "limit", "value": "5", "description": "Number of statements (1-50)"}
                   ]
                 },
-                "description": "Get all available statements (both annual and quarterly) for AAPL"
+                "description": "Get only cash flow statements for AAPL. Shows operating, investing, and financing activities."
               },
               "response": []
             },
             {
-              "name": "Get Financials (TSLA - Quarterly)",
+              "name": "Get Statements for Specific Year (AAPL 2024)",
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/stocks/financials/TSLA?timeframe=quarterly&limit=4",
+                  "raw": "{{baseUrl}}/stocks/financials/AAPL?fiscal_year=2024",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stocks", "financials", "AAPL"],
+                  "query": [
+                    {"key": "fiscal_year", "value": "2024", "description": "Filter by fiscal year (2000-2030)"}
+                  ]
+                },
+                "description": "Get all statement types for AAPL fiscal year 2024 (income, balance_sheet, cash_flow)."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Balance Sheet for Specific Year (TSLA 2023)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/financials/TSLA?statement_type=balance_sheet&fiscal_year=2023",
                   "host": ["{{baseUrl}}"],
                   "path": ["stocks", "financials", "TSLA"],
                   "query": [
-                    {"key": "timeframe", "value": "quarterly"},
-                    {"key": "limit", "value": "4"}
+                    {"key": "statement_type", "value": "balance_sheet", "description": "Filter by statement type"},
+                    {"key": "fiscal_year", "value": "2023", "description": "Filter by fiscal year"}
                   ]
                 },
-                "description": "Get 4 most recent quarterly financial statements for TSLA"
+                "description": "Combine filters: Get TSLA balance sheet for FY 2023 only."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Recent Statements (NVDA, limit 20)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/stocks/financials/NVDA?limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stocks", "financials", "NVDA"],
+                  "query": [
+                    {"key": "limit", "value": "20", "description": "Get more statements (max 50)"}
+                  ]
+                },
+                "description": "Get up to 20 most recent statements for NVDA (all types, sorted by year DESC)."
               },
               "response": []
             }
