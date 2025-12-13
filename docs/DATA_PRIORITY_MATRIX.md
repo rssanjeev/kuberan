@@ -154,36 +154,36 @@ This document maps **~150 data fields** across 4 providers, establishing priorit
 
 | Field | YFinance | MASSIVE | Alpha Vantage | Finnhub | Priority | Primary Source | Conflict Rule |
 |-------|----------|---------|---------------|---------|----------|---------------|---------------|
-| **pe_ratio** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **forward_pe** | ✅ | ❌ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **peg_ratio** | ✅ | ❌ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **price_to_book** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **price_to_sales** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **ev_to_revenue** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **ev_to_ebitda** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **enterprise_value** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
+| **pe_ratio** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | YFinance | Most recent |
+| **forward_pe** | ✅ | ❌ | ✅ | ✅ | 🟡 P1 | YFinance | Most recent |
+| **peg_ratio** | ✅ | ❌ | ✅ | ✅ | 🟡 P1 | YFinance | Most recent |
+| **price_to_book** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | YFinance | Most recent |
+| **price_to_sales** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | YFinance | Most recent |
+| **ev_to_revenue** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
+| **ev_to_ebitda** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
+| **enterprise_value** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
 
 ### Profitability Metrics (P1)
 
 | Field | YFinance | MASSIVE | Alpha Vantage | Finnhub | Priority | Primary Source | Conflict Rule |
 |-------|----------|---------|---------------|---------|----------|---------------|---------------|
-| **profit_margin** | ✅ | ❌ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **operating_margin** | ✅ | ❌ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **return_on_assets** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **return_on_equity** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **revenue_per_share** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **quarterly_revenue_growth** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **quarterly_earnings_growth** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
+| **profit_margin** | ✅ | ❌ | ✅ | ✅ | 🟡 P1 | YFinance | Most recent |
+| **operating_margin** | ✅ | ❌ | ✅ | ✅ | 🟡 P1 | YFinance | Most recent |
+| **return_on_assets** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
+| **return_on_equity** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
+| **revenue_per_share** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
+| **quarterly_revenue_growth** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
+| **quarterly_earnings_growth** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
 
 ### Financial Health (P2)
 
 | Field | YFinance | MASSIVE | Alpha Vantage | Finnhub | Priority | Primary Source | Conflict Rule |
 |-------|----------|---------|---------------|---------|----------|---------------|---------------|
-| **debt_to_equity** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **current_ratio** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **quick_ratio** | ✅ | ❌ | ✅ | ❌ | 🟢 P2 | Alpha Vantage | Most recent |
-| **total_cash** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **total_debt** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
+| **debt_to_equity** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
+| **current_ratio** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
+| **quick_ratio** | ✅ | ❌ | ✅ | ❌ | 🟢 P2 | YFinance | Most recent |
+| **total_cash** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
+| **total_debt** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
 
 ---
 
@@ -195,44 +195,44 @@ This document maps **~150 data fields** across 4 providers, establishing priorit
 |-------|----------|---------|---------------|---------|----------|---------------|---------------|
 | **fiscal_year** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Any | Exact match |
 | **fiscal_quarter** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Any | Exact match |
-| **revenue** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **cost_of_revenue** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **gross_profit** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **operating_expenses** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **operating_income** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **net_income** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **ebitda** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **eps** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **eps_diluted** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
+| **revenue** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **cost_of_revenue** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **gross_profit** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **operating_expenses** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **operating_income** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **net_income** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **ebitda** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **eps** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **eps_diluted** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
 
 ### Balance Sheet (P1)
 
 | Field | YFinance | MASSIVE | Alpha Vantage | Finnhub | Priority | Primary Source | Conflict Rule |
 |-------|----------|---------|---------------|---------|----------|---------------|---------------|
-| **total_assets** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **total_liabilities** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **total_equity** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **current_assets** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **current_liabilities** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **cash_and_equivalents** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **short_term_investments** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **long_term_debt** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **retained_earnings** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
+| **total_assets** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **total_liabilities** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **total_equity** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **current_assets** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Most recent |
+| **current_liabilities** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Most recent |
+| **cash_and_equivalents** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Most recent |
+| **short_term_investments** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Most recent |
+| **long_term_debt** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Most recent |
+| **retained_earnings** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Most recent |
 
 ### Cash Flow Statement (P1)
 
 | Field | YFinance | MASSIVE | Alpha Vantage | Finnhub | Priority | Primary Source | Conflict Rule |
 |-------|----------|---------|---------------|---------|----------|---------------|---------------|
-| **operating_cash_flow** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **investing_cash_flow** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **financing_cash_flow** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **free_cash_flow** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
-| **capex** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **dividends_paid** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **stock_repurchased** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
-| **debt_repayment** | ✅ | ❌ | ✅ | ✅ | 🔵 P3 | Alpha Vantage | Most recent |
-| **depreciation** | ✅ | ❌ | ✅ | ✅ | 🔵 P3 | Alpha Vantage | Most recent |
-| **change_in_working_capital** | ✅ | ❌ | ✅ | ✅ | 🔵 P3 | Alpha Vantage | Most recent |
+| **operating_cash_flow** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **investing_cash_flow** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **financing_cash_flow** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **free_cash_flow** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
+| **capex** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Most recent |
+| **dividends_paid** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Most recent |
+| **stock_repurchased** | ✅ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Most recent |
+| **debt_repayment** | ✅ | ❌ | ✅ | ✅ | 🔵 P3 | YFinance | Most recent |
+| **depreciation** | ✅ | ❌ | ✅ | ✅ | 🔵 P3 | YFinance | Most recent |
+| **change_in_working_capital** | ✅ | ❌ | ✅ | ✅ | 🔵 P3 | YFinance | Most recent |
 
 ---
 
@@ -246,7 +246,7 @@ This document maps **~150 data fields** across 4 providers, establishing priorit
 | **dividend_amount** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | MASSIVE (canonical) |
 | **dividend_yield** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | YFinance | Calculate: (annual_div / price) * 100 |
 | **ex_dividend_date** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | MASSIVE (canonical) |
-| **payout_ratio** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Most recent |
+| **payout_ratio** | ✅ | ❌ | ✅ | ✅ | 🟢 P2 | YFinance | Most recent |
 
 ### Stock Splits (P1)
 
@@ -261,7 +261,7 @@ This document maps **~150 data fields** across 4 providers, establishing priorit
 
 | Field | YFinance | MASSIVE | Alpha Vantage | Finnhub | Priority | Primary Source | Conflict Rule |
 |-------|----------|---------|---------------|---------|----------|---------------|---------------|
-| **earnings_date** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | Alpha Vantage | Most recent |
+| **earnings_date** | ✅ | ✅ | ✅ | ✅ | 🟡 P1 | MASSIVE | Most recent |
 
 ---
 
@@ -306,10 +306,10 @@ This document maps **~150 data fields** across 4 providers, establishing priorit
 
 | Field | YFinance | MASSIVE | Alpha Vantage | Finnhub | Priority | Primary Source | Conflict Rule |
 |-------|----------|---------|---------------|---------|----------|---------------|---------------|
-| **sentiment_score** | ❌ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Average of all sources |
-| **sentiment_label** | ❌ | ✅ | ✅ | ✅ | 🟢 P2 | Alpha Vantage | Majority vote |
-| **relevance_score** | ❌ | ✅ | ✅ | ❌ | 🔵 P3 | Alpha Vantage | Alpha Vantage only |
-| **ticker_sentiment** | ❌ | ✅ | ✅ | ❌ | 🔵 P3 | Alpha Vantage | Per-ticker sentiment |
+| **sentiment_score** | ❌ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Average of all sources |
+| **sentiment_label** | ❌ | ✅ | ✅ | ✅ | 🟢 P2 | MASSIVE | Majority vote |
+| **relevance_score** | ❌ | ✅ | ✅ | ❌ | 🔵 P3 | MASSIVE | MASSIVE preferred |
+| **ticker_sentiment** | ❌ | ✅ | ✅ | ❌ | 🔵 P3 | MASSIVE | Per-ticker sentiment |
 
 ---
 
@@ -379,7 +379,7 @@ else:
 - **Conflict:** Most recent timestamp wins
 
 #### Fundamental Data
-- **Rule:** Alpha Vantage for financial statements, MASSIVE for identifiers
+- **Rule:** MASSIVE for financial statements and identifiers, YFinance for ratios
 - **Conflict:** Most recent fiscal period wins
 
 #### Metadata
@@ -387,7 +387,7 @@ else:
 - **Conflict:** MASSIVE always wins for identifiers
 
 #### News & Sentiment
-- **Rule:** Aggregate sentiment scores, prefer Alpha Vantage for analysis
+- **Rule:** Aggregate sentiment scores, prefer MASSIVE for articles and analysis
 - **Conflict:** Average sentiment scores from all sources
 
 ### 4. Field-Specific Overrides
@@ -403,10 +403,11 @@ else:
 - 52-week high/low (comprehensive history)
 - Premarket/afterhours prices (reliable extended hours)
 
-**Always prefer Alpha Vantage for:**
-- Financial statement data (income, balance, cash flow)
-- Valuation ratios (P/E, PEG, P/B, P/S)
-- Sentiment analysis (dedicated sentiment API)
+**Alpha Vantage (Use only when explicitly needed):**
+- Available as fallback for financial statements
+- Available as fallback for valuation ratios
+- Available as fallback for sentiment analysis
+- Not preferred as primary source
 
 **Always calculate for:**
 - Technical indicators (SMA, EMA, RSI, MACD)
@@ -429,14 +430,14 @@ else:
 - Validation: Alpha Vantage
 
 **Fundamental Data (7-day cache):**
-- Primary: Alpha Vantage (financial statements)
-- Secondary: MASSIVE (identifiers, metadata)
-- Enrichment: YFinance (ratios)
+- Primary: MASSIVE (financial statements, identifiers)
+- Secondary: YFinance (ratios, metrics)
+- Fallback: Alpha Vantage (when explicitly needed)
 
 **News & Sentiment (1-hour cache):**
-- Primary: Alpha Vantage (sentiment)
-- Secondary: MASSIVE (news articles)
-- Tertiary: Finnhub
+- Primary: MASSIVE (news articles, sentiment)
+- Secondary: Finnhub (supplementary)
+- Fallback: Alpha Vantage (when explicitly needed)
 
 ### 2. Caching Strategy
 
@@ -498,21 +499,21 @@ result = {
 # User requests: Financial metrics for MSFT
 sources = {
     "identifiers": "MASSIVE",      # CIK, FIGI, CUSIP
-    "financials": "Alpha Vantage", # Income, balance, cash flow
+    "financials": "MASSIVE",       # Income, balance, cash flow
     "ratios": "YFinance"           # P/E, P/B, dividend yield
 }
 
 result = {
     "ticker": "MSFT",
     "cik": "0000789019",           # MASSIVE
-    "revenue": 211_915_000_000,    # Alpha Vantage (FY2023)
-    "net_income": 72_361_000_000,  # Alpha Vantage
-    "pe_ratio": 35.2,              # Alpha Vantage
+    "revenue": 211_915_000_000,    # MASSIVE (FY2023)
+    "net_income": 72_361_000_000,  # MASSIVE
+    "pe_ratio": 35.2,              # YFinance
     "dividend_yield": 0.82,        # YFinance (calculated)
     "sources": {
         "identifiers": "MASSIVE",
-        "financials": "Alpha Vantage",
-        "ratios": "Alpha Vantage"
+        "financials": "MASSIVE",
+        "ratios": "YFinance"
     }
 }
 ```
