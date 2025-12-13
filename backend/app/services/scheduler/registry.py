@@ -19,7 +19,6 @@ def register_all_jobs():
     None currently active.
     
     DISABLED JOBS:
-    - metals_price_collector (daily at 10 AM IST)
     - metadata_enrichment (daily at 2 AM EST)
     - incremental_collection_15min (every 15 minutes)
     - massive_foundation_per_minute (every minute) - COMPLETE
@@ -242,25 +241,6 @@ def register_all_jobs():
     # ============================================================================
     # SYSTEM 2: DISABLED - Comprehensive NYSE/NASDAQ Collection
     # ============================================================================
-    
-    # ============================================================================
-    # PRECIOUS METALS COLLECTION: DISABLED
-    # ============================================================================
-    # Uses Puppeteer browser automation to bypass Cloudflare protection
-    # Fetches gold and silver prices from goodreturns.in
-    # Schedule: Once daily at 10:00 AM IST (all days)
-    
-    # job_scheduler.add_job(
-    #     func=metals_price_collector_job.run,
-    #     trigger=CronTrigger(
-    #         hour='10',              # 10 AM
-    #         minute='0',             # At the start of the hour
-    #         second='0',
-    #         timezone='Asia/Kolkata'  # IST timezone
-    #     ),
-    #     job_id='metals_price_collector',
-    #     name='Precious Metals Price Collection'
-    # )
     
     # # Metadata enrichment: Daily at 2:00 AM EST (Alpha Vantage free tier: 25 calls/day)
     # # Processes 5 tickers per run to stay within limits

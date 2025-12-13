@@ -7,7 +7,6 @@ Domain Models:
 - auth: User authentication and profile
 - stock: Stock Tracker domain (StockMetadata, StockPrice, UserWatchlist)
 - financier: Financier domain (MerchantCategory, CreditCardTransaction, FinancialDocumentMetadata)
-- precious_metals: Precious metals tracking (GoldPrice, SilverPrice)
 - provider: Multi-provider data models (17 models for stocks, forex, crypto, news, etc.)
 - monitoring: System monitoring and metrics (4 models for API tracking, health checks, rate limits)
 
@@ -33,12 +32,6 @@ from app.models.financier import (
     MerchantCategory,
     CreditCardTransaction,
     FinancialDocumentMetadata,
-)
-
-# Precious Metals models
-from app.models.precious_metals import (
-    GoldPrice,
-    SilverPrice,
 )
 
 # Investor models
@@ -113,10 +106,6 @@ __all__ = [
     "CreditCardTransaction",
     "FinancialDocumentMetadata",
     
-    # Precious Metals
-    "GoldPrice",
-    "SilverPrice",
-    
     # Provider Enums
     "DataSource",
     "IndicatorType",
@@ -181,10 +170,6 @@ DOCUMENT_MODELS = [
     MerchantCategory,
     CreditCardTransaction,
     FinancialDocumentMetadata,
-    
-    # Precious Metals
-    GoldPrice,
-    SilverPrice,
     
     # Investor
     FamousInvestorPortfolio,
