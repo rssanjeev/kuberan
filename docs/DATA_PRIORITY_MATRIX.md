@@ -2,7 +2,7 @@
 
 **Created:** December 13, 2025  
 **Purpose:** Document all data fields across providers with priority rankings and conflict resolution rules  
-**Providers:** YFinance, MASSIVE (Polygon.io), Alpha Vantage, Finnhub
+**Providers:** YFinance, MASSIVE, Alpha Vantage, Finnhub
 
 ---
 

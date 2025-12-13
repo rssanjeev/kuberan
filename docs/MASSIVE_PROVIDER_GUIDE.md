@@ -1,9 +1,9 @@
 # MASSIVE API Provider Guide
 
 **Last Updated:** December 13, 2025  
-**API Provider:** Polygon.io (branded as MASSIVE)  
-**Base URL:** `https://api.polygon.io`  
-**Documentation:** https://polygon.io/docs  
+**API Provider:** MASSIVE  
+**Base URL:** `https://api.massive.com/`  
+**Documentation:** https://massive.com/docs  
 **Reference Guide:** See `docs/MASSIVE_REFERENCE_ENDPOINTS_GUIDE.md` for complete endpoint documentation  
 **Primary Use:** Real-time quotes, identifiers, regulatory data, news with sentiment  
 **Free Tier Rate Limits:** 5 calls/min, 300 calls/hour, 7,200 calls/day
@@ -32,21 +32,24 @@
 
 ### What is MASSIVE?
 
-**MASSIVE and Polygon.io are the same service.** Polygon.io is the actual API provider, while "MASSIVE" is their branding/marketing name. Throughout Kuberan's codebase, we refer to it as "MASSIVE" for consistency, but:
+**MASSIVE** is a comprehensive financial data API provider offering real-time and historical market data, company fundamentals, corporate actions, and news with sentiment analysis.
 
-- **Actual API base URL:** `https://api.polygon.io`
-- **API infrastructure:** Polygon.io's exchange-level data platform
-- **Documentation:** https://polygon.io/docs
-- **Why the confusion?** Polygon.io uses "MASSIVE" in their marketing, but their API URLs still use `polygon.io`
+**Key Characteristics:**
+- **Base URL:** `https://api.massive.com/`
+- **Authentication:** API key (query parameter or header)
+- **Rate Limits:** 5 calls/min, 300/hour, 7,200/day (free tier)
+- **Free Tier Access:** 11 reference endpoints (metadata, splits, dividends, news)
+- **Paid Tier:** 130+ additional endpoints (real-time prices, technical indicators)
 
-For Kuberan, this means:
-- Code uses `api.polygon.io` for actual HTTP requests
-- Documentation refers to "MASSIVE" or "MASSIVE (Polygon.io)"
-- Both names reference the same service
+**Primary Use in Kuberan:**
+- Ticker metadata enrichment (CIK, FIGI, SIC codes)
+- Corporate actions tracking (splits, dividends)
+- Company fundamentals (branding, descriptions)
+- Financial news with sentiment analysis
 
 ### Capabilities
 
-Polygon.io provides exchange-level financial data with regulatory identifiers (CIK, FIGI, CUSIP) and real-time market data.
+MASSIVE provides exchange-level financial data with regulatory identifiers (CIK, FIGI, CUSIP) and comprehensive market data.
 
 ### Strengths
 
@@ -109,7 +112,7 @@ POLYGON_API_KEY=your_api_key_here
 import httpx
 
 api_key = os.getenv("POLYGON_API_KEY")
-url = f"https://api.polygon.io/v3/reference/tickers?apiKey={api_key}"
+url = f"https://api.massive.com/v3/reference/tickers?apiKey={api_key}"
 response = httpx.get(url)
 ```
 
@@ -118,7 +121,7 @@ response = httpx.get(url)
 ```python
 headers = {"Authorization": f"Bearer {api_key}"}
 response = httpx.get(
-    "https://api.polygon.io/v3/reference/tickers",
+    "https://api.massive.com/v3/reference/tickers",
     headers=headers
 )
 ```
@@ -128,7 +131,7 @@ response = httpx.get(
 ```python
 # Test API key
 response = httpx.get(
-    f"https://api.polygon.io/v3/reference/tickers/AAPL?apiKey={api_key}"
+    f"https://api.massive.com/v3/reference/tickers/AAPL?apiKey={api_key}"
 )
 
 if response.status_code == 200:
@@ -211,7 +214,7 @@ Ticker metadata, identifiers, and classification.
       "share_class_figi": "BBG001S5N8V8"
     }
   ],
-  "next_url": "https://api.polygon.io/v3/reference/tickers?cursor=..."
+  "next_url": "https://api.massive.com/v3/reference/tickers?cursor=..."
 }
 ```
 
@@ -252,8 +255,8 @@ Ticker metadata, identifiers, and classification.
     "total_employees": 164000,
     "list_date": "1980-12-12",
     "branding": {
-      "logo_url": "https://api.polygon.io/v1/reference/company-branding/...",
-      "icon_url": "https://api.polygon.io/v1/reference/company-branding/..."
+      "logo_url": "https://api.massive.com/v1/reference/company-branding/...",
+      "icon_url": "https://api.massive.com/v1/reference/company-branding/..."
     },
     "share_class_shares_outstanding": 15204100000,
     "weighted_shares_outstanding": 15204100000,
@@ -476,7 +479,7 @@ Financial news with publisher attribution and sentiment.
       "sentiment_reasoning": "Article discusses new product launch..."
     }]
   }],
-  "next_url": "https://api.polygon.io/v2/reference/news?cursor=..."
+  "next_url": "https://api.massive.com/v2/reference/news?cursor=..."
 }
 ```
 
@@ -616,7 +619,7 @@ MASSIVE uses **cursor-based pagination**.
   "status": "OK",
   "results": [...],
   "count": 1000,
-  "next_url": "https://api.polygon.io/v3/reference/tickers?cursor=YXNkZg"
+  "next_url": "https://api.massive.com/v3/reference/tickers?cursor=YXNkZg"
 }
 ```
 
@@ -746,7 +749,7 @@ class MassiveCache:
 **Always follow next_url:**
 ```python
 async def fetch_all_tickers():
-    url = "https://api.polygon.io/v3/reference/tickers?limit=1000"
+    url = "https://api.massive.com/v3/reference/tickers?limit=1000"
     all_results = []
     
     while url:
@@ -828,7 +831,7 @@ import os
 
 async def get_ticker_metadata(ticker: str):
     api_key = os.getenv("POLYGON_API_KEY")
-    url = f"https://api.polygon.io/v3/reference/tickers/{ticker}"
+    url = f"https://api.massive.com/v3/reference/tickers/{ticker}"
     
     async with httpx.AsyncClient() as client:
         response = await client.get(url, params={"apiKey": api_key})
@@ -870,7 +873,7 @@ print(f"FIGI: {metadata['composite_figi']}")
 ```python
 async def get_daily_bars(ticker: str, start_date: str, end_date: str):
     api_key = os.getenv("POLYGON_API_KEY")
-    url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{start_date}/{end_date}"
+    url = f"https://api.massive.com/v2/aggs/ticker/{ticker}/range/1/day/{start_date}/{end_date}"
     
     async with httpx.AsyncClient() as client:
         response = await client.get(url, params={
@@ -911,7 +914,7 @@ print(f"Fetched {len(bars)} daily bars")
 ```python
 async def get_ticker_news(ticker: str, limit: int = 10):
     api_key = os.getenv("POLYGON_API_KEY")
-    url = "https://api.polygon.io/v2/reference/news"
+    url = "https://api.massive.com/v2/reference/news"
     
     async with httpx.AsyncClient() as client:
         response = await client.get(url, params={
@@ -960,7 +963,7 @@ for article in news:
 ```python
 async def fetch_all_active_tickers():
     api_key = os.getenv("POLYGON_API_KEY")
-    base_url = "https://api.polygon.io/v3/reference/tickers"
+    base_url = "https://api.massive.com/v3/reference/tickers"
     
     all_tickers = []
     next_url = f"{base_url}?active=true&limit=1000&apiKey={api_key}"
@@ -1039,7 +1042,7 @@ async def fetch_with_retry(url: str, max_retries: int = 3):
 
 # Usage
 api_key = os.getenv("POLYGON_API_KEY")
-url = f"https://api.polygon.io/v3/reference/tickers/AAPL?apiKey={api_key}"
+url = f"https://api.massive.com/v3/reference/tickers/AAPL?apiKey={api_key}"
 data = await fetch_with_retry(url)
 ```
 
@@ -1048,7 +1051,7 @@ data = await fetch_with_retry(url)
 ## Summary
 
 **MASSIVE (Polygon.io) Overview:**
-- **API Base URL**: `https://api.polygon.io`
+- **API Base URL**: `https://api.massive.com`
 - **Free Tier Access**: 11 reference endpoints (metadata, splits, dividends, news)
 - **Rate Limits**: 5 calls/min, 300 calls/hour, 7,200 calls/day
 - **Primary Use**: Ticker metadata enrichment with regulatory identifiers (CIK, FIGI)
