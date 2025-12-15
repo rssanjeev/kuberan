@@ -6,11 +6,15 @@
 - [Tech Stack & Dependencies](docs/TECH_STACK.md) - Technologies, versions, libraries
 - [Architecture & Design Patterns](docs/ARCHITECTURE.md) - System design, layers, patterns
 - [Coding Style Guide](docs/STYLE_GUIDE.md) - Naming, formatting, conventions
-- [Domain Overviews](docs/DOMAINS.md) - Stock Tracker & Financier domains
+- [Domain Overviews](docs/DOMAINS.md) - Stock Tracker, Financier, ETF domains
 - [Security Policies](docs/SECURITY.md) - **CRITICAL** for financial data handling
 - [Logging Standards](docs/LOGGING.md) - Structured logging, best practices
 - [Development Workflows](docs/WORKFLOWS.md) - Commands, testing, deployment
 - [Web Scraping Guide](docs/WEB_SCRAPING.md) - MCP servers, data extraction, best practices
+- [Provider Ingest Specs](docs/Ingest) - Finviz, StockAnalysis, MASSIVE, YFinance snapshot contracts
+- [Data Standardization Rules](docs/DATA_STANDARDIZATION_RULES.md) - Per–data point rules & strategies (v1)
+- [Standardized Ticker View](docs/standardized_ticker_view.md) - Per-ticker materialization (Version line inside file)
+- [DATA_PRIORITY_MATRIX Config](config/data_priority_matrix.yaml) - Machine-readable priority & strategy matrix (v1)
 
 ## Project Overview
 

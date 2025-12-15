@@ -12,6 +12,10 @@ The goal is to answer, for every field you may want from Finviz:
 > "Where on the page do I look, and what stable cues can I use to
 >  extract it?"
 
+Ingest pipelines turn this HTML structure into a concrete
+`finviz_snapshot_v1` JSON document; see the **Snapshot Schema** section
+below for the exact fields and types.
+
 ---
 
 ## 1. URL Pattern & Page Types
@@ -48,6 +52,68 @@ three supplemental areas:
 - Quote Header Row (ticker + company name)
 - Classification Chips Row (sector / industry / country / exchange)
 - Peers / "Held by" ETFs Row (related tickers)
+
+---
+
+## 1.1 Snapshot Schema (`finviz_snapshot_v1`)
+
+The Finviz ingest pipeline produces one **snapshot document per ticker**
+with the following logical schema:
+
+```jsonc
+{
+  "provider": "FINVIZ",
+  "ticker": "NVDA",
+  "as_of_date": "2025-12-14",
+
+  "identity": {
+    "company_name": "NVIDIA Corp",
+    "exchange": "NASDAQ",
+    "country": "USA",
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+
+  "snapshot_table": {
+    "market_cap": "1.23T",
+    "pe": "75.4",
+    "forward_pe": "45.2",
+    "peg": "2.10",
+    "eps_ttm": "3.45",
+    "dividend_yield": "0.03%",
+    "payout_ratio": "8.5%",
+    "roe": "45.0%",
+    "profit_margin": "28.0%",
+    "operating_margin": "32.0%",
+    "current_ratio": "3.2",
+    "quick_ratio": "2.8",
+    "debt_to_equity": "40.0%",
+    "beta": "1.70",
+    "eps_next_5y": "25.0%"
+    // many more label → raw string entries
+  },
+
+  "price_block": {
+    "last_price": 123.45,
+    "change": -1.23,
+    "change_percent": -0.99
+  },
+
+  "held_by_etfs": ["VOO", "QQQ"],
+
+  "raw_html_metadata": {
+    "page_url": "https://finviz.com/quote.ashx?t=NVDA&p=d"
+  }
+}
+```
+
+Notes:
+- Values in `snapshot_table` are stored as **raw strings exactly as
+  rendered by Finviz**; standardization is responsible for parsing and
+  normalizing them into numeric data points.
+- `identity` and `price_block` fields may be duplicated across
+  providers; the DATA_PRIORITY_MATRIX defines how conflicts are
+  resolved.
 
 
 ## 3. Quote Header Row
@@ -439,12 +505,79 @@ string.
   - Maintain a mapping from label → normalized key (core + ETF-specific).
   - When a label is absent (e.g., `ROE` for some ETFs), the field is simply
     `None` / missing.
-- When you encounter **Elite‑locked** values (you will see the label but an
-  empty or placeholder cell), record the field as present-without-value
-  rather than attempting any workaround.
 - Use an explicit `entity_type` flag (`"stock"` vs `"etf"`) in your
   downstream schema so that consumers can interpret ambiguous fields like
   `Dividend %` correctly.
+
+### 8.5 Paywalled / Hidden Content (Finviz Elite)
+
+Finviz offers additional data to **Elite** subscribers. On a free account
+you will sometimes see **the label present but the value effectively
+hidden**, typically rendered as:
+
+- A bare dash (`-`)
+- An obviously empty cell, while adjacent time-horizon fields are populated
+- In some cases, text or iconography clearly indicating Elite-only access
+
+This is most visible on ETF pages for **longer-horizon flow metrics**
+(`Flows% 3Y`, `Flows% 5Y`) and occasionally other advanced fields.
+
+For Kuberan, you should treat this as a **first-class paywall signal**, not
+as generic missing data. The goal is to be able to:
+
+1. Distinguish between "data truly missing" vs "data gated by Elite".
+2. Backfill Elite-only fields later **without changing the schema** when an
+   Elite subscription is available.
+
+#### 8.5.1 Field Shape
+
+Each entry under the `fields` object is an object with at least a `raw`
+string, and may include a `paywalled` flag:
+
+```jsonc
+"fields": {
+  "flows_3y": { "raw": "-", "paywalled": true },
+  "flows_1y": { "raw": "10.25%" },
+  "market_cap": { "raw": "575.77B" }
+}
+``
+
+Semantics:
+
+- `raw`  
+  The **literal text** visible in the cell (`-`, `10.25%`, `3.75 (1.11%)`,
+  etc.). Do **not** attempt to infer or impute hidden values.
+- `paywalled` (optional, boolean)  
+  - `true`  → The label is present but the visible value is clearly
+    Elite-gated (placeholder / empty / "Elite"), and the missingness is
+    due to access level, not genuine data absence.
+  - `false` or omitted → Either the value is fully visible, or it is
+    genuinely not reported by Finviz (e.g., small or illiquid instruments).
+
+Scrapers **must not guess**; they should only set `paywalled: true` when the
+behaviour matches known Elite gating patterns (e.g., shorter horizons like
+`Flows% 1M` and `Flows% 1Y` are populated while `Flows% 3Y`/`Flows% 5Y` show
+`-`).
+
+#### 8.5.2 Snapshot-Level Paywall Flags
+
+In addition to per-field flags, snapshots may include an optional
+`paywall` object at the top level to summarise Elite-only behaviour for
+downstream consumers:
+
+```jsonc
+"paywall": {
+  "has_elite_only_flows": true
+}
+```
+
+Suggested flags (all optional, default `false` / absent):
+
+- `has_elite_only_flows`  
+  At least one of the `flows_*` fields is marked `paywalled: true`.
+
+You can extend this object in the future if Finviz introduces other clearly
+Elite-only groups (e.g., advanced ownership breakdowns).
 
 
 ## 9. Additional Tables (Optional)
@@ -775,6 +908,9 @@ Below is a plausible snapshot for an ETF like `VTI`.
     "peers": ["SCHB", "ITOT", "SPTM"],
     "held_by": []                           // usually empty for ETFs
   },
+  "paywall": {
+    "has_elite_only_flows": true
+  },
   "fields": {
     "market_cap": { "raw": "575.77B" },
     "aum": { "raw": "575.77B" },
@@ -791,8 +927,9 @@ Below is a plausible snapshot for an ETF like `VTI`.
     "flows_3m": { "raw": "1.87%" },
     "flows_ytd": { "raw": "6.61%" },
     "flows_1y": { "raw": "10.25%" },
-    "flows_3y": { "raw": "18.40%" },
-    "flows_5y": { "raw": "27.90%" },
+    // Example of Elite-gated horizons on a free account:
+    "flows_3y": { "raw": "-", "paywalled": true },
+    "flows_5y": { "raw": "-", "paywalled": true },
     "perf_week": { "raw": "-0.47%" },
     "perf_month": { "raw": "0.04%" },
     "perf_quarter": { "raw": "3.10%" },
