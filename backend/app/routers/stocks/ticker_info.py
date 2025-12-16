@@ -5,13 +5,17 @@ Endpoints:
     - GET /{ticker}: Get current stock information
     - GET /price/{ticker}: Get just the current price (lightweight)
     - GET /complete/{ticker}: Get comprehensive stock info (real-time + metadata)
+    - GET /standardized/{ticker}: Get standardized ticker view with data sources
     - GET /related-companies/{ticker}: Get related companies
 """
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional, Dict, Any
 from app.services.stock.fetcher import stock_fetcher as stock_service
+from app.services.standardization_engine import StandardizationEngine
 from app.models.provider import CompanyOverview, RelatedCompany
+from app.core.logging_config import get_logger
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 

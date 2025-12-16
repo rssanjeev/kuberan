@@ -3,6 +3,9 @@
 ## Quick Navigation
 
 📚 **Comprehensive Documentation:**
+- [**DOCUMENTATION STRUCTURE**](../docs/DOCUMENTATION_STRUCTURE.md) - **START HERE** for finding any documentation
+- [**Project Overview**](../docs/KUBERAN_OVERVIEW.md) - Vision, goals, users, development philosophy
+- [**Data Pipeline Architecture**](../docs/DATA_PIPELINE_ARCHITECTURE.md) - Complete pipeline (4 stages)
 - [Tech Stack & Dependencies](docs/TECH_STACK.md) - Technologies, versions, libraries
 - [Architecture & Design Patterns](docs/ARCHITECTURE.md) - System design, layers, patterns
 - [Coding Style Guide](docs/STYLE_GUIDE.md) - Naming, formatting, conventions
@@ -11,10 +14,15 @@
 - [Logging Standards](docs/LOGGING.md) - Structured logging, best practices
 - [Development Workflows](docs/WORKFLOWS.md) - Commands, testing, deployment
 - [Web Scraping Guide](docs/WEB_SCRAPING.md) - MCP servers, data extraction, best practices
-- [Provider Ingest Specs](docs/Ingest) - Finviz, StockAnalysis, MASSIVE, YFinance snapshot contracts
-- [Data Standardization Rules](docs/DATA_STANDARDIZATION_RULES.md) - Per–data point rules & strategies (v1)
-- [Standardized Ticker View](docs/standardized_ticker_view.md) - Per-ticker materialization (Version line inside file)
-- [DATA_PRIORITY_MATRIX Config](config/data_priority_matrix.yaml) - Machine-readable priority & strategy matrix (v1)
+
+📁 **Documentation by Domain:**
+- [Data Ingestion](../docs/Ingest/) - Provider-specific specs (YFinance, MASSIVE, Finviz, StockAnalysis)
+- [Data Standardization](../docs/Standardization/) - Rules, priority matrix, schemas
+- [API Layer](../docs/API/) - Endpoint specifications and contracts
+- [Frontend](../docs/Frontend/) - UI patterns and implementation plans
+- [Trader Knowledge](../docs/Knowledge/) - Trading concepts and terminology
+- [Background Jobs](../docs/Jobs/) - Job specifications and scheduling
+- [Planning](../docs/planning/) - ⏳ Current work items and decisions
 
 ## Project Overview
 
@@ -127,6 +135,7 @@ logger.error("Operation failed", extra={"error": str(e)}, exc_info=True)
 - snake_case for files/functions, PascalCase for classes
 - Docstrings required for all classes and functions
 - Always use `python3` command (never `python`)
+- **CRITICAL**: Never calculate or derive new financial values (no weighted averages, no consensus calculations). Only select existing values from providers based on priority rules.
 
 ## Common Workflows
 
@@ -704,6 +713,7 @@ See [FRONTEND_IMPLEMENTATION_PLAN.md](../docs/FRONTEND_IMPLEMENTATION_PLAN.md#pr
 - **Thoughtful Design**: Consider impact before implementing
 - **MCP-First Approach**: Use MCP servers for all external data fetching
 - **Beginner-Friendly**: Explain everything in simple terms, wait for approvals
+- **No Synthetic Data**: NEVER calculate or manipulate financial values - only select from existing provider data. Decisions must be based on real data that actually exists, not computed averages or derived values.
 
 ## Notes for Copilot
 
@@ -714,6 +724,69 @@ See [FRONTEND_IMPLEMENTATION_PLAN.md](../docs/FRONTEND_IMPLEMENTATION_PLAN.md#pr
 - The user values thoughtful architecture over quick hacks
 - **Always use MCP servers** for web scraping and data extraction (never custom libraries)
 - **Frontend development**: Follow [FRONTEND_IMPLEMENTATION_PLAN.md](../docs/FRONTEND_IMPLEMENTATION_PLAN.md) phase-by-phase
+- **User is new to Flutter**: Explain everything in beginner-friendly terms, provide exact commands
+
+## Documentation Standards
+
+### Organization
+
+**CRITICAL**: Follow [DOCUMENTATION_STRUCTURE.md](../docs/DOCUMENTATION_STRUCTURE.md) for ALL documentation work.
+
+**Key Principles:**
+1. **Single Source of Truth**: Each concept has ONE authoritative document
+2. **Domain-Based Organization**: Use subdirectories (Ingest/, Standardization/, API/, Frontend/, Knowledge/, Jobs/)
+3. **Maximum 300 Lines**: Split documents exceeding 300 lines
+4. **Status Indicators**: Always add status (🟢 Active, 🟡 Draft, 🔴 Deprecated, ⏳ Temporary, ⭐ Core)
+5. **Living Documentation**: Update docs alongside code changes
+
+### Finding Documentation
+
+**Quick Reference:**
+- **Overall vision?** → `docs/KUBERAN_OVERVIEW.md`
+- **How to organize docs?** → `docs/DOCUMENTATION_STRUCTURE.md`
+- **Data pipeline?** → `docs/DATA_PIPELINE_ARCHITECTURE.md`
+- **Ingestion from provider?** → `docs/Ingest/{PROVIDER}_INGEST_SPEC.md`
+- **Standardization rules?** → `docs/Standardization/DATA_STANDARDIZATION_RULES.md`
+- **API endpoints?** → `docs/API/{DOMAIN}_ENDPOINTS.md`
+- **Current work?** → `docs/planning/PLANNING_CHECKLIST.md`
+
+### Creating Documentation
+
+**File Naming:**
+- Overview: `{DOMAIN}_OVERVIEW.md`
+- Strategy: `{FEATURE}_STRATEGY.md`
+- Specification: `{PROVIDER}_INGEST_SPEC.md`
+- Endpoints: `{DOMAIN}_ENDPOINTS.md`
+- Planning: `{PURPOSE}_PLAN.md` or `{PURPOSE}_CHECKLIST.md`
+
+**Document Header Template:**
+```markdown
+# {Document Title}
+
+**Last Updated:** {Date}  
+**Status:** {🟢 Active | 🟡 Draft | 🔴 Deprecated | ⏳ Temporary}  
+**Purpose:** {One-line description}  
+**Related Docs:** {Links to related documentation}
+
+---
+```
+
+**When Creating/Updating Docs:**
+1. Check `docs/DOCUMENTATION_STRUCTURE.md` for correct location
+2. Use standard header template
+3. Keep under 300 lines (split if needed)
+4. Add to `docs/README.md` if new document
+5. Update related docs with cross-references
+6. Update copilot instructions if structure changes
+
+**Planning Documents:**
+- Create in `docs/planning/` subdirectory
+- Mark as ⏳ Temporary status
+- Move to archive when work completes
+
+**Architectural Decisions:**
+- Create as `docs/planning/decisions/ADR-{YYYYMMDD}-{title}.md`
+- Use ADR template from DOCUMENTATION_STRUCTURE.md
 - **User is new to Flutter**: Explain everything in beginner-friendly terms, provide exact commands
 
 ---

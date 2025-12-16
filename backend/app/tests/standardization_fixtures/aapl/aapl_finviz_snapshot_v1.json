@@ -1,0 +1,45 @@
+{
+  "provider": "finviz",
+  "ticker": "AAPL",
+  "as_of_date": "2025-12-15",
+  "identity": {
+    "company_name": "Apple Inc.",
+    "exchange": "NASDAQ",
+    "sector": "Technology",
+    "industry": "Consumer Electronics",
+    "sic_code": "3571"
+  },
+  "snapshot_table": {
+    "Market Cap": "2.68T",
+    "Enterprise Value": "2.73T",
+    "P/E": "28.7",
+    "Forward P/E": "28.0",
+    "PEG": "2.9",
+    "P/S": "7.6",
+    "P/B": "44.9",
+    "P/FCF": "26.0",
+    "EV/EBITDA": "23.8",
+    "EV/Sales": "7.0",
+    "EPS (ttm)": "6.38",
+    "EPS next Y": "6.72",
+    "Dividend %": "0.47%",
+    "Beta": "1.22",
+    "52W High": "199.50",
+    "52W Low": "164.00",
+    "Avg Volume": "55.2M",
+    "Float": "15.1B",
+    "Price": "174.50",
+    "Open": "173.80",
+    "High": "175.00",
+    "Low": "173.45",
+    "Volume": "50.1M"
+  },
+  "news_articles": [
+    {
+      "title": "Apple Stock Hits New High",
+      "published_at": "2025-12-14",
+      "url": "https://finviz.com/apple-news",
+      "source": "Finviz News"
+    }
+  ]
+}

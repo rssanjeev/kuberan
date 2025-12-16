@@ -12,6 +12,13 @@ The goals are:
 - Define a **DATA_PRIORITY_MATRIX** describing how each data point is resolved from multiple providers.
 - Stay **configurable** so that provider reliability can be re-weighted without code changes.
 
+Authoritative configuration:
+- `config/data_priority_matrix.yaml` is the **machine-readable matrix**
+  that standardization code must follow.
+- `docs/DATA_PRIORITY_MATRIX.md` is a **human-readable design doc**;
+  when it differs from the YAML, the YAML is considered source of
+  truth and the Markdown should be updated.
+
 ## 2. Key Concepts
 
 ### 2.1 Data Point
@@ -91,6 +98,110 @@ Some data points are naturally **collections** rather than scalars. They may be 
 
 This document focuses on **rules**; physical storage layout can evolve independently.
 
+## 4. Execution & Service Contract
+
+Standardization is executed by a service that reads provider snapshots
+and writes standardized views.
+
+- Core interface (conceptual):
+  - `standardize_ticker(ticker: str) -> standardized_ticker_view_v1`
+  - `standardize_tickers(tickers: List[str]) -> List[standardized_ticker_view_v1]`
+- Inputs:
+  - All available `finviz_*_snapshot_v1`, `stockanalysis_*_snapshot_v1`,
+    `massive_*_snapshot_v1`, `yfinance_*_snapshot_v1` documents for the
+    ticker.
+  - `config/data_priority_matrix.yaml` loaded into memory.
+- Outputs:
+  - One `standardized_ticker_view_v1` document per ticker written to
+    the `standardized_ticker_views` collection.
+
+Suggested snapshot storage (can evolve independently of rules):
+- `finviz_snapshots` for `finviz_*_snapshot_v1`
+- `stockanalysis_snapshots` for `stockanalysis_*_snapshot_v1`
+- `massive_snapshots` for `massive_*_snapshot_v1`
+- `yfinance_snapshots` for `yfinance_*_snapshot_v1`
+
+Each snapshot collection is keyed at minimum by `ticker`, with
+optional `as_of`/`fetched_at` timestamps for freshness checks.
+
+Execution modes:
+- **On-demand**: called directly when an API consumer needs a
+  standardized view and snapshots are reasonably fresh.
+- **Batch job**: periodic job (e.g., nightly) that recomputes
+  standardized views for all relevant tickers.
+
+Idempotence and overwrite semantics:
+- Standardizing the same ticker from the same set of snapshots should
+  be **idempotent** (re-running yields an identical
+  `standardized_ticker_view_v1`).
+- The latest successful standardization run **overwrites** the prior
+  document for that ticker in `standardized_ticker_views`.
+- Implementations may choose to also keep historical versions (e.g.,
+  via `as_of` or an additional `version` field), but v1 only requires
+  the latest per ticker.
+
+Error and missing-data semantics:
+- If a data point cannot be resolved (no provider has a value), the
+  corresponding key **may be omitted** from `data_points` or stored
+  with `value: null` and `source: null`.
+- If providers disagree beyond configured tolerance (for
+  `numeric_consensus`), the implementation may:
+  - mark the point as unresolved (omit it), and/or
+  - emit logging/metrics for investigation.
+
+This contract is complemented by the shape described in
+`standardized_ticker_view.md`.
+
+## 6. Testing & Validation Plan
+
+To ensure the implementation matches these rules, tests should be
+organized around deterministic fixtures and strategy-level behavior.
+
+### 6.1 Golden Fixtures (End-to-End)
+
+Create small **golden bundles** per ticker containing:
+- One or more provider snapshots (`*_snapshot_v1` documents) serialized
+  as JSON.
+- A slice of `config/data_priority_matrix.yaml` relevant to those data
+  points.
+- An expected `standardized_ticker_view_v1` document.
+
+End-to-end tests then:
+- Load the snapshots and matrix fragment.
+- Run `standardize_ticker(ticker)`.
+- Assert deep equality with the expected standardized view.
+
+Golden bundles should cover:
+- Happy path: all providers agree or are within tolerance.
+- Partial data: only some providers have a value.
+- Conflicts: providers disagree beyond tolerance (for
+  `numeric_consensus`).
+- Missing data: no provider supplies a value for a point.
+
+### 6.2 Strategy-Level Unit Tests
+
+For each strategy (e.g., `single_value`, `numeric_consensus`,
+`timeseries_primary_with_checks`):
+- Pass in synthetic provider values and matrix parameters.
+- Assert that the resolved `{ value, source }` matches expectations.
+- Include edge cases:
+  - Ties in weight.
+  - Values exactly on the tolerance boundary.
+  - Outliers that should be ignored.
+
+### 6.3 Invariants & Property Checks
+
+Add higher-level tests that assert invariants, such as:
+- If only one provider supplies a value and it is valid, the
+  standardized value must match that provider.
+- For `numeric_consensus`, the resolved value must lie within the
+  configured tolerance envelope of all accepted inputs.
+- For `aggregate_union` collections, there should be **no duplicates**
+  after normalization.
+
+Where feasible, property-based tests can generate random inputs within
+constraints to further validate these invariants.
+
 ## 3. Standardization Strategies
 
 Each data point is associated with a **strategy** describing how to resolve multiple inputs.
@@ -101,9 +212,12 @@ Supported strategies in v1:
    - Use one value selected according to provider weights and conflict rules.
    - Typical for stable identifiers: `sic_code`, `exchange`, `name`.
 
-2. **`numeric_consensus`**
-   - For numeric values where small discrepancies are expected (e.g., `market_cap`).
-   - Use weighted average or choose the value closest to the weighted median within allowed tolerance.
+2. **`numeric_consensus`** (⚠️ DEPRECATED - DO NOT USE)
+   - **CRITICAL**: This strategy is DEPRECATED. We must NEVER calculate or derive new financial values.
+   - **Reason**: All values must come directly from provider data sources. Calculated averages create synthetic data that doesn't exist in any real source, which could lead to incorrect investment decisions.
+   - **Replacement**: Use `single_value` strategy with appropriate provider priorities instead.
+   - ~~For numeric values where small discrepancies are expected (e.g., `market_cap`).~~
+   - ~~Use weighted average or choose the value closest to the weighted median within allowed tolerance.~~
 
 3. **`latest_by_timestamp`**
    - For values that change over time and where providers emit different timestamps.

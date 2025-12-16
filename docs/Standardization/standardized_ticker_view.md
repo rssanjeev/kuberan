@@ -30,6 +30,8 @@ At a high level, a standardized ticker view document looks like this:
 {
   "ticker": "AAPL",
   "as_of": "2025-12-14T00:00:00Z",
+  "computed_at": "2025-12-14T00:05:12Z",
+  "standardization_version": "v1",
   "data_points": {
     "sic_code": {
       "value": "3571",
@@ -70,6 +72,17 @@ At a high level, a standardized ticker view document looks like this:
 - `as_of` (ISO8601 timestamp):
   - The logical timestamp when this standardized view was computed.
   - May align with a batch run time (e.g., nightly job) or on-demand computation.
+
+- `computed_at` (ISO8601 timestamp, optional in v1):
+  - The wall-clock time when the standardization job actually ran.
+  - Useful to distinguish **data staleness** (`as_of`) from **job run
+    time** (`computed_at`).
+
+- `standardization_version` (string, optional in v1):
+  - Version of the standardization logic/config used to produce this
+    document, e.g. `"v1"`.
+  - Should be incremented if breaking changes are made to
+    `standardized_ticker_view` structure or to matrix semantics.
 
 - `data_points` (object):
   - A map from **data point name** (e.g., `sic_code`, `market_cap`) to a standardized record.

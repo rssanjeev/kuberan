@@ -1,0 +1,58 @@
+{
+  "provider": "massive",
+  "ticker": "AAPL",
+  "as_of_date": "2025-12-15",
+  "identity": {
+    "company_name": "Apple Inc.",
+    "exchange": "XNAS",
+    "exchange_mic": "XNAS",
+    "locale": "US",
+    "country": "US",
+    "sector": "Technology",
+    "industry": "Consumer Electronics",
+    "sic_code": "3571",
+    "sic_description": "Electronic Computers",
+    "cik": "0000320193",
+    "composite_figi": "BBG000B9XRY4",
+    "share_class_figi": "BBG001S5N8V8",
+    "primary_listing_date": "1980-12-12",
+    "status_active": true
+  },
+  "company_profile": {
+    "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.",
+    "website_url": "https://www.apple.com",
+    "phone_number": "+1-408-996-1010",
+    "employees": 164000,
+    "address_city": "Cupertino",
+    "address_state": "CA",
+    "address_postal_code": "95014",
+    "country_full": "United States of America"
+  },
+  "shares": {
+    "shares_outstanding": 15600000000
+  },
+  "corporate_actions": {
+    "split_event": {
+      "date": "2020-08-31",
+      "ratio": "4:1",
+      "split_from": 1,
+      "split_to": 4
+    },
+    "dividend_event": {
+      "date": "2025-11-15",
+      "amount": 0.24,
+      "currency": "USD"
+    }
+  },
+  "news": {
+    "news_article": [
+      {
+        "title": "Apple Announces Q4 Results",
+        "published_at": "2025-11-01",
+        "url": "https://example.com/apple-q4",
+        "source": "MASSIVE News"
+      }
+    ],
+    "news_sentiment_score": 0.75
+  }
+}

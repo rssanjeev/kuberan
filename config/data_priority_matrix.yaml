@@ -200,8 +200,7 @@ country_full:
       weight: 1.0
 
 employees:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: massive
       weight: 1.0
@@ -215,30 +214,27 @@ employees:
 ###############################################################################
 
 market_cap:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: yfinance
-      weight: 0.9
+      weight: 1.0
     - provider: finviz
-      weight: 0.85
+      weight: 0.9
     - provider: stockanalysis
       weight: 0.85
 
 enterprise_value:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: yfinance
-      weight: 0.9
+      weight: 1.0
     - provider: finviz
-      weight: 0.85
+      weight: 0.9
     - provider: stockanalysis
       weight: 0.85
 
 shares_outstanding:
-  strategy: numeric_consensus
-  tolerance_pct: 2.0
+  strategy: single_value
   candidates:
     - provider: massive
       weight: 1.0
@@ -248,107 +244,96 @@ shares_outstanding:
       weight: 0.85
 
 free_float_shares:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.9
+      weight: 1.0
     - provider: finviz
-      weight: 0.85
+      weight: 0.9
 
 avg_volume_10d:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: yfinance
-      weight: 0.9
+      weight: 1.0
     - provider: finviz
-      weight: 0.85
+      weight: 0.9
 
 avg_volume_3m:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: yfinance
-      weight: 0.9
+      weight: 1.0
     - provider: finviz
-      weight: 0.85
+      weight: 0.9
 
 ###############################################################################
 # 4. Valuation Multiples
 ###############################################################################
 
 pe_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
     - provider: yfinance
       weight: 0.85
 
 pe_forward:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 peg_ratio:
-  strategy: numeric_consensus
-  tolerance_pct: 15.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 ps_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 pb_ratio:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 pfcf_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 enterprise_value_ebitda:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 enterprise_value_sales:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
@@ -357,172 +342,152 @@ enterprise_value_sales:
 ###############################################################################
 
 gross_margin_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 operating_margin_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 profit_margin_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 return_on_equity_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 return_on_assets_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 return_on_invested_capital_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 ###############################################################################
 # 6. Growth Metrics
 ###############################################################################
 
 revenue_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 3.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: yfinance
       weight: 0.9
 
 revenue_5y_cagr:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 net_income_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 3.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: yfinance
       weight: 0.9
 
 net_income_5y_cagr:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 free_cash_flow_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 free_cash_flow_5y_cagr:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 ###############################################################################
 # 7. Earnings & Dividends
 ###############################################################################
 
 eps_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 EPS_forward:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 Dividend_yield_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 Dividend_payout_ratio_ttm:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 ###############################################################################
 # 8. Risk & Volatility
 ###############################################################################
 
 beta_5y_monthly:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: yfinance
       weight: 0.9
 
 beta_1y_daily:
-  strategy: numeric_consensus
-  tolerance_pct: 10.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 price_52w_high:
-  strategy: numeric_consensus
-  tolerance_pct: 1.0
+  strategy: single_value
   candidates:
     - provider: yfinance
-      weight: 0.9
+      weight: 1.0
     - provider: finviz
-      weight: 0.85
+      weight: 0.9
 
 price_52w_low:
-  strategy: numeric_consensus
-  tolerance_pct: 1.0
+  strategy: single_value
   candidates:
     - provider: yfinance
-      weight: 0.9
+      weight: 1.0
     - provider: finviz
-      weight: 0.85
+      weight: 0.9
 
 ###############################################################################
 # 9. Prices (OHLCV) - Time Series
@@ -618,28 +583,25 @@ news_sentiment_score:
 ###############################################################################
 
 etf_aum:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 etf_expense_ratio:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
     - provider: finviz
       weight: 0.9
 
 etf_holdings_count:
-  strategy: numeric_consensus
-  tolerance_pct: 5.0
+  strategy: single_value
   candidates:
     - provider: stockanalysis
-      weight: 0.95
+      weight: 1.0
 
 # END OF v1 MATRIX

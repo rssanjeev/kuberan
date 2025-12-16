@@ -1,0 +1,295 @@
+{
+  "ticker": "AAPL",
+  "version": "v1",
+  "data_points": {
+    "ticker": {
+      "value": "AAPL",
+      "source": "massive"
+    },
+    "name": {
+      "value": "Apple Inc.",
+      "source": "massive"
+    },
+    "exchange": {
+      "value": "XNAS",
+      "source": "massive"
+    },
+    "exchange_mic": {
+      "value": "XNAS",
+      "source": "massive"
+    },
+    "locale": {
+      "value": "US",
+      "source": "massive"
+    },
+    "country": {
+      "value": "United States",
+      "source": "stockanalysis"
+    },
+    "sector": {
+      "value": "Technology",
+      "source": "stockanalysis"
+    },
+    "industry": {
+      "value": "Consumer Electronics",
+      "source": "stockanalysis"
+    },
+    "sic_code": {
+      "value": "3571",
+      "source": "massive"
+    },
+    "sic_description": {
+      "value": "Electronic Computers",
+      "source": "massive"
+    },
+    "cik": {
+      "value": "0000320193",
+      "source": "massive"
+    },
+    "composite_figi": {
+      "value": "BBG000B9XRY4",
+      "source": "massive"
+    },
+    "share_class_figi": {
+      "value": "BBG001S5N8V8",
+      "source": "massive"
+    },
+    "primary_listing_date": {
+      "value": "1980-12-12",
+      "source": "massive"
+    },
+    "status_active": {
+      "value": true,
+      "source": "massive"
+    },
+    "company_description": {
+      "value": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.",
+      "source": "massive"
+    },
+    "website_url": {
+      "value": "https://www.apple.com",
+      "source": "massive"
+    },
+    "phone_number": {
+      "value": "+1-408-996-1010",
+      "source": "massive"
+    },
+    "address_city": {
+      "value": "Cupertino",
+      "source": "massive"
+    },
+    "address_state": {
+      "value": "CA",
+      "source": "massive"
+    },
+    "address_postal_code": {
+      "value": "95014",
+      "source": "massive"
+    },
+    "country_full": {
+      "value": "United States of America",
+      "source": "massive"
+    },
+    "employees": {
+      "value": 164000,
+      "source": "massive"
+    },
+    "market_cap": {
+      "value": 2700000000000,
+      "source": "yfinance"
+    },
+    "enterprise_value": {
+      "value": 2750000000000,
+      "source": "yfinance"
+    },
+    "shares_outstanding": {
+      "value": 15600000000,
+      "source": "massive"
+    },
+    "free_float_shares": {
+      "value": 15200000000,
+      "source": "stockanalysis"
+    },
+    "avg_volume_3m": {
+      "value": 55200000.0,
+      "source": "finviz"
+    },
+    "pe_ttm": {
+      "value": 29.1,
+      "source": "stockanalysis"
+    },
+    "pe_forward": {
+      "value": 28.5,
+      "source": "stockanalysis"
+    },
+    "peg_ratio": {
+      "value": 2.8,
+      "source": "stockanalysis"
+    },
+    "ps_ttm": {
+      "value": 7.8,
+      "source": "stockanalysis"
+    },
+    "pb_ratio": {
+      "value": 45.2,
+      "source": "stockanalysis"
+    },
+    "pfcf_ttm": {
+      "value": 26.4,
+      "source": "stockanalysis"
+    },
+    "enterprise_value_ebitda": {
+      "value": 24.1,
+      "source": "stockanalysis"
+    },
+    "enterprise_value_sales": {
+      "value": 7.1,
+      "source": "stockanalysis"
+    },
+    "gross_margin_ttm": {
+      "value": 0.456,
+      "source": "stockanalysis"
+    },
+    "operating_margin_ttm": {
+      "value": 0.307,
+      "source": "stockanalysis"
+    },
+    "profit_margin_ttm": {
+      "value": 0.251,
+      "source": "stockanalysis"
+    },
+    "return_on_equity_ttm": {
+      "value": 1.601,
+      "source": "stockanalysis"
+    },
+    "return_on_assets_ttm": {
+      "value": 0.221,
+      "source": "stockanalysis"
+    },
+    "return_on_invested_capital_ttm": {
+      "value": 0.532,
+      "source": "stockanalysis"
+    },
+    "revenue_ttm": {
+      "value": 383285000000,
+      "source": "stockanalysis"
+    },
+    "revenue_5y_cagr": {
+      "value": 0.078,
+      "source": "stockanalysis"
+    },
+    "net_income_ttm": {
+      "value": 96995000000,
+      "source": "stockanalysis"
+    },
+    "net_income_5y_cagr": {
+      "value": 0.089,
+      "source": "stockanalysis"
+    },
+    "free_cash_flow_ttm": {
+      "value": 99584000000,
+      "source": "stockanalysis"
+    },
+    "free_cash_flow_5y_cagr": {
+      "value": 0.072,
+      "source": "stockanalysis"
+    },
+    "eps_ttm": {
+      "value": 6.42,
+      "source": "stockanalysis"
+    },
+    "EPS_forward": {
+      "value": 6.75,
+      "source": "stockanalysis"
+    },
+    "Dividend_yield_ttm": {
+      "value": 0.0048,
+      "source": "stockanalysis"
+    },
+    "Dividend_payout_ratio_ttm": {
+      "value": 0.15,
+      "source": "stockanalysis"
+    },
+    "beta_5y_monthly": {
+      "value": 1.24,
+      "source": "stockanalysis"
+    },
+    "beta_1y_daily": {
+      "value": 1.18,
+      "source": "stockanalysis"
+    },
+    "price_52w_high": {
+      "value": 199.62,
+      "source": "yfinance"
+    },
+    "price_52w_low": {
+      "value": 164.08,
+      "source": "yfinance"
+    },
+    "close_price": {
+      "value": 174.49,
+      "source": "yfinance"
+    },
+    "open_price": {
+      "value": 173.85,
+      "source": "yfinance"
+    },
+    "high_price": {
+      "value": 175.1,
+      "source": "yfinance"
+    },
+    "low_price": {
+      "value": 173.5,
+      "source": "yfinance"
+    },
+    "adjusted_close_price": {
+      "value": 174.49,
+      "source": "yfinance"
+    },
+    "volume": {
+      "value": 50123456,
+      "source": "yfinance"
+    },
+    "split_event": {
+      "value": {
+        "date": "2020-08-31",
+        "ratio": "4:1",
+        "split_from": 1,
+        "split_to": 4
+      },
+      "source": "massive"
+    },
+    "dividend_event": {
+      "value": {
+        "date": "2025-11-15",
+        "amount": 0.24,
+        "currency": "USD"
+      },
+      "source": "massive"
+    },
+    "news_article": {
+      "value": [
+        {
+          "title": "Apple Announces Q4 Results",
+          "published_at": "2025-11-01",
+          "url": "https://example.com/apple-q4",
+          "source": "MASSIVE News"
+        },
+        {
+          "title": "Apple Stock Hits New High",
+          "published_at": "2025-12-14",
+          "url": "https://finviz.com/apple-news",
+          "source": "Finviz News"
+        }
+      ],
+      "source": [
+        "massive",
+        "finviz"
+      ]
+    },
+    "news_sentiment_score": {
+      "value": 0.75,
+      "source": "massive"
+    }
+  }
+}
