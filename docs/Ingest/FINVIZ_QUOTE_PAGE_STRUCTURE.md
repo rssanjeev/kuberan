@@ -1,20 +1,58 @@
 # Finviz Quote Page Structure
 
-**Last Updated:** 2025-12-13
+**Last Updated:** 2025-12-17  
+**Status:** 🟢 Active - Reference for FinViz HTML structure  
+**Purpose:** Document the structural layout of FinViz quote pages for data extraction
+
+---
+
+## ⭐ Confirmed Extraction Method
+
+**IMPORTANT**: This document describes the HTML structure. For the **confirmed production-ready extraction method**, see:
+
+- **Implementation**: `scripts/fetch_finviz_all_statements.py` (Playwright browser automation)
+- **Parser**: `backend/app/core/finviz_parser.py` (4 separate BeautifulSoup parsers)
+- **Documentation**: [Copilot Instructions - FinViz Section](../../.github/copilot-instructions.md#finviz-data-extraction-confirmed-standard-method)
+- **Guide**: [WEB_SCRAPING.md - FinViz Section](../../.github/docs/WEB_SCRAPING.md#current-implementation-finviz-financial-statements-)
+
+**User Quote**: *"Here after, if I mention extracting data from FinViz - This is what I mean."*
+
+### Quick Start
+
+```bash
+# 1. Install Playwright (one-time)
+pip3 install playwright && playwright install chromium
+
+# 2. Extract all 3 financial statement tabs
+python3 scripts/fetch_finviz_all_statements.py NVDA
+
+# 3. Parse and validate (generates JSON with 923+ data points)
+cd backend && python3 -m app.scripts.test_finviz_parser NVDA
+```
+
+**Extraction Results**:
+- ✅ Snapshot Table: 83 metrics
+- ✅ Income Statement: 8 periods × 30 metrics = 240 data points
+- ✅ Balance Sheet: 8 periods × 39 metrics = 312 data points
+- ✅ Cash Flow: 8 periods × 36 metrics = 288 data points
+
+---
+
+## Overview
 
 This document describes the *structural layout* of Finviz quote pages
 (`https://finviz.com/quote.ashx?t={TICKER}&p=d`) for both **stocks** and
-**ETFs**. It is **tool-agnostic** and is intended as the reference for any
-future scraper implementation (Playwright, Puppeteer, `mcp_fetch`, etc.).
+**ETFs**. It serves as a reference for understanding the HTML structure
+and how our extraction pipeline works.
 
 The goal is to answer, for every field you may want from Finviz:
 
 > "Where on the page do I look, and what stable cues can I use to
 >  extract it?"
 
-Ingest pipelines turn this HTML structure into a concrete
-`finviz_snapshot_v1` JSON document; see the **Snapshot Schema** section
-below for the exact fields and types.
+Our production extraction pipeline (Playwright + BeautifulSoup) uses this structure
+to generate a concrete `finviz_snapshot_v1` JSON document. See the **Snapshot Schema**
+section below for the exact fields and types.
 
 ---
 

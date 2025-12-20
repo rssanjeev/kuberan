@@ -13,6 +13,11 @@ pytz
 pandas-market-calendars
 httpx  # For Alpha Vantage and Finnhub providers
 
+# Web Scraping & Browser Automation
+playwright==1.40.0
+pyyaml>=6.0.1
+beautifulsoup4>=4.12.0
+
 # PDF Processing
 pdfplumber==0.10.3
 PyPDF2==3.0.1

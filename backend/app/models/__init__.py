@@ -90,6 +90,13 @@ from app.models.monitoring import (
     RateLimitStatus,
 )
 
+# Cartographer models
+from app.models.cartographer import (
+    FinvizSnapshot,
+    StockAnalysisSnapshot,
+    AlphaVantageSnapshot,
+)
+
 # All Beanie Document models for initialization
 __all__ = [
     # Auth
@@ -153,6 +160,11 @@ __all__ = [
     "ProviderDailyStats",
     "ProviderHealthCheck",
     "RateLimitStatus",
+    
+    # Cartographer Models
+    "FinvizSnapshot",
+    "StockAnalysisSnapshot",
+    "AlphaVantageSnapshot",
 ]
 
 # List of all Document models for Beanie initialization
@@ -198,4 +210,9 @@ DOCUMENT_MODELS = [
     ProviderDailyStats,
     ProviderHealthCheck,
     RateLimitStatus,
+    
+    # Cartographer Models
+    FinvizSnapshot,
+    StockAnalysisSnapshot,
+    AlphaVantageSnapshot,
 ]
