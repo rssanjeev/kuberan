@@ -1,0 +1,176 @@
+{
+  "source": "finviz_screener",
+  "extracted_at": "2025-12-21T17:41:24.235607Z",
+  "base_url": "https://finviz.com/screener.ashx",
+  "filters": {
+    "count": 92,
+    "categories": [
+      {
+        "name": "Exchange",
+        "type": "label"
+      },
+      {
+        "name": "AnyAMEXCBOENASDAQNYSECustom (Elite only)",
+        "type": "label"
+      },
+      {
+        "name": "Index",
+        "type": "label"
+      },
+      {
+        "name": "Sector",
+        "type": "label"
+      },
+      {
+        "name": "Industry",
+        "type": "label"
+      },
+      {
+        "name": "Country",
+        "type": "label"
+      },
+      {
+        "name": "Market Cap.",
+        "type": "label"
+      },
+      {
+        "name": "P/E",
+        "type": "label"
+      },
+      {
+        "name": "Forward P/E",
+        "type": "label"
+      },
+      {
+        "name": "PEG",
+        "type": "label"
+      },
+      {
+        "name": "P/S",
+        "type": "label"
+      },
+      {
+        "name": "P/B",
+        "type": "label"
+      },
+      {
+        "name": "Price/Cash",
+        "type": "label"
+      },
+      {
+        "name": "Price/Free Cash Flow",
+        "type": "label"
+      },
+      {
+        "name": "EV/EBITDA",
+        "type": "label"
+      },
+      {
+        "name": "EV/Sales",
+        "type": "label"
+      },
+      {
+        "name": "Dividend Growth",
+        "type": "label"
+      },
+      {
+        "name": "EPS GrowthThis Year",
+        "type": "label"
+      },
+      {
+        "name": "EPS GrowthNext Year",
+        "type": "label"
+      },
+      {
+        "name": "EPS GrowthQtr Over Qtr",
+        "type": "label"
+      },
+      {
+        "name": "EPS Growth TTM",
+        "type": "label"
+      },
+      {
+        "name": "EPS GrowthPast 3 Years",
+        "type": "label"
+      },
+      {
+        "name": "EPS GrowthPast 5 Years",
+        "type": "label"
+      },
+      {
+        "name": "EPS GrowthNext 5 Years",
+        "type": "label"
+      },
+      {
+        "name": "Sales GrowthQtr Over Qtr",
+        "type": "label"
+      },
+      {
+        "name": "Sales Growth TTM",
+        "type": "label"
+      },
+      {
+        "name": "Sales GrowthPast 3 Years",
+        "type": "label"
+      },
+      {
+        "name": "Sales GrowthPast 5 Years",
+        "type": "label"
+      },
+      {
+        "name": "Earnings & Revenue Surprise",
+        "type": "label"
+      },
+      {
+        "name": "Dividend Yield",
+        "type": "label"
+      }
+    ]
+  },
+  "tabs": {
+    "Overview": {
+      "url_param": "v=111",
+      "columns": [],
+      "column_count": 0,
+      "sample_rows": [],
+      "sample_row_count": 0
+    },
+    "Valuation": {
+      "url_param": "v=121",
+      "columns": [],
+      "column_count": 0,
+      "sample_rows": [],
+      "sample_row_count": 0
+    },
+    "Financial": {
+      "url_param": "v=161",
+      "columns": [],
+      "column_count": 0,
+      "sample_rows": [],
+      "sample_row_count": 0
+    },
+    "Ownership": {
+      "url_param": "v=131",
+      "columns": [],
+      "column_count": 0,
+      "sample_rows": [],
+      "sample_row_count": 0
+    },
+    "Performance": {
+      "url_param": "v=141",
+      "columns": [],
+      "column_count": 0,
+      "sample_rows": [],
+      "sample_row_count": 0
+    },
+    "Technical": {
+      "url_param": "v=171",
+      "columns": [],
+      "column_count": 0,
+      "sample_rows": [],
+      "sample_row_count": 0
+    }
+  },
+  "total_tickers": "Total Debt/Equity",
+  "sample_data": {}
+}

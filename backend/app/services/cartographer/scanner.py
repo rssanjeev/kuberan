@@ -26,6 +26,7 @@ from playwright.async_api import async_playwright, Browser, Page
 from app.core.logging_config import get_logger
 from app.models.cartographer import (
     CartographerConfig,
+    ExtractionMode,
     GlobalInterceptor,
     PageTemplate,
     RegionDefinition,
@@ -33,6 +34,8 @@ from app.models.cartographer import (
     SelectorStrategy,
     SiteDictionary,
 )
+from .interceptor_handler import InterceptorHandler
+from .selector_validator import SelectorValidator
 
 logger = get_logger(__name__)
 
@@ -66,46 +69,29 @@ class CartographerScanner:
         self.config: Optional[CartographerConfig] = None
         self.browser: Optional[Browser] = None
         self.site_name: str = ""
+        self.interceptor_handler = InterceptorHandler()
+        self.selector_validator = SelectorValidator()
 
     async def load_config(self) -> CartographerConfig:
-        """
-        Load and validate YAML configuration.
-        
-        Returns:
-            Validated CartographerConfig object
-            
-        Raises:
-            FileNotFoundError: If config file doesn't exist
-            ValueError: If YAML is invalid or doesn't match schema
-        """
-        logger.info("Loading configuration", extra={"path": str(self.config_path)})
-
-        if not self.config_path.exists():
-            raise FileNotFoundError(f"Config file not found: {self.config_path}")
-
-        with open(self.config_path, "r") as f:
-            raw_config = yaml.safe_load(f)
-
-        # Validate against Pydantic schema
+        """Load and validate YAML configuration."""
         try:
-            self.config = CartographerConfig(**raw_config)
+            with open(self.config_path) as f:
+                config_data = yaml.safe_load(f)
+            
+            self.config = CartographerConfig(**config_data)
             self.site_name = self.config.site_name
+            
             logger.info(
-                "Configuration loaded successfully",
+                "Config loaded",
                 extra={
                     "site": self.site_name,
                     "templates": len(self.config.page_templates),
-                    "interceptors": len(self.config.global_interceptors),
                 },
             )
             return self.config
-        except Exception as e:
-            logger.error(
-                "Configuration validation failed",
-                extra={"error": str(e)},
-                exc_info=True,
-            )
-            raise ValueError(f"Invalid configuration: {e}")
+        except (FileNotFoundError, yaml.YAMLError, ValidationError) as e:
+            logger.error("Config load failed", extra={"error": str(e)}, exc_info=True)
+            raise
 
     async def _launch_browser(self) -> Browser:
         """
@@ -135,109 +121,125 @@ class CartographerScanner:
         logger.info("Browser launched", extra={"type": browser_type})
         return self.browser
 
-    async def _execute_interceptors(
-        self, page: Page, interceptor_names: List[str]
+    async def _validate_page_signature(
+        self, page: Page, template: PageTemplate, sample_url: str
     ) -> None:
-        """
-        Execute global interceptors (handle popups, ads, cookie consent).
-        
-        Args:
-            page: Playwright page instance
-            interceptor_names: List of interceptor names to execute
-        """
-        # Get interceptors by name
-        interceptors = [
-            i for i in self.config.global_interceptors if i.name in interceptor_names
-        ]
-
-        # Sort by priority (higher priority = execute first)
-        interceptors.sort(key=lambda x: x.priority, reverse=True)
-
-        for interceptor in interceptors:
-            try:
-                # Check if trigger element exists
-                trigger = await page.query_selector(interceptor.trigger_selector)
-                if not trigger:
-                    logger.debug(
-                        "Interceptor trigger not found",
-                        extra={"name": interceptor.name},
-                    )
-                    continue
-
-                logger.info("Executing interceptor", extra={"name": interceptor.name})
-
-                # Execute action
-                if interceptor.action == "click":
-                    await page.click(interceptor.target_selector, timeout=interceptor.timeout_ms)
-                elif interceptor.action == "close":
-                    target = await page.query_selector(interceptor.target_selector)
-                    if target:
-                        await target.click()
-                elif interceptor.action == "dismiss":
-                    await page.keyboard.press("Escape")
-                elif interceptor.action == "wait":
-                    await asyncio.sleep(interceptor.timeout_ms / 1000)
-
-                logger.info("Interceptor executed", extra={"name": interceptor.name})
-
-            except Exception as e:
-                logger.warning(
-                    "Interceptor failed",
-                    extra={"name": interceptor.name, "error": str(e)},
+        """Validate required and forbidden elements match page signature."""
+        # Validate required elements
+        for required in template.signature.required_elements:
+            element = await page.query_selector(required)
+            if not element:
+                logger.error(
+                    "Required element not found",
+                    extra={"selector": required, "url": sample_url},
                 )
+                raise ValueError(f"Required element not found: {required}")
 
-    async def _validate_selector(
-        self, page: Page, selector_strategy: SelectorStrategy
-    ) -> Optional[str]:
-        """
-        Test selector strategy and return first working selector.
-        
-        Args:
-            page: Playwright page instance
-            selector_strategy: Selector with primary + fallbacks
-            
-        Returns:
-            Working selector string, or None if all fail
-        """
-        # Try primary selector
-        try:
-            element = await page.query_selector(selector_strategy.primary)
+        # Check forbidden elements
+        for forbidden in template.signature.forbidden_elements:
+            element = await page.query_selector(forbidden)
             if element:
-                logger.debug(
-                    "Primary selector valid",
-                    extra={"selector": selector_strategy.primary},
+                logger.error(
+                    "Forbidden element found",
+                    extra={"selector": forbidden, "url": sample_url},
                 )
-                return selector_strategy.primary
-        except Exception as e:
-            logger.debug(
-                "Primary selector failed",
-                extra={"selector": selector_strategy.primary, "error": str(e)},
-            )
+                raise ValueError(f"Forbidden element found: {forbidden}")
 
-        # Try fallbacks
-        for fallback in selector_strategy.fallbacks:
-            try:
-                element = await page.query_selector(fallback)
-                if element:
-                    logger.info(
-                        "Fallback selector valid",
-                        extra={"selector": fallback, "primary": selector_strategy.primary},
-                    )
-                    return fallback
-            except Exception as e:
-                logger.debug(
-                    "Fallback selector failed",
-                    extra={"selector": fallback, "error": str(e)},
-                )
-
-        logger.warning(
-            "All selectors failed",
-            extra={
-                "primary": selector_strategy.primary,
-                "fallback_count": len(selector_strategy.fallbacks),
-            },
+    async def _validate_parsing_rule(
+        self, page: Page, rule: ParsingRule
+    ) -> Dict:
+        """Validate single parsing rule and return validated dictionary."""
+        working_selector = await self.selector_validator.validate_selector(
+            page, rule.selector
         )
-        return None
+
+        return {
+            "field_name": rule.field_name,
+            "selector": working_selector,  # Promoted fallback if primary failed
+            "data_type": rule.data_type,
+            "required": rule.required,
+            "valid": working_selector is not None,
+        }
+
+    async def _validate_label_based_region(
+        self, page: Page, region: RegionDefinition
+    ) -> Dict:
+        """Validate label-based extraction for a region."""
+        label_config = region.label_config
+        if not label_config:
+            return {"region_id": region.region_id, "error": "No label_config defined"}
+        
+        # Check if container exists
+        container = await page.query_selector(region.container_selector)
+        if not container:
+            return {
+                "region_id": region.region_id,
+                "error": f"Container not found: {region.container_selector}"
+            }
+        
+        # Count label elements to verify selector works
+        labels = await page.query_selector_all(
+            f"{region.container_selector} {label_config.label_selector}"
+        )
+        label_count = len(labels)
+        
+        logger.info(
+            "Label-based region validated",
+            extra={
+                "region_id": region.region_id,
+                "label_count": label_count,
+                "mappings": len(label_config.field_mappings),
+            }
+        )
+        
+        return {
+            "region_id": region.region_id,
+            "container_selector": region.container_selector,
+            "extraction_mode": "label_based",
+            "label_config": {
+                "label_selector": label_config.label_selector,
+                "value_selector": label_config.value_selector,
+                "extract_all": label_config.extract_all,
+                "field_mappings": [
+                    {
+                        "label": m.label,
+                        "field_name": m.field_name,
+                        "data_type": m.data_type.value,
+                    }
+                    for m in label_config.field_mappings
+                ],
+            },
+            "labels_found": label_count,
+            "valid": label_count > 0,
+        }
+
+    async def _scan_regions(
+        self, page: Page, regions: List[RegionDefinition]
+    ) -> List[Dict]:
+        """Scan all regions and validate parsing rules."""
+        validated_regions = []
+        for region in regions:
+            # Determine extraction mode (default to SELECTOR for backward compat)
+            mode = getattr(region, 'extraction_mode', ExtractionMode.SELECTOR)
+            
+            if mode == ExtractionMode.LABEL_BASED:
+                validated_region = await self._validate_label_based_region(page, region)
+            else:
+                # Original selector-based validation
+                validated_rules = []
+                for rule in region.parsing_rules:
+                    validated_rule = await self._validate_parsing_rule(page, rule)
+                    validated_rules.append(validated_rule)
+
+                validated_region = {
+                    "region_id": region.region_id,
+                    "container_selector": region.container_selector,
+                    "extraction_mode": "selector",
+                    "parsing_rules": validated_rules,
+                }
+            
+            validated_regions.append(validated_region)
+        return validated_regions
 
     async def scan_template(
         self, template: PageTemplate, sample_url: str
@@ -259,54 +261,26 @@ class CartographerScanner:
 
         page = await self.browser.new_page()
         try:
-            # Navigate to page
-            await page.goto(sample_url, wait_until="networkidle")
+            # Navigate to page - use domcontentloaded instead of networkidle
+            # FinViz has continuous ad/tracking scripts that prevent networkidle
+            await page.goto(sample_url, wait_until="domcontentloaded", timeout=60000)
+            
+            # Wait for key elements to appear
+            await page.wait_for_selector("table.snapshot-table2", timeout=10000)
             logger.info("Page loaded", extra={"url": sample_url})
 
             # Execute interceptors
-            await self._execute_interceptors(page, template.interceptors)
+            interceptors = [
+                i for i in self.config.global_interceptors
+                if i.name in template.interceptors
+            ]
+            await self.interceptor_handler.execute_interceptors(page, interceptors)
 
-            # Validate signature
-            for required in template.signature.required_elements:
-                element = await page.query_selector(required)
-                if not element:
-                    logger.error(
-                        "Required element not found",
-                        extra={"selector": required, "url": sample_url},
-                    )
-                    raise ValueError(f"Required element not found: {required}")
+            # Validate page signature
+            await self._validate_page_signature(page, template, sample_url)
 
-            # Check forbidden elements
-            for forbidden in template.signature.forbidden_elements:
-                element = await page.query_selector(forbidden)
-                if element:
-                    logger.error(
-                        "Forbidden element found",
-                        extra={"selector": forbidden, "url": sample_url},
-                    )
-                    raise ValueError(f"Forbidden element found: {forbidden}")
-
-            # Validate all parsing rules
-            validated_regions = []
-            for region in template.regions:
-                validated_rules = []
-
-                for rule in region.parsing_rules:
-                    working_selector = await self._validate_selector(page, rule.selector)
-
-                    validated_rules.append({
-                        "field_name": rule.field_name,
-                        "selector": working_selector,  # Promoted fallback if primary failed
-                        "data_type": rule.data_type,
-                        "required": rule.required,
-                        "valid": working_selector is not None,
-                    })
-
-                validated_regions.append({
-                    "region_id": region.region_id,
-                    "container_selector": region.container_selector,
-                    "parsing_rules": validated_rules,
-                })
+            # Scan regions and validate parsing rules
+            validated_regions = await self._scan_regions(page, template.regions)
 
             logger.info(
                 "Template validated",
@@ -348,7 +322,7 @@ class CartographerScanner:
         await self._launch_browser()
 
         try:
-            validated_templates = []
+            validated_templates: Dict[str, PageTemplate] = {}
 
             for template in self.config.page_templates:
                 if template.signature.name not in sample_urls:
@@ -360,18 +334,17 @@ class CartographerScanner:
 
                 sample_url = sample_urls[template.signature.name]
                 validated = await self.scan_template(template, sample_url)
-                validated_templates.append(validated)
+                
+                # Store as PageTemplate, keyed by template name
+                validated_templates[template.signature.name] = template
 
-            # Create site dictionary
+            # Create site dictionary with proper types
             dictionary = SiteDictionary(
                 site_name=self.site_name,
                 base_url=self.config.base_url,
                 templates=validated_templates,
-                interceptors=[
-                    {"name": i.name, "trigger": i.trigger_selector}
-                    for i in self.config.global_interceptors
-                ],
-                generated_at=None,  # Will be set by model
+                interceptors=list(self.config.global_interceptors),
+                # generated_at uses default_factory=datetime.now
             )
 
             logger.info(

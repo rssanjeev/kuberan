@@ -27,7 +27,8 @@ from typing import Dict, List, Optional, Any
 from playwright.async_api import async_playwright, Browser, Page
 
 from app.core.logging_config import get_logger
-from app.models.cartographer import SiteDictionary
+from app.models.cartographer import SiteDictionary, DataType
+from app.services.cartographer.smart_parser import SmartParser as TypeCaster
 
 logger = get_logger(__name__)
 
@@ -129,11 +130,11 @@ class SmartParser:
 
     def _transform_value(self, raw_value: str, data_type: str) -> Any:
         """
-        Apply data type transformations.
+        Apply data type transformations using SmartParser module.
         
         Args:
             raw_value: Raw text extracted from page
-            data_type: Target data type (currency, percentage, float, int, list)
+            data_type: Target data type (currency, percentage, float, int, list, etc.)
             
         Returns:
             Transformed value
@@ -144,82 +145,28 @@ class SmartParser:
         raw_value = raw_value.strip()
 
         try:
-            if data_type == "currency":
-                # "$1.5B" → 1500000000
-                # "$450.00" → 450.0
-                return self._parse_currency(raw_value)
-
-            elif data_type == "percentage":
-                # "12.5%" → 12.5
-                return self._parse_percentage(raw_value)
-
-            elif data_type == "float":
-                # "45.23" → 45.23
-                return float(raw_value.replace(",", ""))
-
-            elif data_type == "int":
-                # "1,234" → 1234
-                return int(raw_value.replace(",", ""))
-
-            elif data_type == "list":
-                # "AAPL MSFT GOOGL" → ["AAPL", "MSFT", "GOOGL"]
-                return [item.strip() for item in raw_value.split() if item.strip()]
-
-            else:  # string (default)
-                return raw_value
+            # Map string data_type to DataType enum
+            type_mapping = {
+                "currency": DataType.CURRENCY,
+                "percentage": DataType.PERCENTAGE,
+                "float": DataType.FLOAT,
+                "int": DataType.INTEGER,
+                "integer": DataType.INTEGER,
+                "list": DataType.LIST,
+                "string": DataType.STRING,
+            }
+            
+            dtype = type_mapping.get(data_type.lower(), DataType.STRING)
+            
+            # Delegate to TypeCaster (SmartParser module)
+            return TypeCaster.parse(raw_value, dtype)
 
         except Exception as e:
             logger.warning(
-                "Transformation failed",
+                "Transformation failed, returning raw value",
                 extra={"raw": raw_value, "type": data_type, "error": str(e)},
             )
             return raw_value  # Return raw value on failure
-
-    def _parse_currency(self, value: str) -> Optional[float]:
-        """
-        Parse currency with suffix (K, M, B, T).
-        
-        Examples:
-            "$1.5B" → 1500000000.0
-            "$450.00" → 450.0
-            "2.77T" → 2770000000000.0
-        """
-        # Remove currency symbols and spaces
-        value = re.sub(r'[$€£¥,\s]', '', value)
-
-        # Extract numeric part and suffix
-        match = re.match(r'^([\d.]+)([KMBT])?$', value, re.IGNORECASE)
-        if not match:
-            return None
-
-        number = float(match.group(1))
-        suffix = match.group(2)
-
-        # Apply multiplier
-        multipliers = {
-            'K': 1_000,
-            'M': 1_000_000,
-            'B': 1_000_000_000,
-            'T': 1_000_000_000_000,
-        }
-
-        if suffix:
-            number *= multipliers[suffix.upper()]
-
-        return number
-
-    def _parse_percentage(self, value: str) -> Optional[float]:
-        """
-        Parse percentage value.
-        
-        Examples:
-            "12.5%" → 12.5
-            "-3.27%" → -3.27
-        """
-        match = re.match(r'^([-+]?[\d.]+)%?$', value.replace(',', ''))
-        if match:
-            return float(match.group(1))
-        return None
 
     async def extract_data(self, url: str) -> Dict[str, Any]:
         """

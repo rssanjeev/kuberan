@@ -18,6 +18,22 @@ This document provides a **high-level architecture** of Kuberan's data pipeline,
 - Each data point MUST preserve its source provider for transparency
 - Weights represent priority rankings (1.0 = highest), NOT calculation coefficients
 
+**Ticker-Centric Data Organization:**
+- ALL data MUST be organized from the **ticker's point of view**
+- Never store data organized by tab, page, or extraction method
+- Each ticker gets its own complete data record (one file per ticker)
+- Consistent pattern across all sources: `{"ticker": "AAPL", "data_categories": {...}, "metadata": {...}}`
+- This applies to: Quote pages, Screener data, Financial statements, News, etc.
+
+**Example Structure:**
+```json
+// Quote page → aapl_financials.json
+{"ticker": "AAPL", "snapshot": {...}, "income_statement": {...}, "metadata": {...}}
+
+// Screener → aapl_screener.json  
+{"ticker": "AAPL", "screener_data": {"overview": {...}, "valuation": {...}}, "metadata": {...}}
+```
+
 ---
 
 ## Pipeline Stages

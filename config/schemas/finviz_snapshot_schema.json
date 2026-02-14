@@ -1,0 +1,307 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kuberan.io/schemas/finviz_snapshot_v1.json",
+  "title": "FinViz Snapshot Schema v1",
+  "description": "JSON Schema for validating FinViz provider snapshots (screener + quote page data)",
+  "type": "object",
+  "required": ["provider", "ticker", "snapshot_version", "as_of_date", "fetched_at"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "const": "FINVIZ",
+      "description": "Provider identifier"
+    },
+    "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}$",
+      "description": "Stock ticker symbol"
+    },
+    "snapshot_version": {
+      "type": "string",
+      "const": "v1",
+      "description": "Schema version for migration support"
+    },
+    "as_of_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the data represents (YYYY-MM-DD)"
+    },
+    "fetched_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when data was fetched"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["screener", "quote_page", "merged"],
+      "description": "Which FinViz source this snapshot came from"
+    },
+    "identity": {
+      "$ref": "#/$defs/identity"
+    },
+    "price": {
+      "$ref": "#/$defs/price"
+    },
+    "valuation": {
+      "$ref": "#/$defs/valuation"
+    },
+    "financials": {
+      "$ref": "#/$defs/financials"
+    },
+    "profitability": {
+      "$ref": "#/$defs/profitability"
+    },
+    "liquidity": {
+      "$ref": "#/$defs/liquidity"
+    },
+    "earnings": {
+      "$ref": "#/$defs/earnings"
+    },
+    "dividend": {
+      "$ref": "#/$defs/dividend"
+    },
+    "ownership": {
+      "$ref": "#/$defs/ownership"
+    },
+    "performance": {
+      "$ref": "#/$defs/performance"
+    },
+    "technical": {
+      "$ref": "#/$defs/technical"
+    },
+    "analyst": {
+      "$ref": "#/$defs/analyst"
+    },
+    "options": {
+      "$ref": "#/$defs/options"
+    },
+    "paywall": {
+      "$ref": "#/$defs/paywall"
+    }
+  },
+  "$defs": {
+    "rawValue": {
+      "type": "object",
+      "description": "Raw value with optional paywall flag",
+      "required": ["raw"],
+      "properties": {
+        "raw": {
+          "type": ["string", "number", "null"],
+          "description": "Raw value as displayed on FinViz"
+        },
+        "paywalled": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if this value is behind FinViz Elite paywall"
+        }
+      },
+      "additionalProperties": false
+    },
+    "identity": {
+      "type": "object",
+      "description": "Company identification and classification",
+      "properties": {
+        "company_name": { "$ref": "#/$defs/rawValue" },
+        "sector": { "$ref": "#/$defs/rawValue" },
+        "industry": { "$ref": "#/$defs/rawValue" },
+        "country": { "$ref": "#/$defs/rawValue" },
+        "exchange": { "$ref": "#/$defs/rawValue" },
+        "index": { "$ref": "#/$defs/rawValue" },
+        "employees": { "$ref": "#/$defs/rawValue" },
+        "ipo_date": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "price": {
+      "type": "object",
+      "description": "Current price and trading data",
+      "properties": {
+        "price": { "$ref": "#/$defs/rawValue" },
+        "prev_close": { "$ref": "#/$defs/rawValue" },
+        "change": { "$ref": "#/$defs/rawValue" },
+        "change_from_open": { "$ref": "#/$defs/rawValue" },
+        "gap": { "$ref": "#/$defs/rawValue" },
+        "volume": { "$ref": "#/$defs/rawValue" },
+        "avg_volume": { "$ref": "#/$defs/rawValue" },
+        "rel_volume": { "$ref": "#/$defs/rawValue" },
+        "trades": { "$ref": "#/$defs/rawValue" },
+        "high_52w_price": { "$ref": "#/$defs/rawValue" },
+        "low_52w_price": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "valuation": {
+      "type": "object",
+      "description": "Valuation ratios and metrics",
+      "properties": {
+        "market_cap": { "$ref": "#/$defs/rawValue" },
+        "enterprise_value": { "$ref": "#/$defs/rawValue" },
+        "pe_ratio": { "$ref": "#/$defs/rawValue" },
+        "forward_pe": { "$ref": "#/$defs/rawValue" },
+        "peg_ratio": { "$ref": "#/$defs/rawValue" },
+        "price_to_sales": { "$ref": "#/$defs/rawValue" },
+        "price_to_book": { "$ref": "#/$defs/rawValue" },
+        "price_to_cash": { "$ref": "#/$defs/rawValue" },
+        "price_to_fcf": { "$ref": "#/$defs/rawValue" },
+        "ev_to_ebitda": { "$ref": "#/$defs/rawValue" },
+        "ev_to_sales": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "financials": {
+      "type": "object",
+      "description": "Basic financial figures",
+      "properties": {
+        "income": { "$ref": "#/$defs/rawValue" },
+        "sales": { "$ref": "#/$defs/rawValue" },
+        "book_value_per_share": { "$ref": "#/$defs/rawValue" },
+        "cash_per_share": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "profitability": {
+      "type": "object",
+      "description": "Profitability margins and returns",
+      "properties": {
+        "roa": { "$ref": "#/$defs/rawValue" },
+        "roe": { "$ref": "#/$defs/rawValue" },
+        "roic": { "$ref": "#/$defs/rawValue" },
+        "gross_margin": { "$ref": "#/$defs/rawValue" },
+        "operating_margin": { "$ref": "#/$defs/rawValue" },
+        "profit_margin": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "liquidity": {
+      "type": "object",
+      "description": "Liquidity and solvency ratios",
+      "properties": {
+        "current_ratio": { "$ref": "#/$defs/rawValue" },
+        "quick_ratio": { "$ref": "#/$defs/rawValue" },
+        "debt_to_equity": { "$ref": "#/$defs/rawValue" },
+        "lt_debt_to_equity": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "earnings": {
+      "type": "object",
+      "description": "Earnings data and growth metrics",
+      "properties": {
+        "eps_ttm": { "$ref": "#/$defs/rawValue" },
+        "eps_this_year": { "$ref": "#/$defs/rawValue" },
+        "eps_next_year": { "$ref": "#/$defs/rawValue" },
+        "eps_next_quarter": { "$ref": "#/$defs/rawValue" },
+        "eps_past_5y": { "$ref": "#/$defs/rawValue" },
+        "eps_next_5y": { "$ref": "#/$defs/rawValue" },
+        "eps_past_3y_5y": { "$ref": "#/$defs/rawValue" },
+        "eps_yoy_ttm": { "$ref": "#/$defs/rawValue" },
+        "eps_qoq": { "$ref": "#/$defs/rawValue" },
+        "sales_past_5y": { "$ref": "#/$defs/rawValue" },
+        "sales_past_3y_5y": { "$ref": "#/$defs/rawValue" },
+        "sales_yoy_ttm": { "$ref": "#/$defs/rawValue" },
+        "sales_qoq": { "$ref": "#/$defs/rawValue" },
+        "eps_sales_surprise": { "$ref": "#/$defs/rawValue" },
+        "earnings_date": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "dividend": {
+      "type": "object",
+      "description": "Dividend information",
+      "properties": {
+        "dividend_yield": { "$ref": "#/$defs/rawValue" },
+        "dividend_ttm": { "$ref": "#/$defs/rawValue" },
+        "dividend_est": { "$ref": "#/$defs/rawValue" },
+        "dividend_ex_date": { "$ref": "#/$defs/rawValue" },
+        "dividend_growth_3y_5y": { "$ref": "#/$defs/rawValue" },
+        "payout_ratio": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "ownership": {
+      "type": "object",
+      "description": "Ownership and share statistics",
+      "properties": {
+        "shares_outstanding": { "$ref": "#/$defs/rawValue" },
+        "shares_float": { "$ref": "#/$defs/rawValue" },
+        "insider_ownership": { "$ref": "#/$defs/rawValue" },
+        "insider_transactions": { "$ref": "#/$defs/rawValue" },
+        "institutional_ownership": { "$ref": "#/$defs/rawValue" },
+        "institutional_transactions": { "$ref": "#/$defs/rawValue" },
+        "short_float": { "$ref": "#/$defs/rawValue" },
+        "short_ratio": { "$ref": "#/$defs/rawValue" },
+        "short_interest": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "performance": {
+      "type": "object",
+      "description": "Historical price performance",
+      "properties": {
+        "perf_week": { "$ref": "#/$defs/rawValue" },
+        "perf_month": { "$ref": "#/$defs/rawValue" },
+        "perf_quarter": { "$ref": "#/$defs/rawValue" },
+        "perf_half": { "$ref": "#/$defs/rawValue" },
+        "perf_ytd": { "$ref": "#/$defs/rawValue" },
+        "perf_year": { "$ref": "#/$defs/rawValue" },
+        "perf_3y": { "$ref": "#/$defs/rawValue" },
+        "perf_5y": { "$ref": "#/$defs/rawValue" },
+        "perf_10y": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "technical": {
+      "type": "object",
+      "description": "Technical analysis indicators",
+      "properties": {
+        "beta": { "$ref": "#/$defs/rawValue" },
+        "atr": { "$ref": "#/$defs/rawValue" },
+        "volatility": { "$ref": "#/$defs/rawValue" },
+        "volatility_week": { "$ref": "#/$defs/rawValue" },
+        "volatility_month": { "$ref": "#/$defs/rawValue" },
+        "sma20": { "$ref": "#/$defs/rawValue" },
+        "sma50": { "$ref": "#/$defs/rawValue" },
+        "sma200": { "$ref": "#/$defs/rawValue" },
+        "high_52w": { "$ref": "#/$defs/rawValue" },
+        "low_52w": { "$ref": "#/$defs/rawValue" },
+        "rsi": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "analyst": {
+      "type": "object",
+      "description": "Analyst ratings and price targets",
+      "properties": {
+        "target_price": { "$ref": "#/$defs/rawValue" },
+        "recommendation": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "options": {
+      "type": "object",
+      "description": "Options and short selling availability",
+      "properties": {
+        "option_short": { "$ref": "#/$defs/rawValue" }
+      },
+      "additionalProperties": false
+    },
+    "paywall": {
+      "type": "object",
+      "description": "Paywall detection metadata",
+      "properties": {
+        "has_paywalled_fields": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if any fields are behind Elite paywall"
+        },
+        "paywalled_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of paywalled fields detected"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
