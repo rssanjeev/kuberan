@@ -1,0 +1,41 @@
+{
+  "provider": "yfinance",
+  "ticker": "AAPL",
+  "as_of_date": "2025-12-15",
+  "identity": {
+    "company_name": "Apple Inc.",
+    "exchange": "NMS",
+    "country": "United States",
+    "sector": "Technology",
+    "industry": "Consumer Electronics"
+  },
+  "fundamentals": {
+    "market_cap": 2700000000000,
+    "enterprise_value": 2750000000000,
+    "employees": 161000,
+    "shares_outstanding": 15500000000,
+    "beta_5y_monthly": 1.25,
+    "revenue_ttm": 385000000000,
+    "net_income_ttm": 97000000000,
+    "price_52w_high": 199.62,
+    "price_52w_low": 164.08
+  },
+  "prices": {
+    "close_price": 174.49,
+    "open_price": 173.85,
+    "high_price": 175.10,
+    "low_price": 173.50,
+    "adjusted_close_price": 174.49,
+    "volume": 50123456
+  },
+  "corporate_actions": {
+    "split_event": {
+      "date": "2020-08-31",
+      "ratio": "4:1"
+    },
+    "dividend_event": {
+      "date": "2025-11-15",
+      "amount": 0.24
+    }
+  }
+}

@@ -1,0 +1,217 @@
+# FinViz Test Configuration for Cartographer Scanner
+# This config tests the scanner with a minimal set of fields from FinViz quote pages
+# Updated: 2025-12-21 - Fixed selectors to use valid CSS
+
+site_name: finviz
+base_url: https://finviz.com
+
+# Global interceptors for handling popups/ads
+global_interceptors:
+  - name: cookie_banner
+    trigger_selector: ".cookie-banner, .gdpr-consent"
+    action: click
+    target_selector: ".accept-button, .consent-accept"
+    timeout_ms: 2000
+    priority: 10
+  
+  - name: ad_overlay
+    trigger_selector: ".ad-overlay, .modal-backdrop"
+    action: close
+    target_selector: ".close-button, [aria-label='Close']"
+    timeout_ms: 1000
+    priority: 20
+
+# Page templates
+page_templates:
+  # Stock quote page (e.g., NVDA)
+  - signature:
+      name: stock_page
+      url_pattern: "^https://finviz\\.com/quote\\.ashx\\?t=[A-Z]+"
+      required_elements:
+        - "table.snapshot-table2"
+      forbidden_elements:
+        - ".error-page"
+        - ".ticker-not-found"
+    
+    interceptors:
+      - cookie_banner
+      - ad_overlay
+    
+    regions:
+      # Header information
+      - region_id: header
+        description: "Ticker and company name"
+        container_selector: "table.fullview-title"
+        parsing_rules:
+          - field_name: ticker
+            label_text: null
+            selector:
+              primary: ".fullview-title .quote-header_ticker-wrapper_ticker"
+              fallbacks:
+                - "h1 a"
+                - "a.tab-link"
+              selector_type: css
+            data_type: string
+            required: true
+          
+          - field_name: company_name
+            label_text: null
+            selector:
+              primary: ".fullview-title .quote-header_ticker-wrapper_company"
+              fallbacks:
+                - "h2"
+                - ".fullview-title a"
+              selector_type: css
+            data_type: string
+            required: true
+      
+      # Classification chips (sector/industry/country/exchange)
+      - region_id: classification
+        description: "Sector, industry, country, exchange"
+        container_selector: "table.fullview-links"
+        parsing_rules:
+          - field_name: sector
+            label_text: null
+            selector:
+              primary: "table.fullview-links a[href*='sec_']"
+              fallbacks:
+                - ".fullview-links a"
+              selector_type: css
+            data_type: string
+            required: false
+          
+          - field_name: industry
+            label_text: null
+            selector:
+              primary: "table.fullview-links a[href*='ind_']"
+              fallbacks:
+                - ".fullview-links tr td:nth-child(2) a"
+              selector_type: css
+            data_type: string
+            required: false
+          
+          - field_name: country
+            label_text: null
+            selector:
+              primary: "table.fullview-links a[href*='geo_']"
+              fallbacks:
+                - ".fullview-links tr:nth-child(2) td:first-child a"
+              selector_type: css
+            data_type: string
+            required: false
+          
+          - field_name: exchange
+            label_text: null
+            selector:
+              primary: "table.fullview-links a[href*='exch_']"
+              fallbacks:
+                - ".fullview-links tr:nth-child(2) td:nth-child(2) a"
+              selector_type: css
+            data_type: string
+            required: false
+      
+      # Snapshot table (main data) - Uses label-based extraction
+      - region_id: snapshot_table
+        description: "Main fundamentals table"
+        container_selector: "table.snapshot-table2"
+        parsing_rules:
+          # Market Cap - Uses index in table (row 1, col 2)
+          - field_name: market_cap
+            label_text: "Market Cap"
+            selector:
+              primary: "table.snapshot-table2 tr:nth-child(2) td:nth-child(2)"
+              fallbacks:
+                - ".snapshot-table2 td.snapshot-td2 + td"
+              selector_type: css
+            data_type: currency
+            transformation: market_cap
+            required: false
+          
+          # P/E Ratio (row 1, col 4)
+          - field_name: pe_ratio
+            label_text: "P/E"
+            selector:
+              primary: "table.snapshot-table2 tr:nth-child(1) td:nth-child(4)"
+              fallbacks:
+                - ".snapshot-table2 tr:first-child td:nth-child(4)"
+              selector_type: css
+            data_type: float
+            required: false
+          
+          # Forward P/E (row 1, col 6)
+          - field_name: forward_pe_ratio
+            label_text: "Forward P/E"
+            selector:
+              primary: "table.snapshot-table2 tr:nth-child(1) td:nth-child(6)"
+              fallbacks:
+                - ".snapshot-table2 tr:first-child td:nth-child(6)"
+              selector_type: css
+            data_type: float
+            required: false
+          
+          # EPS (TTM) (row 2, col 6)
+          - field_name: eps_ttm
+            label_text: "EPS (ttm)"
+            selector:
+              primary: "table.snapshot-table2 tr:nth-child(2) td:nth-child(6)"
+              fallbacks:
+                - ".snapshot-table2 tr:nth-child(2) td:nth-child(6)"
+              selector_type: css
+            data_type: float
+            required: false
+          
+          # Dividend Yield (row 3, col 6)
+          - field_name: dividend_yield
+            label_text: "Dividend %"
+            selector:
+              primary: "table.snapshot-table2 tr:nth-child(3) td:nth-child(6)"
+              fallbacks:
+                - ".snapshot-table2 tr:nth-child(3) td:nth-child(6)"
+              selector_type: css
+            data_type: percentage
+            required: false
+          
+          # ROE (row 5, col 6)
+          - field_name: roe
+            label_text: "ROE"
+            selector:
+              primary: "table.snapshot-table2 tr:nth-child(5) td:nth-child(6)"
+              fallbacks:
+                - ".snapshot-table2 tr:nth-child(5) td:nth-child(6)"
+              selector_type: css
+            data_type: percentage
+            required: false
+          
+          # Volume (row 11, col 10)
+          - field_name: volume
+            label_text: "Volume"
+            selector:
+              primary: "table.snapshot-table2 tr:nth-child(11) td:nth-child(10)"
+              fallbacks:
+                - ".snapshot-table2 tr:nth-child(11) td:last-child"
+              selector_type: css
+            data_type: integer
+            transformation: volume
+            required: false
+          
+          # 52W High (row 9, col 10)
+          - field_name: high_52w
+            label_text: "52W High"
+            selector:
+              primary: "table.snapshot-table2 tr:nth-child(9) td:nth-child(10)"
+              fallbacks:
+                - ".snapshot-table2 tr:nth-child(9) td:last-child"
+              selector_type: css
+            data_type: float
+            required: false
+
+# Global settings
+settings:
+  headless: false  # Set to true for production
+  browser_type: chromium
+  timeout_ms: 60000
+  viewport_width: 1920
+  viewport_height: 1080
+  wait_for_selector_timeout: 10000
+  screenshot_on_error: true
+  max_retries: 3

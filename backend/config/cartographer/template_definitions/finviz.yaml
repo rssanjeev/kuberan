@@ -1,0 +1,294 @@
+# Cartographer Configuration for FinViz
+# Last Updated: 2025-12-20
+# Architecture: Config-driven web scraping with self-healing fallbacks
+# File Size: <300 lines (compliant)
+
+site_name: "finviz"
+base_url: "https://finviz.com"
+
+# Global Settings
+settings:
+  default_timeout: 10000  # milliseconds
+  max_retries: 3
+  headless: true
+  browser_type: "chromium"
+  wait_for_network_idle: true
+
+# Global Interceptors (Pop-ups, Ads, Modals)
+global_interceptors:
+  - name: "cookie_consent"
+    trigger_selector: "div.cookie-notice"
+    action: "click"
+    target_selector: "button.accept-cookies"
+    timeout_ms: 2000
+    priority: 10
+
+  - name: "premium_popup"
+    trigger_selector: "div.premium-overlay"
+    action: "click"
+    target_selector: "button.close-premium"
+    timeout_ms: 2000
+    priority: 20
+
+  - name: "ad_overlay"
+    trigger_selector: "div.ad-interstitial"
+    action: "dismiss"
+    target_selector: "span.close-ad"
+    timeout_ms: 1500
+    priority: 30
+
+# Page Templates
+page_templates:
+  # Template 1: Stock/ETF Quote Page
+  - signature:
+      name: "quote_page"
+      url_pattern: "^https://finviz\\.com/quote\\.ashx\\?t=.*"
+      required_elements:
+        - "table.snapshot-table2"
+        - "div.quote-header"
+      forbidden_elements:
+        - "div.error-page"
+        - "div.ticker-not-found"
+
+    interceptors:
+      - "cookie_consent"
+      - "premium_popup"
+
+    regions:
+      # Region 1: Header (Ticker + Company Name)
+      - region_id: "header"
+        description: "Quote header with ticker and company name"
+        container_selector: "div.quote-header"
+        parsing_rules:
+          - field_name: "ticker"
+            selector:
+              primary: "div.quote-header h1"
+              fallbacks:
+                - "table.fullview-title td b"
+                - "span.ticker-symbol"
+              selector_type: "css"
+            data_type: "string"
+            required: true
+
+          - field_name: "company_name"
+            selector:
+              primary: "div.quote-header h2"
+              fallbacks:
+                - "table.fullview-title td.fullview-title"
+              selector_type: "css"
+            data_type: "string"
+            required: true
+
+      # Region 2: Classification Chips
+      - region_id: "classification"
+        description: "Sector, Industry, Country, Exchange chips"
+        container_selector: "div.quote-links"
+        parsing_rules:
+          - field_name: "sector"
+            label_text: null
+            selector:
+              primary: "div.quote-links a:nth-of-type(1)"
+              selector_type: "css"
+            data_type: "string"
+
+          - field_name: "industry"
+            selector:
+              primary: "div.quote-links a:nth-of-type(2)"
+              selector_type: "css"
+            data_type: "string"
+
+          - field_name: "country"
+            selector:
+              primary: "div.quote-links a:nth-of-type(3)"
+              selector_type: "css"
+            data_type: "string"
+
+          - field_name: "exchange"
+            selector:
+              primary: "div.quote-links a:nth-of-type(4)"
+              selector_type: "css"
+            data_type: "string"
+
+      # Region 3: Snapshot Table (Main Fundamentals)
+      - region_id: "snapshot_table"
+        description: "Fundamental metrics grid"
+        container_selector: "table.snapshot-table2"
+        parsing_rules:
+          # Valuation Metrics
+          - field_name: "market_cap"
+            label_text: "Market Cap"
+            selector:
+              primary: "td:contains('Market Cap') + td"
+              fallbacks:
+                - "//td[contains(text(), 'Market Cap')]/following-sibling::td[1]"
+              selector_type: "css"
+            data_type: "currency"
+            transformation: "parse_market_cap"
+
+          - field_name: "pe_ratio"
+            label_text: "P/E"
+            selector:
+              primary: "td:contains('P/E') + td"
+              fallbacks:
+                - "//td[text()='P/E']/following-sibling::td[1]"
+              selector_type: "css"
+            data_type: "float"
+
+          - field_name: "forward_pe"
+            label_text: "Forward P/E"
+            selector:
+              primary: "td:contains('Forward P/E') + td"
+              selector_type: "css"
+            data_type: "float"
+
+          - field_name: "peg_ratio"
+            label_text: "PEG"
+            selector:
+              primary: "td:contains('PEG') + td"
+              selector_type: "css"
+            data_type: "float"
+
+          - field_name: "price_to_sales"
+            label_text: "P/S"
+            selector:
+              primary: "td:contains('P/S') + td"
+              selector_type: "css"
+            data_type: "float"
+
+          - field_name: "price_to_book"
+            label_text: "P/B"
+            selector:
+              primary: "td:contains('P/B') + td"
+              selector_type: "css"
+            data_type: "float"
+
+          # Profitability Metrics
+          - field_name: "roe"
+            label_text: "ROE"
+            selector:
+              primary: "td:contains('ROE') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          - field_name: "roa"
+            label_text: "ROA"
+            selector:
+              primary: "td:contains('ROA') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          - field_name: "roi"
+            label_text: "ROI"
+            selector:
+              primary: "td:contains('ROI') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          - field_name: "gross_margin"
+            label_text: "Gross Margin"
+            selector:
+              primary: "td:contains('Gross Margin') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          - field_name: "operating_margin"
+            label_text: "Oper. Margin"
+            selector:
+              primary: "td:contains('Oper. Margin') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          - field_name: "profit_margin"
+            label_text: "Profit Margin"
+            selector:
+              primary: "td:contains('Profit Margin') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          # Dividend Metrics
+          - field_name: "dividend_yield"
+            label_text: "Dividend %"
+            selector:
+              primary: "td:contains('Dividend %') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          - field_name: "payout_ratio"
+            label_text: "Payout"
+            selector:
+              primary: "td:contains('Payout') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          # ETF-Specific Fields
+          - field_name: "aum"
+            label_text: "AUM"
+            selector:
+              primary: "td:contains('AUM') + td"
+              fallbacks:
+                - "td:contains('Assets') + td"
+              selector_type: "css"
+            data_type: "currency"
+            transformation: "parse_market_cap"
+
+          - field_name: "expense_ratio"
+            label_text: "Expense"
+            selector:
+              primary: "td:contains('Expense') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          - field_name: "dividend_ttm"
+            label_text: "Dividend TTM"
+            selector:
+              primary: "td:contains('Dividend TTM') + td"
+              selector_type: "css"
+            data_type: "string"
+
+          # Performance Metrics
+          - field_name: "perf_week"
+            label_text: "Perf Week"
+            selector:
+              primary: "td:contains('Perf Week') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          - field_name: "perf_month"
+            label_text: "Perf Month"
+            selector:
+              primary: "td:contains('Perf Month') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          - field_name: "perf_quarter"
+            label_text: "Perf Quarter"
+            selector:
+              primary: "td:contains('Perf Quarter') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+          - field_name: "perf_year"
+            label_text: "Perf Year"
+            selector:
+              primary: "td:contains('Perf Year') + td"
+              selector_type: "css"
+            data_type: "percentage"
+
+      # Region 4: Peers & ETF Holdings
+      - region_id: "related_tickers"
+        description: "Peers and 'Held by' ETFs"
+        container_selector: "div.peers-links"
+        parsing_rules:
+          - field_name: "peers"
+            label_text: "Peers"
+            selector:
+              primary: "div:contains('Peers') a"
+              selector_type: "css"
+            data_type: "list"
+
+          - field_name: "held_by_etfs"
+            label_text: "Held by"
+            selector:
+              primary: "div:contains('Held by') a"
+              selector_type: "css"
+            data_type: "list"

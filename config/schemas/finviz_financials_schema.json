@@ -1,0 +1,308 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kuberan.io/schemas/finviz_financials_v1.json",
+  "title": "FinViz Financial Statements Schema v1",
+  "description": "JSON Schema for validating FinViz financial statements (Income Statement, Balance Sheet, Cash Flow)",
+  "type": "object",
+  "required": ["provider", "ticker", "snapshot_version", "as_of_date", "fetched_at"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "const": "FINVIZ",
+      "description": "Provider identifier"
+    },
+    "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}$",
+      "description": "Stock ticker symbol"
+    },
+    "snapshot_version": {
+      "type": "string",
+      "const": "v1",
+      "description": "Schema version for migration support"
+    },
+    "as_of_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the data represents (YYYY-MM-DD)"
+    },
+    "fetched_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when data was fetched"
+    },
+    "income_statement": {
+      "$ref": "#/$defs/incomeStatement"
+    },
+    "balance_sheet": {
+      "$ref": "#/$defs/balanceSheet"
+    },
+    "cash_flow": {
+      "$ref": "#/$defs/cashFlow"
+    },
+    "metadata": {
+      "$ref": "#/$defs/statementMetadata"
+    },
+    "paywall": {
+      "$ref": "#/$defs/paywall"
+    }
+  },
+  "$defs": {
+    "periodValue": {
+      "type": ["string", "number", "null"],
+      "description": "Financial value for a specific period (raw as displayed)"
+    },
+    "periodData": {
+      "type": "object",
+      "description": "Financial data for a single period (TTM, FY_YYYY, or Q#_YYYY)",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period identifier (TTM, FY_2024, Q1_2024, etc.)"
+        },
+        "period_end_date": {
+          "type": ["string", "null"],
+          "description": "End date of the fiscal period"
+        },
+        "values": {
+          "type": "object",
+          "description": "Key-value pairs of financial line items",
+          "additionalProperties": { "$ref": "#/$defs/periodValue" }
+        }
+      },
+      "required": ["period"],
+      "additionalProperties": false
+    },
+    "incomeStatement": {
+      "type": "object",
+      "description": "Income Statement / Profit & Loss data",
+      "properties": {
+        "periods_available": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Number of periods with data (typically 8)"
+        },
+        "periods": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/periodData" },
+          "description": "Array of period data (TTM first, then fiscal years)"
+        },
+        "line_items": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of available line item names",
+          "default": [
+            "Period",
+            "Period End Date",
+            "Total Revenue",
+            "Cost of Goods Sold Incl. D&A",
+            "Gross Profit",
+            "Selling, General and Administrative Excl. Other",
+            "Research and Development",
+            "Other Operating Expense",
+            "Operating Income",
+            "Interest Expense",
+            "Unusual Expense",
+            "Net Income Before Taxes",
+            "Income Taxes",
+            "Consolidated Net Income",
+            "Net Income From Continuing Operations",
+            "Net Income",
+            "EPS (Recurring)",
+            "EPS (Basic, Before Extraordinaries)",
+            "EPS (Diluted)",
+            "EBITDA",
+            "Non-Operating Income (Expense)",
+            "Other After Tax Adjustments",
+            "Stock Option Compensation Expense",
+            "Price To Earnings Ratio",
+            "Price To Sales Ratio",
+            "Gross Margin",
+            "Operating Margin",
+            "Net Margin",
+            "Shares Outstanding",
+            "Market Capitalization"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "balanceSheet": {
+      "type": "object",
+      "description": "Balance Sheet / Statement of Financial Position",
+      "properties": {
+        "periods_available": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Number of periods with data (typically 8)"
+        },
+        "periods": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/periodData" },
+          "description": "Array of period data (fiscal years)"
+        },
+        "line_items": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of available line item names",
+          "default": [
+            "Period",
+            "Period End Date",
+            "Short Term Receivables",
+            "Inventories",
+            "Other Current Assets",
+            "Total Current Assets",
+            "Net Property, Plant & Equipment",
+            "Total Investments and Advances",
+            "Long-Term Note Receivable",
+            "Intangible Assets",
+            "Deferred Tax Assets",
+            "Other Assets",
+            "Total Assets",
+            "Short Term Debt Incl. Current Port. of LT Debt",
+            "Accounts Payable",
+            "Income Tax Payable",
+            "Other Current Liabilities",
+            "Total Current Liabilities",
+            "Long Term Debt",
+            "Provision for Risks Charges",
+            "Deferred Tax Liabilities",
+            "Other Liabilities",
+            "Total Liabilities",
+            "Non-Equity Reserves",
+            "Preferred Stock - Carrying Value",
+            "Common Equity",
+            "Total Shareholders Equity",
+            "Accumulated Minority Interest",
+            "Total Equity",
+            "Liabilities & Shareholders Equity",
+            "Book Value Per Share",
+            "Total Debt",
+            "Debt-to-Equity Ratio",
+            "Total Current Assets / Total Current Liabilities",
+            "Long Term Debt To Total Equity",
+            "Net Debt",
+            "Tangible Book Value Per Share",
+            "Working Capital",
+            "Net Debt Per Share"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "cashFlow": {
+      "type": "object",
+      "description": "Cash Flow Statement",
+      "properties": {
+        "periods_available": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Number of periods with data (typically 8)"
+        },
+        "periods": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/periodData" },
+          "description": "Array of period data (TTM first, then fiscal years)"
+        },
+        "line_items": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of available line item names",
+          "default": [
+            "Period",
+            "Period End Date",
+            "Net Income",
+            "Depreciation, Depletion and Amortization",
+            "Deferred Taxes & Investment Tax Credit",
+            "Other Funds",
+            "Funds from Operations",
+            "Extraordinaries",
+            "Changes in Working Capital",
+            "Accounts Receivable",
+            "Inventories",
+            "Accounts Payable",
+            "Other Assets/Liabilities",
+            "Net Operating Cash Flow",
+            "Capital Expenditures",
+            "Net Assets from Acquisitions",
+            "Sale of Fixed Assets & Businesses",
+            "Purchase/Sale of Investments",
+            "Other Uses",
+            "Other Sources",
+            "Net Investing Cash Flow",
+            "Cash Dividends Paid",
+            "Change in Short Term Borrowings",
+            "Change in Current Debt",
+            "Change in Long Term Debt",
+            "Issuance/Reduction of Debt, Net",
+            "Issuance of Stock",
+            "Repurchase of Stock",
+            "Issuance/Reduction of Capital Stock, Net",
+            "Other Funds",
+            "Other Uses",
+            "Net Financing Cash Flow",
+            "Effect of Exchange Rate Changes",
+            "Net Change in Cash",
+            "Free Cash Flow",
+            "Free Cash Flow Per Share",
+            "Price to Free Cash Flow"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "statementMetadata": {
+      "type": "object",
+      "description": "Metadata about the financial statements extraction",
+      "properties": {
+        "extraction_method": {
+          "type": "string",
+          "enum": ["playwright", "mcp_puppeteer", "api"],
+          "description": "How the data was extracted"
+        },
+        "income_statement_periods": {
+          "type": "integer",
+          "description": "Number of income statement periods extracted"
+        },
+        "balance_sheet_periods": {
+          "type": "integer",
+          "description": "Number of balance sheet periods extracted"
+        },
+        "cash_flow_periods": {
+          "type": "integer",
+          "description": "Number of cash flow periods extracted"
+        },
+        "total_data_points": {
+          "type": "integer",
+          "description": "Total count of extracted data points"
+        },
+        "has_ttm": {
+          "type": "boolean",
+          "description": "Whether TTM (Trailing Twelve Months) data is available"
+        }
+      },
+      "additionalProperties": false
+    },
+    "paywall": {
+      "type": "object",
+      "description": "Paywall detection for financial statements",
+      "properties": {
+        "detected": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if paywall was detected during extraction"
+        },
+        "limited_periods": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if only limited historical periods are available"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

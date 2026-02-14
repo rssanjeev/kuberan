@@ -1,0 +1,607 @@
+# DATA_PRIORITY_MATRIX for Kuberan standardization
+# Version: v1
+#
+# NOTE:
+# - This is a machine-readable counterpart to docs/DATA_STANDARDIZATION_RULES.md.
+# - Each top-level key is a data point name.
+# - Strategies must match the ones defined in the rules doc.
+# - Provider names used here: massive, yfinance, finviz, stockanalysis.
+
+###############################################################################
+# 1. Identity & Classification
+###############################################################################
+
+ticker:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+    - provider: yfinance
+      weight: 0.9
+    - provider: stockanalysis
+      weight: 0.9
+    - provider: finviz
+      weight: 0.8
+
+name:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+    - provider: yfinance
+      weight: 0.9
+    - provider: stockanalysis
+      weight: 0.9
+    - provider: finviz
+      weight: 0.8
+
+exchange:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+    - provider: yfinance
+      weight: 0.9
+
+exchange_mic:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+locale:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+country:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 0.9
+    - provider: massive
+      weight: 0.9
+    - provider: yfinance
+      weight: 0.8
+
+sector:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+    - provider: yfinance
+      weight: 0.8
+
+industry:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+    - provider: yfinance
+      weight: 0.8
+
+sic_code:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+    - provider: stockanalysis
+      weight: 0.7
+    - provider: finviz
+      weight: 0.6
+
+sic_description:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+cik:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+composite_figi:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+share_class_figi:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+isin:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+cusip:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+primary_listing_date:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+status_active:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+###############################################################################
+# 2. Company Profile & Address
+###############################################################################
+
+company_description:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+    - provider: stockanalysis
+      weight: 0.9
+
+website_url:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+    - provider: stockanalysis
+      weight: 0.9
+
+phone_number:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+address_line1:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+address_city:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+address_state:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+address_postal_code:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+country_full:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+employees:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+    - provider: stockanalysis
+      weight: 0.9
+    - provider: yfinance
+      weight: 0.8
+
+###############################################################################
+# 3. Size, Shares & Liquidity
+###############################################################################
+
+market_cap:
+  strategy: single_value
+  candidates:
+    - provider: yfinance
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+    - provider: stockanalysis
+      weight: 0.85
+
+enterprise_value:
+  strategy: single_value
+  candidates:
+    - provider: yfinance
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+    - provider: stockanalysis
+      weight: 0.85
+
+shares_outstanding:
+  strategy: single_value
+  candidates:
+    - provider: massive
+      weight: 1.0
+    - provider: stockanalysis
+      weight: 0.9
+    - provider: yfinance
+      weight: 0.85
+
+free_float_shares:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+avg_volume_10d:
+  strategy: single_value
+  candidates:
+    - provider: yfinance
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+avg_volume_3m:
+  strategy: single_value
+  candidates:
+    - provider: yfinance
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+###############################################################################
+# 4. Valuation Multiples
+###############################################################################
+
+pe_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+    - provider: yfinance
+      weight: 0.85
+
+pe_forward:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+peg_ratio:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+ps_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+pb_ratio:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+pfcf_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+enterprise_value_ebitda:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+enterprise_value_sales:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+###############################################################################
+# 5. Profitability & Margins
+###############################################################################
+
+gross_margin_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+operating_margin_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+profit_margin_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+return_on_equity_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+return_on_assets_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+return_on_invested_capital_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+###############################################################################
+# 6. Growth Metrics
+###############################################################################
+
+revenue_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: yfinance
+      weight: 0.9
+
+revenue_5y_cagr:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+net_income_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: yfinance
+      weight: 0.9
+
+net_income_5y_cagr:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+free_cash_flow_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+free_cash_flow_5y_cagr:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+###############################################################################
+# 7. Earnings & Dividends
+###############################################################################
+
+eps_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+EPS_forward:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+Dividend_yield_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+Dividend_payout_ratio_ttm:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+###############################################################################
+# 8. Risk & Volatility
+###############################################################################
+
+beta_5y_monthly:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: yfinance
+      weight: 0.9
+
+beta_1y_daily:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+price_52w_high:
+  strategy: single_value
+  candidates:
+    - provider: yfinance
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+price_52w_low:
+  strategy: single_value
+  candidates:
+    - provider: yfinance
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+###############################################################################
+# 9. Prices (OHLCV) - Time Series
+###############################################################################
+
+close_price:
+  strategy: timeseries_primary_with_checks
+  candidates:
+    - provider: yfinance
+      role: primary
+    - provider: finviz
+      role: sanity_check
+
+open_price:
+  strategy: timeseries_primary_with_checks
+  candidates:
+    - provider: yfinance
+      role: primary
+    - provider: finviz
+      role: sanity_check
+
+high_price:
+  strategy: timeseries_primary_with_checks
+  candidates:
+    - provider: yfinance
+      role: primary
+    - provider: finviz
+      role: sanity_check
+
+low_price:
+  strategy: timeseries_primary_with_checks
+  candidates:
+    - provider: yfinance
+      role: primary
+    - provider: finviz
+      role: sanity_check
+
+adjusted_close_price:
+  strategy: timeseries_primary_with_checks
+  candidates:
+    - provider: yfinance
+      role: primary
+
+volume:
+  strategy: timeseries_primary_with_checks
+  candidates:
+    - provider: yfinance
+      role: primary
+    - provider: finviz
+      role: sanity_check
+
+###############################################################################
+# 10. Corporate Actions (Collections)
+###############################################################################
+
+split_event:
+  strategy: single_value
+  scope: event
+  candidates:
+    - provider: massive
+      weight: 1.0
+    - provider: yfinance
+      weight: 0.9
+
+dividend_event:
+  strategy: single_value
+  scope: event
+  candidates:
+    - provider: massive
+      weight: 1.0
+    - provider: yfinance
+      weight: 0.9
+
+###############################################################################
+# 11. News & Sentiment
+###############################################################################
+
+news_article:
+  strategy: aggregate_union
+  candidates:
+    - provider: massive
+    - provider: finviz
+    - provider: stockanalysis
+
+news_sentiment_score:
+  strategy: passthrough
+  candidates:
+    - provider: massive
+      weight: 1.0
+
+###############################################################################
+# 12. Misc / ETF-Specific Fields (Skeletons for v1)
+###############################################################################
+
+etf_aum:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+etf_expense_ratio:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+    - provider: finviz
+      weight: 0.9
+
+etf_holdings_count:
+  strategy: single_value
+  candidates:
+    - provider: stockanalysis
+      weight: 1.0
+
+# END OF v1 MATRIX

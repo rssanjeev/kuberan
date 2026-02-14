@@ -1,0 +1,1054 @@
+{
+  "$schema": "finviz_ticker_schema_v1",
+  "description": "Standardized schema for all FinViz data extraction (Screener + Quote Page)",
+  "last_updated": "2025-12-21",
+  
+  "schema": {
+    "ticker": {
+      "type": "string",
+      "description": "Stock ticker symbol",
+      "example": "AAPL",
+      "source": ["screener", "quote_page"]
+    },
+    
+    "identity": {
+      "description": "Company identification and classification",
+      "fields": {
+        "company_name": {
+          "type": "string",
+          "description": "Full legal company name",
+          "example": "Apple Inc",
+          "source": ["screener"],
+          "screener_key": "Company"
+        },
+        "sector": {
+          "type": "string",
+          "description": "Business sector classification (e.g., Technology, Healthcare, Financial)",
+          "example": "Technology",
+          "source": ["screener"],
+          "screener_key": "Sector"
+        },
+        "industry": {
+          "type": "string",
+          "description": "Specific industry within the sector",
+          "example": "Consumer Electronics",
+          "source": ["screener"],
+          "screener_key": "Industry"
+        },
+        "country": {
+          "type": "string",
+          "description": "Country of incorporation/headquarters",
+          "example": "USA",
+          "source": ["screener"],
+          "screener_key": "Country"
+        },
+        "index": {
+          "type": "string",
+          "description": "Major index memberships (S&P 500, DJIA, NASDAQ 100)",
+          "example": "NDX, S&P 500",
+          "source": ["quote_page"],
+          "quote_page_key": "Index"
+        },
+        "employees": {
+          "type": "integer",
+          "description": "Number of full-time employees",
+          "example": "164000",
+          "source": ["quote_page"],
+          "quote_page_key": "Employees"
+        },
+        "ipo_date": {
+          "type": "string",
+          "description": "Initial public offering date",
+          "example": "Dec 12, 1980",
+          "source": ["quote_page"],
+          "quote_page_key": "IPO"
+        }
+      }
+    },
+    
+    "price": {
+      "description": "Current price and trading data",
+      "fields": {
+        "price": {
+          "type": "number",
+          "description": "Current stock price",
+          "example": "273.67",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Price",
+          "quote_page_key": "Price"
+        },
+        "change": {
+          "type": "string",
+          "description": "Price change percentage for the current session",
+          "example": "0.54%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Change",
+          "quote_page_key": "Change"
+        },
+        "change_from_open": {
+          "type": "string",
+          "description": "Percentage change from today's opening price",
+          "example": "0.47%",
+          "source": ["screener"],
+          "screener_key": "Change from Open"
+        },
+        "gap": {
+          "type": "string",
+          "description": "Opening gap percentage (difference between today's open and yesterday's close)",
+          "example": "0.08%",
+          "source": ["screener"],
+          "screener_key": "Gap"
+        },
+        "prev_close": {
+          "type": "number",
+          "description": "Previous trading day's closing price",
+          "example": "458.13",
+          "source": ["quote_page"],
+          "quote_page_key": "Prev Close"
+        },
+        "volume": {
+          "type": "string",
+          "description": "Number of shares traded in the current session",
+          "example": "144,243,462",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Volume",
+          "quote_page_key": "Volume"
+        },
+        "avg_volume": {
+          "type": "string",
+          "description": "Average daily trading volume (typically 3-month average)",
+          "example": "48.86M",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Avg Volume",
+          "quote_page_key": "Avg Volume"
+        },
+        "rel_volume": {
+          "type": "number",
+          "description": "Relative volume - today's volume divided by average volume",
+          "example": "2.95",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Rel Volume",
+          "quote_page_key": "Rel Volume"
+        },
+        "trades": {
+          "type": "string",
+          "description": "Number of trades executed in the current session",
+          "example": "102345",
+          "source": ["quote_page"],
+          "quote_page_key": "Trades"
+        }
+      }
+    },
+    
+    "valuation": {
+      "description": "Valuation ratios and metrics",
+      "fields": {
+        "market_cap": {
+          "type": "string",
+          "description": "Total market capitalization (share price × shares outstanding)",
+          "example": "4043.84B",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Market Cap",
+          "quote_page_key": "Market Cap"
+        },
+        "enterprise_value": {
+          "type": "string",
+          "description": "Total company value (market cap + debt - cash)",
+          "example": "97.47B",
+          "source": ["quote_page"],
+          "quote_page_key": "Enterprise Value"
+        },
+        "pe_ratio": {
+          "type": "number",
+          "description": "Price-to-Earnings ratio (trailing twelve months)",
+          "example": "36.69",
+          "source": ["screener", "quote_page"],
+          "screener_key": "P/E",
+          "quote_page_key": "P/E"
+        },
+        "forward_pe": {
+          "type": "number",
+          "description": "Forward Price-to-Earnings ratio based on next year's estimated earnings",
+          "example": "29.96",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Fwd P/E",
+          "quote_page_key": "Forward P/E"
+        },
+        "peg_ratio": {
+          "type": "number",
+          "description": "Price/Earnings-to-Growth ratio (P/E divided by earnings growth rate)",
+          "example": "2.86",
+          "source": ["screener", "quote_page"],
+          "screener_key": "PEG",
+          "quote_page_key": "PEG"
+        },
+        "price_to_sales": {
+          "type": "number",
+          "description": "Price-to-Sales ratio (market cap divided by revenue)",
+          "example": "9.72",
+          "source": ["screener", "quote_page"],
+          "screener_key": "P/S",
+          "quote_page_key": "P/S"
+        },
+        "price_to_book": {
+          "type": "number",
+          "description": "Price-to-Book ratio (market cap divided by book value)",
+          "example": "54.83",
+          "source": ["screener", "quote_page"],
+          "screener_key": "P/B",
+          "quote_page_key": "P/B"
+        },
+        "price_to_cash": {
+          "type": "number",
+          "description": "Price-to-Cash ratio (market cap divided by cash and equivalents)",
+          "example": "73.93",
+          "source": ["screener", "quote_page"],
+          "screener_key": "P/C",
+          "quote_page_key": "P/C"
+        },
+        "price_to_fcf": {
+          "type": "number",
+          "description": "Price-to-Free-Cash-Flow ratio",
+          "example": "40.94",
+          "source": ["screener", "quote_page"],
+          "screener_key": "P/FCF",
+          "quote_page_key": "P/FCF"
+        },
+        "ev_to_ebitda": {
+          "type": "number",
+          "description": "Enterprise Value to EBITDA ratio",
+          "example": "50.52",
+          "source": ["quote_page"],
+          "quote_page_key": "EV/EBITDA"
+        },
+        "ev_to_sales": {
+          "type": "number",
+          "description": "Enterprise Value to Sales ratio",
+          "example": "13.82",
+          "source": ["quote_page"],
+          "quote_page_key": "EV/Sales"
+        }
+      }
+    },
+    
+    "financials": {
+      "description": "Financial metrics and ratios",
+      "fields": {
+        "income": {
+          "type": "string",
+          "description": "Net income (trailing twelve months)",
+          "example": "1.34B",
+          "source": ["quote_page"],
+          "quote_page_key": "Income"
+        },
+        "sales": {
+          "type": "string",
+          "description": "Total revenue (trailing twelve months)",
+          "example": "7.05B",
+          "source": ["quote_page"],
+          "quote_page_key": "Sales"
+        },
+        "book_value_per_share": {
+          "type": "number",
+          "description": "Book value per share (total equity divided by shares outstanding)",
+          "example": "152.30",
+          "source": ["quote_page"],
+          "quote_page_key": "Book/sh"
+        },
+        "cash_per_share": {
+          "type": "number",
+          "description": "Cash and equivalents per share",
+          "example": "15.94",
+          "source": ["quote_page"],
+          "quote_page_key": "Cash/sh"
+        }
+      }
+    },
+    
+    "profitability": {
+      "description": "Profitability ratios and margins",
+      "fields": {
+        "roa": {
+          "type": "string",
+          "description": "Return on Assets - net income divided by total assets",
+          "example": "30.93%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "ROA",
+          "quote_page_key": "ROA"
+        },
+        "roe": {
+          "type": "string",
+          "description": "Return on Equity - net income divided by shareholders' equity",
+          "example": "171.42%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "ROE",
+          "quote_page_key": "ROE"
+        },
+        "roic": {
+          "type": "string",
+          "description": "Return on Invested Capital - measures efficiency of capital allocation",
+          "example": "68.44%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "ROIC",
+          "quote_page_key": "ROIC"
+        },
+        "gross_margin": {
+          "type": "string",
+          "description": "Gross profit margin - (revenue - COGS) / revenue",
+          "example": "46.91%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Gross M",
+          "quote_page_key": "Gross Margin"
+        },
+        "operating_margin": {
+          "type": "string",
+          "description": "Operating profit margin - operating income / revenue",
+          "example": "31.97%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Oper M",
+          "quote_page_key": "Oper. Margin"
+        },
+        "profit_margin": {
+          "type": "string",
+          "description": "Net profit margin - net income / revenue",
+          "example": "26.92%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Profit M",
+          "quote_page_key": "Profit Margin"
+        }
+      }
+    },
+    
+    "liquidity": {
+      "description": "Liquidity and solvency ratios",
+      "fields": {
+        "current_ratio": {
+          "type": "number",
+          "description": "Current assets divided by current liabilities - measures short-term liquidity",
+          "example": "0.89",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Curr R",
+          "quote_page_key": "Current Ratio"
+        },
+        "quick_ratio": {
+          "type": "number",
+          "description": "Quick assets (current assets - inventory) divided by current liabilities",
+          "example": "0.86",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Quick R",
+          "quote_page_key": "Quick Ratio"
+        },
+        "debt_to_equity": {
+          "type": "number",
+          "description": "Total debt divided by shareholders' equity",
+          "example": "1.52",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Debt/Eq",
+          "quote_page_key": "Debt/Eq"
+        },
+        "lt_debt_to_equity": {
+          "type": "number",
+          "description": "Long-term debt divided by shareholders' equity",
+          "example": "1.22",
+          "source": ["screener", "quote_page"],
+          "screener_key": "LTDebt/Eq",
+          "quote_page_key": "LT Debt/Eq"
+        }
+      }
+    },
+    
+    "earnings": {
+      "description": "Earnings per share and growth metrics",
+      "fields": {
+        "eps_ttm": {
+          "type": "number",
+          "description": "Earnings per share (trailing twelve months)",
+          "example": "8.02",
+          "source": ["quote_page"],
+          "quote_page_key": "EPS (ttm)"
+        },
+        "eps_this_year": {
+          "type": "string",
+          "description": "EPS growth this year compared to last year",
+          "example": "10.50%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "EPS This Y",
+          "quote_page_key": "EPS this Y"
+        },
+        "eps_next_year": {
+          "type": "string",
+          "description": "Expected EPS growth next year",
+          "example": "10.83%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "EPS Next Y",
+          "quote_page_key": "EPS next Y"
+        },
+        "eps_next_quarter": {
+          "type": "number",
+          "description": "Expected EPS for the next quarter",
+          "example": "3.56",
+          "source": ["quote_page"],
+          "quote_page_key": "EPS next Q"
+        },
+        "eps_past_5y": {
+          "type": "string",
+          "description": "Average annual EPS growth over the past 5 years",
+          "example": "17.91%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "EPS Past 5Y",
+          "quote_page_key": "EPS next 5Y"
+        },
+        "eps_next_5y": {
+          "type": "string",
+          "description": "Expected average annual EPS growth for the next 5 years",
+          "example": "10.49%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "EPS Next 5Y",
+          "quote_page_key": "EPS next 5Y"
+        },
+        "eps_past_3y_5y": {
+          "type": "string",
+          "description": "EPS growth over past 3 years and 5 years (combined field)",
+          "example": "8.52% 13.51%",
+          "source": ["quote_page"],
+          "quote_page_key": "EPS past 3/5Y"
+        },
+        "eps_yoy_ttm": {
+          "type": "string",
+          "description": "Year-over-year EPS growth (trailing twelve months)",
+          "example": "-45.12%",
+          "source": ["quote_page"],
+          "quote_page_key": "EPS Y/Y TTM"
+        },
+        "eps_qoq": {
+          "type": "string",
+          "description": "Quarter-over-quarter EPS growth",
+          "example": "-66.54%",
+          "source": ["quote_page"],
+          "quote_page_key": "EPS Q/Q"
+        },
+        "sales_past_5y": {
+          "type": "string",
+          "description": "Average annual sales/revenue growth over the past 5 years",
+          "example": "8.71%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Sales Past 5Y",
+          "quote_page_key": "Sales past 5Y"
+        },
+        "sales_past_3y_5y": {
+          "type": "string",
+          "description": "Sales growth over past 3 years and 5 years (combined field)",
+          "example": "11.63% 13.87%",
+          "source": ["quote_page"],
+          "quote_page_key": "Sales past 3/5Y"
+        },
+        "sales_yoy_ttm": {
+          "type": "string",
+          "description": "Year-over-year sales growth (trailing twelve months)",
+          "example": "12.62%",
+          "source": ["quote_page"],
+          "quote_page_key": "Sales Y/Y TTM"
+        },
+        "sales_qoq": {
+          "type": "string",
+          "description": "Quarter-over-quarter sales growth",
+          "example": "38.22%",
+          "source": ["quote_page"],
+          "quote_page_key": "Sales Q/Q"
+        },
+        "earnings_date": {
+          "type": "string",
+          "description": "Next earnings announcement date (AMC=After Market Close, BMO=Before Market Open)",
+          "example": "Oct 30/a",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Earnings",
+          "quote_page_key": "Earnings"
+        },
+        "eps_sales_surprise": {
+          "type": "string",
+          "description": "Last earnings and sales surprise percentages",
+          "example": "4.23%0.33%",
+          "source": ["quote_page"],
+          "quote_page_key": "EPS/Sales Surpr."
+        }
+      }
+    },
+    
+    "dividend": {
+      "description": "Dividend-related metrics",
+      "fields": {
+        "dividend_yield": {
+          "type": "string",
+          "description": "Annual dividend yield (annual dividend / share price)",
+          "example": "0.39%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Dividend",
+          "quote_page_key": "Dividend %"
+        },
+        "dividend_ttm": {
+          "type": "string",
+          "description": "Trailing twelve month dividend per share",
+          "example": "1.00",
+          "source": ["quote_page"],
+          "quote_page_key": "Dividend TTM"
+        },
+        "dividend_est": {
+          "type": "string",
+          "description": "Estimated forward annual dividend per share",
+          "example": "1.04",
+          "source": ["quote_page"],
+          "quote_page_key": "Dividend Est."
+        },
+        "dividend_ex_date": {
+          "type": "string",
+          "description": "Most recent ex-dividend date",
+          "example": "Nov 08, 2024",
+          "source": ["quote_page"],
+          "quote_page_key": "Dividend Ex-Date"
+        },
+        "dividend_growth_3y_5y": {
+          "type": "string",
+          "description": "Dividend growth rate over 3 years and 5 years",
+          "example": "5.50% 7.25%",
+          "source": ["quote_page"],
+          "quote_page_key": "Dividend Gr. 3/5Y"
+        },
+        "payout_ratio": {
+          "type": "string",
+          "description": "Percentage of earnings paid as dividends",
+          "example": "15.00%",
+          "source": ["quote_page"],
+          "quote_page_key": "Payout"
+        }
+      }
+    },
+    
+    "ownership": {
+      "description": "Ownership and share structure metrics",
+      "fields": {
+        "shares_outstanding": {
+          "type": "string",
+          "description": "Total number of shares issued and outstanding",
+          "example": "14.77B",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Outstanding",
+          "quote_page_key": "Shs Outstand"
+        },
+        "shares_float": {
+          "type": "string",
+          "description": "Number of shares available for public trading",
+          "example": "14.76B",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Float",
+          "quote_page_key": "Shs Float"
+        },
+        "insider_ownership": {
+          "type": "string",
+          "description": "Percentage of shares held by insiders (officers, directors)",
+          "example": "0.10%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Insider Own",
+          "quote_page_key": "Insider Own"
+        },
+        "insider_transactions": {
+          "type": "string",
+          "description": "Net insider buying/selling over the past 6 months",
+          "example": "-2.33%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Insider Trans",
+          "quote_page_key": "Insider Trans"
+        },
+        "institutional_ownership": {
+          "type": "string",
+          "description": "Percentage of shares held by institutional investors",
+          "example": "64.88%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Inst Own",
+          "quote_page_key": "Inst Own"
+        },
+        "institutional_transactions": {
+          "type": "string",
+          "description": "Net institutional buying/selling over the past 3 months",
+          "example": "-0.22%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Inst Trans",
+          "quote_page_key": "Inst Trans"
+        },
+        "short_float": {
+          "type": "string",
+          "description": "Percentage of float shares sold short",
+          "example": "0.88%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Short Float",
+          "quote_page_key": "Short Float"
+        },
+        "short_ratio": {
+          "type": "number",
+          "description": "Days to cover - short interest divided by average daily volume",
+          "example": "2.65",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Short Ratio",
+          "quote_page_key": "Short Ratio"
+        },
+        "short_interest": {
+          "type": "string",
+          "description": "Total number of shares sold short",
+          "example": "4.70M",
+          "source": ["quote_page"],
+          "quote_page_key": "Short Interest"
+        }
+      }
+    },
+    
+    "performance": {
+      "description": "Historical price performance metrics",
+      "fields": {
+        "perf_week": {
+          "type": "string",
+          "description": "Price performance over the past week",
+          "example": "-1.66%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Perf Week",
+          "quote_page_key": "Perf Week"
+        },
+        "perf_month": {
+          "type": "string",
+          "description": "Price performance over the past month",
+          "example": "1.90%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Perf Month",
+          "quote_page_key": "Perf Month"
+        },
+        "perf_quarter": {
+          "type": "string",
+          "description": "Price performance over the past quarter (3 months)",
+          "example": "6.87%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Perf Quart",
+          "quote_page_key": "Perf Quarter"
+        },
+        "perf_half": {
+          "type": "string",
+          "description": "Price performance over the past 6 months",
+          "example": "35.82%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Perf Half",
+          "quote_page_key": "Perf Half Y"
+        },
+        "perf_ytd": {
+          "type": "string",
+          "description": "Price performance year-to-date",
+          "example": "9.28%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Perf YTD",
+          "quote_page_key": "Perf YTD"
+        },
+        "perf_year": {
+          "type": "string",
+          "description": "Price performance over the past year (52 weeks)",
+          "example": "7.97%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Perf Year",
+          "quote_page_key": "Perf Year"
+        },
+        "perf_3y": {
+          "type": "string",
+          "description": "Price performance over the past 3 years",
+          "example": "91.10%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Perf 3Y",
+          "quote_page_key": "Perf 3Y"
+        },
+        "perf_5y": {
+          "type": "string",
+          "description": "Price performance over the past 5 years",
+          "example": "124.72%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Perf 5Y",
+          "quote_page_key": "Perf 5Y"
+        },
+        "perf_10y": {
+          "type": "string",
+          "description": "Price performance over the past 10 years",
+          "example": "867.20%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Perf 10Y",
+          "quote_page_key": "Perf 10Y"
+        }
+      }
+    },
+    
+    "technical": {
+      "description": "Technical analysis indicators",
+      "fields": {
+        "beta": {
+          "type": "number",
+          "description": "Beta coefficient - measure of volatility relative to the market",
+          "example": "1.09",
+          "source": ["screener", "quote_page"],
+          "screener_key": "Beta",
+          "quote_page_key": "Beta"
+        },
+        "atr": {
+          "type": "number",
+          "description": "Average True Range (14-day) - measure of volatility",
+          "example": "4.99",
+          "source": ["screener", "quote_page"],
+          "screener_key": "ATR",
+          "quote_page_key": "ATR (14)"
+        },
+        "volatility_week": {
+          "type": "string",
+          "description": "Weekly price volatility (standard deviation of daily returns)",
+          "example": "1.99%",
+          "source": ["screener"],
+          "screener_key": "Volatility W"
+        },
+        "volatility_month": {
+          "type": "string",
+          "description": "Monthly price volatility (standard deviation of daily returns)",
+          "example": "1.85%",
+          "source": ["screener"],
+          "screener_key": "Volatility M"
+        },
+        "volatility": {
+          "type": "string",
+          "description": "Weekly and monthly volatility combined",
+          "example": "2.94% 3.37%",
+          "source": ["quote_page"],
+          "quote_page_key": "Volatility"
+        },
+        "sma20": {
+          "type": "string",
+          "description": "Distance from 20-day Simple Moving Average",
+          "example": "-1.39%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "SMA20",
+          "quote_page_key": "SMA20"
+        },
+        "sma50": {
+          "type": "string",
+          "description": "Distance from 50-day Simple Moving Average",
+          "example": "1.54%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "SMA50",
+          "quote_page_key": "SMA50"
+        },
+        "sma200": {
+          "type": "string",
+          "description": "Distance from 200-day Simple Moving Average",
+          "example": "19.03%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "SMA200",
+          "quote_page_key": "SMA200"
+        },
+        "high_52w": {
+          "type": "string",
+          "description": "52-week high price or distance from it",
+          "example": "-5.18%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "52W High",
+          "quote_page_key": "52W High"
+        },
+        "low_52w": {
+          "type": "string",
+          "description": "52-week low price or distance from it",
+          "example": "61.73%",
+          "source": ["screener", "quote_page"],
+          "screener_key": "52W Low",
+          "quote_page_key": "52W Low"
+        },
+        "rsi": {
+          "type": "number",
+          "description": "Relative Strength Index (14-day) - momentum oscillator (0-100)",
+          "example": "48.95",
+          "source": ["screener", "quote_page"],
+          "screener_key": "RSI",
+          "quote_page_key": "RSI (14)"
+        }
+      }
+    },
+    
+    "analyst": {
+      "description": "Analyst ratings and recommendations",
+      "fields": {
+        "target_price": {
+          "type": "number",
+          "description": "Average analyst 12-month price target",
+          "example": "560.09",
+          "source": ["quote_page"],
+          "quote_page_key": "Target Price"
+        },
+        "recommendation": {
+          "type": "number",
+          "description": "Average analyst recommendation (1=Strong Buy, 5=Strong Sell)",
+          "example": "1.46",
+          "source": ["quote_page"],
+          "quote_page_key": "Recom"
+        }
+      }
+    },
+    
+    "options": {
+      "description": "Options and short selling availability",
+      "fields": {
+        "option_short": {
+          "type": "string",
+          "description": "Options tradable / Short selling allowed (Yes/No)",
+          "example": "Yes / Yes",
+          "source": ["quote_page"],
+          "quote_page_key": "Option/Short"
+        }
+      }
+    },
+    
+    "financial_statements": {
+      "description": "Full financial statements (Quote Page only)",
+      "note": "These are multi-period statements with TTM and fiscal year data",
+      "available_from": ["quote_page"],
+      "statements": {
+        "income_statement": {
+          "description": "Income statement / Profit & Loss statement",
+          "periods": ["TTM", "FY_2025", "FY_2024", "FY_2023", "FY_2022", "FY_2021", "FY_2020", "FY_2019"],
+          "fields": [
+            "Period",
+            "Period End Date",
+            "Total Revenue",
+            "Cost of Goods Sold Incl. D&A",
+            "Gross Profit",
+            "Selling, General and Administrative Excl. Other",
+            "Research and Development",
+            "Other Operating Expense",
+            "Operating Income",
+            "Interest Expense",
+            "Unusual Expense",
+            "Net Income Before Taxes",
+            "Income Taxes",
+            "Consolidated Net Income",
+            "Net Income From Continuing Operations",
+            "Net Income",
+            "EPS (Recurring)",
+            "EPS (Basic, Before Extraordinaries)",
+            "EPS (Diluted)",
+            "EBITDA",
+            "Non-Operating Income (Expense)",
+            "Other After Tax Adjustments",
+            "Stock Option Compensation Expense",
+            "Price To Earnings Ratio",
+            "Price To Sales Ratio",
+            "Gross Margin",
+            "Operating Margin",
+            "Net Margin",
+            "Shares Outstanding",
+            "Market Capitalization"
+          ]
+        },
+        "balance_sheet": {
+          "description": "Balance sheet / Statement of Financial Position",
+          "periods": ["FY_2025", "FY_2024", "FY_2023", "FY_2022", "FY_2021", "FY_2020", "FY_2019", "FY_2018"],
+          "fields": [
+            "Period",
+            "Period End Date",
+            "Short Term Receivables",
+            "Inventories",
+            "Other Current Assets",
+            "Total Current Assets",
+            "Net Property, Plant & Equipment",
+            "Total Investments and Advances",
+            "Long-Term Note Receivable",
+            "Intangible Assets",
+            "Deferred Tax Assets",
+            "Other Assets",
+            "Total Assets",
+            "Short Term Debt Incl. Current Port. of LT Debt",
+            "Accounts Payable",
+            "Income Tax Payable",
+            "Other Current Liabilities",
+            "Total Current Liabilities",
+            "Long Term Debt",
+            "Provision for Risks Charges",
+            "Deferred Tax Liabilities",
+            "Other Liabilities",
+            "Total Liabilities",
+            "Non-Equity Reserves",
+            "Preferred Stock - Carrying Value",
+            "Common Equity",
+            "Total Shareholders Equity",
+            "Accumulated Minority Interest",
+            "Total Equity",
+            "Liabilities & Shareholders Equity",
+            "Book Value Per Share",
+            "Total Debt",
+            "Tangible Book Value",
+            "Tangible Book Value Per Share",
+            "Current Ratio"
+          ]
+        },
+        "cash_flow": {
+          "description": "Cash flow statement",
+          "periods": ["TTM", "FY_2025", "FY_2024", "FY_2023", "FY_2022", "FY_2021", "FY_2020", "FY_2019"],
+          "fields": [
+            "Period",
+            "Period End Date",
+            "Net Income",
+            "Depreciation, Depletion & Amortization",
+            "Deferred Taxes & Investment Tax Credit",
+            "Other Funds",
+            "Funds from Operations",
+            "Changes in Working Capital",
+            "Net Operating Cash Flow",
+            "Capital Expenditures",
+            "Net Assets from Acquisitions",
+            "Sale of Fixed Assets & Businesses",
+            "Purchase/Sale of Investments",
+            "Other Uses",
+            "Other Sources",
+            "Net Investing Cash Flow",
+            "Cash Dividends Paid",
+            "Change in Short Term Borrowings",
+            "Change in Current Debt",
+            "Change in Long Term Debt",
+            "Issuance/Reduction of Debt, Net",
+            "Issuance of Stock",
+            "Repurchase of Stock",
+            "Issuance/Reduction of Capital Stock, Net",
+            "Other Funds",
+            "Other Uses",
+            "Net Financing Cash Flow",
+            "Effect of Exchange Rate Changes",
+            "Net Change in Cash",
+            "Free Cash Flow",
+            "Free Cash Flow Per Share",
+            "Price to Free Cash Flow"
+          ]
+        }
+      }
+    }
+  },
+  
+  "field_count_summary": {
+    "identity": 7,
+    "price": 10,
+    "valuation": 11,
+    "financials": 4,
+    "profitability": 6,
+    "liquidity": 4,
+    "earnings": 14,
+    "dividend": 6,
+    "ownership": 9,
+    "performance": 9,
+    "technical": 12,
+    "analyst": 2,
+    "options": 1,
+    "total_snapshot_fields": 95,
+    "income_statement_fields": 30,
+    "balance_sheet_fields": 35,
+    "cash_flow_fields": 32,
+    "total_financial_statement_fields": 97
+  },
+  
+  "source_comparison": {
+    "screener_only_fields": [
+      "company_name",
+      "sector", 
+      "industry",
+      "country",
+      "change_from_open",
+      "gap",
+      "volatility_week",
+      "volatility_month"
+    ],
+    "quote_page_only_fields": [
+      "index",
+      "employees",
+      "ipo_date",
+      "enterprise_value",
+      "ev_to_ebitda",
+      "ev_to_sales",
+      "income",
+      "sales",
+      "book_value_per_share",
+      "cash_per_share",
+      "eps_ttm",
+      "eps_next_quarter",
+      "eps_past_3y_5y",
+      "eps_yoy_ttm",
+      "eps_qoq",
+      "sales_past_3y_5y",
+      "sales_yoy_ttm",
+      "sales_qoq",
+      "eps_sales_surprise",
+      "dividend_ttm",
+      "dividend_est",
+      "dividend_ex_date",
+      "dividend_growth_3y_5y",
+      "payout_ratio",
+      "short_interest",
+      "prev_close",
+      "trades",
+      "target_price",
+      "recommendation",
+      "option_short",
+      "income_statement",
+      "balance_sheet",
+      "cash_flow"
+    ],
+    "available_in_both": [
+      "market_cap",
+      "pe_ratio",
+      "forward_pe",
+      "peg_ratio",
+      "price_to_sales",
+      "price_to_book",
+      "price_to_cash",
+      "price_to_fcf",
+      "roa",
+      "roe",
+      "roic",
+      "gross_margin",
+      "operating_margin",
+      "profit_margin",
+      "current_ratio",
+      "quick_ratio",
+      "debt_to_equity",
+      "lt_debt_to_equity",
+      "eps_this_year",
+      "eps_next_year",
+      "eps_past_5y",
+      "eps_next_5y",
+      "sales_past_5y",
+      "earnings_date",
+      "dividend_yield",
+      "shares_outstanding",
+      "shares_float",
+      "insider_ownership",
+      "insider_transactions",
+      "institutional_ownership",
+      "institutional_transactions",
+      "short_float",
+      "short_ratio",
+      "perf_week",
+      "perf_month",
+      "perf_quarter",
+      "perf_half",
+      "perf_ytd",
+      "perf_year",
+      "perf_3y",
+      "perf_5y",
+      "perf_10y",
+      "beta",
+      "atr",
+      "sma20",
+      "sma50",
+      "sma200",
+      "high_52w",
+      "low_52w",
+      "rsi",
+      "price",
+      "change",
+      "volume",
+      "avg_volume",
+      "rel_volume"
+    ]
+  }
+}

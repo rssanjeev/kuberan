@@ -1,0 +1,55 @@
+testenv/
+.mypy_cache/
+__pycache__/
+.env
+
+# Ignore CSV files in root directory but keep them in Reports/Projections
+/*.csv
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+.env
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+ENV/
+
+# Flutter/Dart
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# General
+*.log
+
+# Financial Documents - SECURITY: Never commit PDFs or extracted data
+*.pdf
+*_chase_extracted.json
+*_extracted.json
+category_mapping.json
+backend/*.pdf
+backend/**/*.pdf
+backend/*_extracted.json
+
+# Manual entries - User's private income/expense data
+backend/data/manual_entries.json        
+
+.github/
+/Users/sanjeev/Developer/kuberan/.github/

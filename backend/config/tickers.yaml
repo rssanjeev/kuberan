@@ -1,0 +1,14 @@
+# Configuration for stock tickers to monitor
+tickers:
+  - KO
+  - NVDA
+  - VZ
+  - VOO
+  - VXUS
+  - CVX
+
+# Refresh interval in seconds (for future background tasks)
+refresh_interval: 300
+
+# Data retention settings
+data_retention_days: 30

@@ -1,0 +1,367 @@
+# FinViz Site Configuration v2 - Label-Based Extraction
+#
+# Uses label-based extraction for snapshot_table (66 metrics)
+# Uses selector-based extraction for header, classification
+#
+# Last Updated: 2025-12-21
+
+site_name: finviz
+base_url: https://finviz.com
+
+# Global interceptors (cookie banners, ads, etc.)
+global_interceptors:
+  - name: cookie_banner
+    trigger_selector: ".cookie-banner, .gdpr-consent, #onetrust-consent-sdk"
+    action: click
+    target_selector: ".accept-button, .consent-accept, #onetrust-accept-btn-handler"
+    timeout_ms: 3000
+    priority: 10
+    
+  - name: ad_overlay
+    trigger_selector: ".ad-overlay, .modal-backdrop, .popup-ad"
+    action: close
+    target_selector: ".close-button, [aria-label='Close'], .popup-close"
+    timeout_ms: 2000
+    priority: 20
+
+# Page templates
+page_templates:
+  # Stock quote page
+  - signature:
+      name: stock_page
+      url_pattern: "^https://finviz\\.com/quote\\.ashx\\?t=[A-Z]+"
+      required_elements:
+        - "table.snapshot-table2"
+      forbidden_elements:
+        - ".error-page"
+        - ".ticker-not-found"
+    
+    interceptors:
+      - cookie_banner
+      - ad_overlay
+    
+    regions:
+      # Header region (ticker + company name) - Selector-based
+      - region_id: header
+        description: "Ticker and company name"
+        container_selector: "table.fullview-title"
+        extraction_mode: selector
+        parsing_rules:
+          - field_name: ticker
+            label_text: null
+            selector:
+              primary: ".quote-header_ticker-wrapper_ticker"
+              fallbacks:
+                - "a.tab-link"
+                - "h1 a"
+              selector_type: css
+            data_type: string
+            required: true
+            
+          - field_name: company_name
+            label_text: null
+            selector:
+              primary: ".quote-header_ticker-wrapper_company a"
+              fallbacks:
+                - ".fullview-title a[href*='quote.ashx']"
+              selector_type: css
+            data_type: string
+            required: true
+
+      # Classification region - Selector-based
+      - region_id: classification
+        description: "Sector, industry, country, exchange"
+        container_selector: "table.fullview-links"
+        extraction_mode: selector
+        parsing_rules:
+          - field_name: sector
+            selector:
+              primary: "a[href*='sec_']"
+              fallbacks:
+                - ".fullview-links a:first-of-type"
+              selector_type: css
+            data_type: string
+            required: false
+            
+          - field_name: industry
+            selector:
+              primary: "a[href*='ind_']"
+              fallbacks: []
+              selector_type: css
+            data_type: string
+            required: false
+            
+          - field_name: country
+            selector:
+              primary: "a[href*='geo_']"
+              fallbacks: []
+              selector_type: css
+            data_type: string
+            required: false
+            
+          - field_name: exchange
+            selector:
+              primary: "a[href*='exch_']"
+              fallbacks: []
+              selector_type: css
+            data_type: string
+            required: false
+
+      # Snapshot table - LABEL-BASED EXTRACTION (66 metrics)
+      - region_id: snapshot_table
+        description: "Main fundamentals table with 66 metrics"
+        container_selector: "table.snapshot-table2"
+        extraction_mode: label_based
+        label_config:
+          # Finviz uses pairs: <td class="snapshot-td2">Label</td><td class="snapshot-td2"><b>Value</b></td>
+          label_selector: "td.snapshot-td2"
+          value_selector: "following-sibling"
+          extract_all: true  # Extract ALL label/value pairs
+          field_mappings:
+            # Valuation Metrics
+            - label: "Market Cap"
+              field_name: market_cap
+              data_type: currency
+            - label: "P/E"
+              field_name: pe_ratio
+              data_type: float
+            - label: "Forward P/E"
+              field_name: forward_pe
+              data_type: float
+            - label: "PEG"
+              field_name: peg_ratio
+              data_type: float
+            - label: "P/S"
+              field_name: price_to_sales
+              data_type: float
+            - label: "P/B"
+              field_name: price_to_book
+              data_type: float
+            - label: "P/C"
+              field_name: price_to_cash
+              data_type: float
+            - label: "P/FCF"
+              field_name: price_to_fcf
+              data_type: float
+              
+            # Earnings & EPS
+            - label: "EPS (ttm)"
+              field_name: eps_ttm
+              data_type: float
+            - label: "EPS next Y"
+              field_name: eps_next_year
+              data_type: float
+            - label: "EPS next Q"
+              field_name: eps_next_quarter
+              data_type: float
+            - label: "EPS this Y"
+              field_name: eps_growth_this_year
+              data_type: percentage
+            - label: "EPS next 5Y"
+              field_name: eps_growth_next_5y
+              data_type: percentage
+            - label: "EPS past 5Y"
+              field_name: eps_growth_past_5y
+              data_type: percentage
+            - label: "Sales past 5Y"
+              field_name: sales_growth_past_5y
+              data_type: percentage
+            - label: "Sales Q/Q"
+              field_name: sales_qq
+              data_type: percentage
+            - label: "EPS Q/Q"
+              field_name: eps_qq
+              data_type: percentage
+              
+            # Profitability & Efficiency
+            - label: "ROA"
+              field_name: roa
+              data_type: percentage
+            - label: "ROE"
+              field_name: roe
+              data_type: percentage
+            - label: "ROI"
+              field_name: roi
+              data_type: percentage
+            - label: "Gross Margin"
+              field_name: gross_margin
+              data_type: percentage
+            - label: "Oper. Margin"
+              field_name: operating_margin
+              data_type: percentage
+            - label: "Profit Margin"
+              field_name: profit_margin
+              data_type: percentage
+              
+            # Balance Sheet
+            - label: "Current Ratio"
+              field_name: current_ratio
+              data_type: float
+            - label: "Quick Ratio"
+              field_name: quick_ratio
+              data_type: float
+            - label: "Debt/Eq"
+              field_name: debt_to_equity
+              data_type: float
+            - label: "LT Debt/Eq"
+              field_name: lt_debt_to_equity
+              data_type: float
+              
+            # Dividends
+            - label: "Dividend %"
+              field_name: dividend_yield
+              data_type: percentage
+            - label: "Payout"
+              field_name: payout_ratio
+              data_type: percentage
+              
+            # Ownership & Short Interest
+            - label: "Shs Outstand"
+              field_name: shares_outstanding
+              data_type: currency
+            - label: "Shs Float"
+              field_name: shares_float
+              data_type: currency
+            - label: "Insider Own"
+              field_name: insider_ownership
+              data_type: percentage
+            - label: "Insider Trans"
+              field_name: insider_transactions
+              data_type: percentage
+            - label: "Inst Own"
+              field_name: institutional_ownership
+              data_type: percentage
+            - label: "Inst Trans"
+              field_name: institutional_transactions
+              data_type: percentage
+            - label: "Short Float"
+              field_name: short_float
+              data_type: percentage
+            - label: "Short Ratio"
+              field_name: short_ratio
+              data_type: float
+              
+            # Performance
+            - label: "Perf Week"
+              field_name: perf_week
+              data_type: percentage
+            - label: "Perf Month"
+              field_name: perf_month
+              data_type: percentage
+            - label: "Perf Quarter"
+              field_name: perf_quarter
+              data_type: percentage
+            - label: "Perf Half Y"
+              field_name: perf_half_year
+              data_type: percentage
+            - label: "Perf Year"
+              field_name: perf_year
+              data_type: percentage
+            - label: "Perf YTD"
+              field_name: perf_ytd
+              data_type: percentage
+              
+            # Technicals
+            - label: "Beta"
+              field_name: beta
+              data_type: float
+            - label: "52W High"
+              field_name: high_52w
+              data_type: float
+            - label: "52W Low"
+              field_name: low_52w
+              data_type: float
+            - label: "52W Range"
+              field_name: range_52w
+              data_type: string
+            - label: "RSI (14)"
+              field_name: rsi_14
+              data_type: float
+            - label: "ATR"
+              field_name: atr
+              data_type: float
+            - label: "SMA20"
+              field_name: sma_20
+              data_type: percentage
+            - label: "SMA50"
+              field_name: sma_50
+              data_type: percentage
+            - label: "SMA200"
+              field_name: sma_200
+              data_type: percentage
+            - label: "Volatility"
+              field_name: volatility
+              data_type: string
+              
+            # Volume & Price
+            - label: "Volume"
+              field_name: volume
+              data_type: integer
+            - label: "Avg Volume"
+              field_name: avg_volume
+              data_type: currency
+            - label: "Rel Volume"
+              field_name: relative_volume
+              data_type: float
+            - label: "Prev Close"
+              field_name: prev_close
+              data_type: float
+            - label: "Price"
+              field_name: current_price
+              data_type: float
+            - label: "Change"
+              field_name: price_change
+              data_type: percentage
+              
+            # Analyst
+            - label: "Target Price"
+              field_name: target_price
+              data_type: float
+            - label: "Recom"
+              field_name: analyst_recommendation
+              data_type: float
+              
+            # Other
+            - label: "Index"
+              field_name: index_membership
+              data_type: string
+            - label: "Optionable"
+              field_name: optionable
+              data_type: string
+            - label: "Shortable"
+              field_name: shortable
+              data_type: string
+            - label: "Employees"
+              field_name: employees
+              data_type: integer
+            - label: "Income"
+              field_name: income
+              data_type: currency
+            - label: "Sales"
+              field_name: sales
+              data_type: currency
+            - label: "Book/sh"
+              field_name: book_value_per_share
+              data_type: float
+            - label: "Cash/sh"
+              field_name: cash_per_share
+              data_type: float
+
+# Global settings
+settings:
+  headless: true  # Run browser in headless mode (no window)
+  browser_type: chromium
+  timeout_ms: 30000
+  retry_attempts: 3
+  delay_between_requests_ms: 1000
+  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+
+# Sample URLs for validation
+sample_urls:
+  stock_page:
+    - ticker: NVDA
+      url: "https://finviz.com/quote.ashx?t=NVDA&p=d"
+    - ticker: AAPL
+      url: "https://finviz.com/quote.ashx?t=AAPL&p=d"
+    - ticker: MSFT
+      url: "https://finviz.com/quote.ashx?t=MSFT&p=d"

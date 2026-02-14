@@ -1,0 +1,386 @@
+{
+  "site_name": "finviz",
+  "base_url": "https://finviz.com",
+  "generated_at": "2025-12-21T15:30:00.000000Z",
+  "version": "2.0.0",
+  "description": "Comprehensive FinViz data extraction dictionary with label-based field mapping",
+  "templates": {
+    "stock_page": {
+      "signature": {
+        "name": "stock_page",
+        "url_pattern": "^https://finviz\\.com/quote\\.ashx\\?t=[A-Z]+",
+        "required_elements": ["table.snapshot-table2"],
+        "forbidden_elements": [".error-page", ".ticker-not-found"]
+      },
+      "regions": [
+        {
+          "region_id": "header",
+          "description": "Ticker and company name",
+          "container_selector": "table.fullview-title",
+          "extraction_mode": "selector",
+          "parsing_rules": [
+            {
+              "field_name": "ticker",
+              "label_text": null,
+              "selector": {"primary": ".quote-header_ticker-wrapper_ticker", "fallbacks": ["h1 a", "a.tab-link"], "selector_type": "css"},
+              "data_type": "string",
+              "category": "identity",
+              "required": true
+            },
+            {
+              "field_name": "company_name",
+              "label_text": null,
+              "selector": {"primary": ".quote-header_ticker-wrapper_company", "fallbacks": ["h2", ".fullview-title a"], "selector_type": "css"},
+              "data_type": "string",
+              "category": "identity",
+              "required": true
+            }
+          ]
+        },
+        {
+          "region_id": "classification",
+          "description": "Sector, industry, country, exchange",
+          "container_selector": "table.fullview-links",
+          "extraction_mode": "selector",
+          "parsing_rules": [
+            {"field_name": "sector", "label_text": null, "selector": {"primary": "a[href*='sec_']", "selector_type": "css"}, "data_type": "string", "category": "classification"},
+            {"field_name": "industry", "label_text": null, "selector": {"primary": "a[href*='ind_']", "selector_type": "css"}, "data_type": "string", "category": "classification"},
+            {"field_name": "country", "label_text": null, "selector": {"primary": "a[href*='geo_']", "selector_type": "css"}, "data_type": "string", "category": "classification"},
+            {"field_name": "exchange", "label_text": null, "selector": {"primary": "a[href*='exch_']", "selector_type": "css"}, "data_type": "string", "category": "classification"}
+          ]
+        },
+        {
+          "region_id": "snapshot_table",
+          "description": "Main fundamentals table with 83+ metrics",
+          "container_selector": "table.snapshot-table2",
+          "extraction_mode": "label_value_pairs",
+          "parsing_rules": [
+            {"field_name": "index", "label_text": "Index", "data_type": "string", "category": "identification"},
+            {"field_name": "market_cap", "label_text": "Market Cap", "data_type": "currency", "transformation": "parse_market_cap", "category": "valuation"},
+            {"field_name": "income", "label_text": "Income", "data_type": "currency", "transformation": "parse_currency", "category": "financials"},
+            {"field_name": "sales", "label_text": "Sales", "data_type": "currency", "transformation": "parse_currency", "category": "financials"},
+            {"field_name": "book_sh", "label_text": "Book/sh", "data_type": "float", "category": "valuation"},
+            {"field_name": "cash_sh", "label_text": "Cash/sh", "data_type": "float", "category": "valuation"},
+            {"field_name": "dividend", "label_text": "Dividend", "data_type": "float", "category": "dividends"},
+            {"field_name": "dividend_yield", "label_text": "Dividend %", "data_type": "percentage", "category": "dividends"},
+            {"field_name": "employees", "label_text": "Employees", "data_type": "integer", "category": "company_info"},
+            {"field_name": "optionable", "label_text": "Optionable", "data_type": "boolean", "category": "trading"},
+            {"field_name": "shortable", "label_text": "Shortable", "data_type": "boolean", "category": "trading"},
+            {"field_name": "recom", "label_text": "Recom", "data_type": "float", "category": "analyst"},
+            {"field_name": "pe_ratio", "label_text": "P/E", "data_type": "float", "category": "valuation"},
+            {"field_name": "forward_pe", "label_text": "Forward P/E", "data_type": "float", "category": "valuation"},
+            {"field_name": "peg", "label_text": "PEG", "data_type": "float", "category": "valuation"},
+            {"field_name": "ps_ratio", "label_text": "P/S", "data_type": "float", "category": "valuation"},
+            {"field_name": "pb_ratio", "label_text": "P/B", "data_type": "float", "category": "valuation"},
+            {"field_name": "pc_ratio", "label_text": "P/C", "data_type": "float", "category": "valuation"},
+            {"field_name": "pfcf_ratio", "label_text": "P/FCF", "data_type": "float", "category": "valuation"},
+            {"field_name": "quick_ratio", "label_text": "Quick Ratio", "data_type": "float", "category": "financials"},
+            {"field_name": "current_ratio", "label_text": "Current Ratio", "data_type": "float", "category": "financials"},
+            {"field_name": "debt_eq", "label_text": "Debt/Eq", "data_type": "float", "category": "financials"},
+            {"field_name": "lt_debt_eq", "label_text": "LT Debt/Eq", "data_type": "float", "category": "financials"},
+            {"field_name": "sma20", "label_text": "SMA20", "data_type": "percentage", "category": "technicals"},
+            {"field_name": "eps_ttm", "label_text": "EPS (ttm)", "data_type": "float", "category": "earnings"},
+            {"field_name": "eps_next_y", "label_text": "EPS next Y", "data_type": "float", "category": "earnings"},
+            {"field_name": "eps_next_q", "label_text": "EPS next Q", "data_type": "float", "category": "earnings"},
+            {"field_name": "eps_this_y_growth", "label_text": "EPS this Y", "data_type": "percentage", "category": "growth"},
+            {"field_name": "eps_next_y_growth", "label_text": "EPS next Y", "data_type": "percentage", "category": "growth"},
+            {"field_name": "eps_next_5y_growth", "label_text": "EPS next 5Y", "data_type": "percentage", "category": "growth"},
+            {"field_name": "eps_past_5y_growth", "label_text": "EPS past 5Y", "data_type": "percentage", "category": "growth"},
+            {"field_name": "sales_past_5y_growth", "label_text": "Sales past 5Y", "data_type": "percentage", "category": "growth"},
+            {"field_name": "sales_qq", "label_text": "Sales Q/Q", "data_type": "percentage", "category": "growth"},
+            {"field_name": "eps_qq", "label_text": "EPS Q/Q", "data_type": "percentage", "category": "growth"},
+            {"field_name": "earnings_date", "label_text": "Earnings", "data_type": "date", "category": "events"},
+            {"field_name": "sma50", "label_text": "SMA50", "data_type": "percentage", "category": "technicals"},
+            {"field_name": "insider_own", "label_text": "Insider Own", "data_type": "percentage", "category": "ownership"},
+            {"field_name": "insider_trans", "label_text": "Insider Trans", "data_type": "percentage", "category": "ownership"},
+            {"field_name": "inst_own", "label_text": "Inst Own", "data_type": "percentage", "category": "ownership"},
+            {"field_name": "inst_trans", "label_text": "Inst Trans", "data_type": "percentage", "category": "ownership"},
+            {"field_name": "roa", "label_text": "ROA", "data_type": "percentage", "category": "profitability"},
+            {"field_name": "roe", "label_text": "ROE", "data_type": "percentage", "category": "profitability"},
+            {"field_name": "roi", "label_text": "ROI", "data_type": "percentage", "category": "profitability"},
+            {"field_name": "gross_margin", "label_text": "Gross Margin", "data_type": "percentage", "category": "profitability"},
+            {"field_name": "oper_margin", "label_text": "Oper. Margin", "data_type": "percentage", "category": "profitability"},
+            {"field_name": "profit_margin", "label_text": "Profit Margin", "data_type": "percentage", "category": "profitability"},
+            {"field_name": "payout", "label_text": "Payout", "data_type": "percentage", "category": "dividends"},
+            {"field_name": "sma200", "label_text": "SMA200", "data_type": "percentage", "category": "technicals"},
+            {"field_name": "shs_outstand", "label_text": "Shs Outstand", "data_type": "currency", "transformation": "parse_shares", "category": "shares"},
+            {"field_name": "shs_float", "label_text": "Shs Float", "data_type": "currency", "transformation": "parse_shares", "category": "shares"},
+            {"field_name": "short_float", "label_text": "Short Float / Ratio", "data_type": "string", "category": "short_interest"},
+            {"field_name": "short_ratio", "label_text": "Short Ratio", "data_type": "float", "category": "short_interest"},
+            {"field_name": "target_price", "label_text": "Target Price", "data_type": "float", "category": "analyst"},
+            {"field_name": "high_52w", "label_text": "52W High", "data_type": "float", "category": "price_range"},
+            {"field_name": "low_52w", "label_text": "52W Low", "data_type": "float", "category": "price_range"},
+            {"field_name": "52w_range", "label_text": "52W Range", "data_type": "string", "category": "price_range"},
+            {"field_name": "rsi_14", "label_text": "RSI (14)", "data_type": "float", "category": "technicals"},
+            {"field_name": "rel_volume", "label_text": "Rel Volume", "data_type": "float", "category": "volume"},
+            {"field_name": "avg_volume", "label_text": "Avg Volume", "data_type": "currency", "transformation": "parse_volume", "category": "volume"},
+            {"field_name": "volume", "label_text": "Volume", "data_type": "integer", "transformation": "parse_volume", "category": "volume"},
+            {"field_name": "perf_week", "label_text": "Perf Week", "data_type": "percentage", "category": "performance"},
+            {"field_name": "perf_month", "label_text": "Perf Month", "data_type": "percentage", "category": "performance"},
+            {"field_name": "perf_quarter", "label_text": "Perf Quarter", "data_type": "percentage", "category": "performance"},
+            {"field_name": "perf_half_y", "label_text": "Perf Half Y", "data_type": "percentage", "category": "performance"},
+            {"field_name": "perf_year", "label_text": "Perf Year", "data_type": "percentage", "category": "performance"},
+            {"field_name": "perf_ytd", "label_text": "Perf YTD", "data_type": "percentage", "category": "performance"},
+            {"field_name": "beta", "label_text": "Beta", "data_type": "float", "category": "risk"},
+            {"field_name": "atr", "label_text": "ATR", "data_type": "float", "category": "technicals"},
+            {"field_name": "volatility", "label_text": "Volatility", "data_type": "string", "category": "risk"},
+            {"field_name": "prev_close", "label_text": "Prev Close", "data_type": "float", "category": "price"},
+            {"field_name": "price", "label_text": "Price", "data_type": "float", "category": "price"},
+            {"field_name": "change", "label_text": "Change", "data_type": "percentage", "category": "price"},
+            {"field_name": "from_open", "label_text": "from Open", "data_type": "percentage", "category": "price"},
+            {"field_name": "gap", "label_text": "Gap", "data_type": "percentage", "category": "price"}
+          ]
+        },
+        {
+          "region_id": "income_statement",
+          "description": "Income statement data (TTM and historical)",
+          "container_selector": "table.quote_statements-table",
+          "extraction_mode": "financial_statement",
+          "tab_name": "Income Statement",
+          "parsing_rules": [
+            {"field_name": "total_revenue", "label_text": "Total Revenue", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "cost_of_revenue", "label_text": "Cost Of Revenue", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "gross_profit", "label_text": "Gross Profit", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "operating_expenses", "label_text": "Operating Expenses", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "rd_expenses", "label_text": "R&D Expenses", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "sga_expenses", "label_text": "SG&A Expenses", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "other_operating_income", "label_text": "Other Operating Income Or Expenses", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "operating_income", "label_text": "Operating Income", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "total_non_operating_income", "label_text": "Total Non-Operating Income/Expense", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "pretax_income", "label_text": "Pre-Tax Income", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "income_taxes", "label_text": "Income Taxes", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "income_after_taxes", "label_text": "Income After Taxes", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "other_income", "label_text": "Other Income", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "income_from_continuous_ops", "label_text": "Income From Continuous Operations", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "income_from_discontinued_ops", "label_text": "Income From Discontinued Operations", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "net_income", "label_text": "Net Income", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "ebitda", "label_text": "EBITDA", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "ebit", "label_text": "EBIT", "data_type": "currency", "category": "income_statement"},
+            {"field_name": "basic_shares_outstanding", "label_text": "Basic Shares Outstanding", "data_type": "currency", "category": "shares"},
+            {"field_name": "shares_outstanding_diluted", "label_text": "Shares Outstanding (Diluted)", "data_type": "currency", "category": "shares"},
+            {"field_name": "basic_eps", "label_text": "Basic EPS", "data_type": "float", "category": "earnings"},
+            {"field_name": "eps_diluted", "label_text": "EPS (Diluted)", "data_type": "float", "category": "earnings"}
+          ],
+          "periods": ["TTM", "2024", "2023", "2022", "2021", "2020", "2019", "2018"]
+        },
+        {
+          "region_id": "balance_sheet",
+          "description": "Balance sheet data (historical)",
+          "container_selector": "table.quote_statements-table",
+          "extraction_mode": "financial_statement",
+          "tab_name": "Balance Sheet",
+          "parsing_rules": [
+            {"field_name": "total_assets", "label_text": "Total Assets", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "total_current_assets", "label_text": "Total Current Assets", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "cash_and_equivalents", "label_text": "Cash And Cash Equivalents", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "short_term_investments", "label_text": "Short-Term Investments", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "accounts_receivable", "label_text": "Accounts Receivable", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "inventory", "label_text": "Inventory", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "total_non_current_assets", "label_text": "Total Non-Current Assets", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "property_plant_equipment", "label_text": "Property, Plant & Equipment", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "goodwill", "label_text": "Goodwill", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "intangible_assets", "label_text": "Intangible Assets", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "total_liabilities", "label_text": "Total Liabilities", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "total_current_liabilities", "label_text": "Total Current Liabilities", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "accounts_payable", "label_text": "Accounts Payable", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "short_term_debt", "label_text": "Short-Term Debt", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "total_non_current_liabilities", "label_text": "Total Non-Current Liabilities", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "long_term_debt", "label_text": "Long-Term Debt", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "total_equity", "label_text": "Total Equity", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "common_stock", "label_text": "Common Stock", "data_type": "currency", "category": "balance_sheet"},
+            {"field_name": "retained_earnings", "label_text": "Retained Earnings", "data_type": "currency", "category": "balance_sheet"}
+          ],
+          "periods": ["2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017"]
+        },
+        {
+          "region_id": "cash_flow",
+          "description": "Cash flow statement data",
+          "container_selector": "table.quote_statements-table",
+          "extraction_mode": "financial_statement",
+          "tab_name": "Cash Flow",
+          "parsing_rules": [
+            {"field_name": "net_income_cf", "label_text": "Net Income", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "operating_cash_flow", "label_text": "Cash From Operating Activities", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "depreciation_amortization", "label_text": "Depreciation & Amortization", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "stock_based_compensation", "label_text": "Stock-Based Compensation", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "change_in_working_capital", "label_text": "Change In Working Capital", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "investing_cash_flow", "label_text": "Cash From Investing Activities", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "capex", "label_text": "Capital Expenditures", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "acquisitions", "label_text": "Acquisitions", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "financing_cash_flow", "label_text": "Cash From Financing Activities", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "dividends_paid", "label_text": "Dividends Paid", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "stock_repurchases", "label_text": "Stock Repurchases", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "net_change_in_cash", "label_text": "Net Change In Cash", "data_type": "currency", "category": "cash_flow"},
+            {"field_name": "free_cash_flow", "label_text": "Free Cash Flow", "data_type": "currency", "category": "cash_flow"}
+          ],
+          "periods": ["TTM", "2024", "2023", "2022", "2021", "2020", "2019", "2018"]
+        },
+        {
+          "region_id": "insider_trading",
+          "description": "Insider trading activity table",
+          "container_selector": "table.body-table",
+          "extraction_mode": "table_rows",
+          "parsing_rules": [
+            {"field_name": "insider_name", "column_index": 0, "data_type": "string", "category": "insider_trading"},
+            {"field_name": "relationship", "column_index": 1, "data_type": "string", "category": "insider_trading"},
+            {"field_name": "transaction_date", "column_index": 2, "data_type": "date", "category": "insider_trading"},
+            {"field_name": "transaction_type", "column_index": 3, "data_type": "string", "category": "insider_trading"},
+            {"field_name": "cost", "column_index": 4, "data_type": "float", "category": "insider_trading"},
+            {"field_name": "shares", "column_index": 5, "data_type": "integer", "category": "insider_trading"},
+            {"field_name": "value", "column_index": 6, "data_type": "currency", "category": "insider_trading"},
+            {"field_name": "shares_total", "column_index": 7, "data_type": "integer", "category": "insider_trading"},
+            {"field_name": "sec_form_4_link", "column_index": 8, "data_type": "url", "category": "insider_trading"}
+          ]
+        }
+      ],
+      "interceptors": ["cookie_banner", "ad_overlay", "subscription_modal"]
+    },
+    "screener_page": {
+      "signature": {
+        "name": "screener_page",
+        "url_pattern": "^https://finviz\\.com/screener\\.ashx",
+        "required_elements": ["table.screener_table", "#screener-content"],
+        "forbidden_elements": [".error-page"]
+      },
+      "regions": [
+        {
+          "region_id": "screener_tabs",
+          "description": "Data view tabs (Overview, Valuation, Financial, etc.)",
+          "container_selector": ".screener-tabs, .tab-list",
+          "extraction_mode": "tab_navigation",
+          "available_tabs": [
+            {"tab_name": "Overview", "view_param": "v=111", "columns": ["No.", "Ticker", "Company", "Sector", "Industry", "Country", "Market Cap", "P/E", "Price", "Change", "Volume"]},
+            {"tab_name": "Valuation", "view_param": "v=121", "columns": ["No.", "Ticker", "Market Cap", "P/E", "Fwd P/E", "PEG", "P/S", "P/B", "P/C", "P/FCF", "EPS this Y", "EPS next Y", "EPS past 5Y", "EPS next 5Y", "Sales past 5Y", "Price", "Change", "Volume"]},
+            {"tab_name": "Financial", "view_param": "v=161", "columns": ["No.", "Ticker", "Market Cap", "Dividend", "ROA", "ROE", "ROI", "Curr R", "Quick R", "LTDebt/Eq", "Debt/Eq", "Gross M", "Oper M", "Profit M", "Earnings", "Price", "Change", "Volume"]},
+            {"tab_name": "Ownership", "view_param": "v=131", "columns": ["No.", "Ticker", "Market Cap", "Outstanding", "Float", "Insider Own", "Insider Trans", "Inst Own", "Inst Trans", "Float Short", "Short Ratio", "Avg Volume", "Price", "Change", "Volume"]},
+            {"tab_name": "Performance", "view_param": "v=141", "columns": ["No.", "Ticker", "Perf Week", "Perf Month", "Perf Quart", "Perf Half", "Perf Year", "Perf YTD", "Volatility W", "Volatility M", "Recom", "Avg Volume", "Rel Volume", "Price", "Change", "Volume"]},
+            {"tab_name": "Technical", "view_param": "v=171", "columns": ["No.", "Ticker", "Beta", "ATR", "SMA20", "SMA50", "SMA200", "52W High", "52W Low", "RSI", "Price", "Change", "from Open", "Gap", "Volume"]},
+            {"tab_name": "Custom", "view_param": "v=151", "columns": ["customizable"]},
+            {"tab_name": "Charts", "view_param": "v=211", "columns": ["chart_images"]},
+            {"tab_name": "Tickers", "view_param": "v=411", "columns": ["ticker_list"]},
+            {"tab_name": "Basic", "view_param": "v=511", "columns": ["basic_info"]},
+            {"tab_name": "TA", "view_param": "v=311", "columns": ["technical_analysis"]},
+            {"tab_name": "News", "view_param": "v=321", "columns": ["news_headlines"]},
+            {"tab_name": "Snapshot", "view_param": "v=331", "columns": ["snapshot_cards"]},
+            {"tab_name": "Maps", "view_param": "v=b", "columns": ["market_map"]},
+            {"tab_name": "Stats", "view_param": "v=s", "columns": ["statistics"]}
+          ]
+        },
+        {
+          "region_id": "screener_results",
+          "description": "Main ticker results table",
+          "container_selector": "table.screener_table, #screener-content table",
+          "extraction_mode": "table_rows",
+          "pagination": {
+            "enabled": true,
+            "type": "page_numbers",
+            "items_per_page": 20,
+            "page_param": "r"
+          }
+        },
+        {
+          "region_id": "screener_summary",
+          "description": "Summary stats above results (e.g., '#1 / 10786 Total')",
+          "container_selector": ".screener-summary, .count-results",
+          "extraction_mode": "text",
+          "parsing_rules": [
+            {"field_name": "total_results", "pattern": "(\\d+)\\s*Total", "data_type": "integer", "category": "summary"},
+            {"field_name": "current_page", "pattern": "#(\\d+)", "data_type": "integer", "category": "summary"}
+          ]
+        }
+      ],
+      "interceptors": ["cookie_banner", "ad_overlay", "subscription_modal"]
+    }
+  },
+  "field_categories": {
+    "identity": {"description": "Ticker and company identification", "fields": ["ticker", "company_name"]},
+    "classification": {"description": "Sector, industry, geography", "fields": ["sector", "industry", "country", "exchange"]},
+    "valuation": {"description": "Valuation ratios and metrics", "fields": ["market_cap", "pe_ratio", "forward_pe", "peg", "ps_ratio", "pb_ratio", "pc_ratio", "pfcf_ratio", "book_sh", "cash_sh"]},
+    "earnings": {"description": "EPS and earnings data", "fields": ["eps_ttm", "eps_next_y", "eps_next_q", "basic_eps", "eps_diluted"]},
+    "growth": {"description": "Growth rates and projections", "fields": ["eps_this_y_growth", "eps_next_y_growth", "eps_next_5y_growth", "eps_past_5y_growth", "sales_past_5y_growth", "sales_qq", "eps_qq"]},
+    "profitability": {"description": "Profitability ratios", "fields": ["roa", "roe", "roi", "gross_margin", "oper_margin", "profit_margin"]},
+    "financials": {"description": "Financial health metrics", "fields": ["income", "sales", "quick_ratio", "current_ratio", "debt_eq", "lt_debt_eq"]},
+    "dividends": {"description": "Dividend data", "fields": ["dividend", "dividend_yield", "payout"]},
+    "ownership": {"description": "Insider and institutional ownership", "fields": ["insider_own", "insider_trans", "inst_own", "inst_trans"]},
+    "shares": {"description": "Share counts", "fields": ["shs_outstand", "shs_float", "basic_shares_outstanding", "shares_outstanding_diluted"]},
+    "short_interest": {"description": "Short selling data", "fields": ["short_float", "short_ratio"]},
+    "analyst": {"description": "Analyst ratings and targets", "fields": ["recom", "target_price"]},
+    "technicals": {"description": "Technical indicators", "fields": ["sma20", "sma50", "sma200", "rsi_14", "atr"]},
+    "price_range": {"description": "52-week price range", "fields": ["high_52w", "low_52w", "52w_range"]},
+    "volume": {"description": "Volume metrics", "fields": ["volume", "avg_volume", "rel_volume"]},
+    "performance": {"description": "Price performance over time", "fields": ["perf_week", "perf_month", "perf_quarter", "perf_half_y", "perf_year", "perf_ytd"]},
+    "risk": {"description": "Risk metrics", "fields": ["beta", "volatility"]},
+    "price": {"description": "Current price data", "fields": ["price", "prev_close", "change", "from_open", "gap"]},
+    "events": {"description": "Upcoming events", "fields": ["earnings_date"]},
+    "trading": {"description": "Trading flags", "fields": ["optionable", "shortable"]},
+    "company_info": {"description": "Company metadata", "fields": ["employees", "index"]},
+    "income_statement": {"description": "Income statement line items", "fields": ["total_revenue", "cost_of_revenue", "gross_profit", "operating_expenses", "rd_expenses", "sga_expenses", "operating_income", "pretax_income", "income_taxes", "net_income", "ebitda", "ebit"]},
+    "balance_sheet": {"description": "Balance sheet line items", "fields": ["total_assets", "total_current_assets", "cash_and_equivalents", "short_term_investments", "accounts_receivable", "inventory", "total_liabilities", "total_equity", "long_term_debt"]},
+    "cash_flow": {"description": "Cash flow statement line items", "fields": ["operating_cash_flow", "investing_cash_flow", "financing_cash_flow", "capex", "free_cash_flow", "dividends_paid", "stock_repurchases"]},
+    "insider_trading": {"description": "Insider transaction data", "fields": ["insider_name", "relationship", "transaction_date", "transaction_type", "cost", "shares", "value", "shares_total"]}
+  },
+  "transformations": {
+    "parse_market_cap": {"description": "Parse values like '3266.36B' to numeric", "pattern": "([\\d.]+)([KMBT]?)", "multipliers": {"K": 1000, "M": 1000000, "B": 1000000000, "T": 1000000000000}},
+    "parse_shares": {"description": "Parse share counts like '24.49B'", "pattern": "([\\d.]+)([KMBT]?)", "multipliers": {"K": 1000, "M": 1000000, "B": 1000000000, "T": 1000000000000}},
+    "parse_volume": {"description": "Parse volume values", "pattern": "([\\d.]+)([KMBT]?)", "multipliers": {"K": 1000, "M": 1000000, "B": 1000000000}},
+    "parse_currency": {"description": "Parse currency values in millions", "unit": "millions"},
+    "parse_percentage": {"description": "Parse percentage values", "pattern": "(-?[\\d.]+)%"}
+  },
+  "interceptors": [
+    {
+      "name": "cookie_banner",
+      "trigger_selector": ".cookie-banner, .gdpr-consent, [class*='cookie'], [class*='consent']",
+      "action": "click",
+      "target_selector": ".accept-button, .consent-accept, button[class*='accept'], [aria-label*='Accept']",
+      "timeout_ms": 2000,
+      "priority": 10
+    },
+    {
+      "name": "ad_overlay",
+      "trigger_selector": ".ad-overlay, .modal-backdrop, [class*='popup'], [class*='overlay']",
+      "action": "close",
+      "target_selector": ".close-button, [aria-label='Close'], button.close, .modal-close, [class*='close']",
+      "timeout_ms": 1000,
+      "priority": 20
+    },
+    {
+      "name": "subscription_modal",
+      "trigger_selector": "[class*='subscription'], [class*='paywall'], [class*='elite']",
+      "action": "close",
+      "target_selector": ".close-button, [aria-label='Close'], button.close",
+      "timeout_ms": 1000,
+      "priority": 15
+    }
+  ],
+  "mongodb_storage": {
+    "collection_name": "finviz_snapshots",
+    "indexes": [
+      {"field": "ticker", "unique": false},
+      {"field": "extracted_at", "unique": false},
+      {"field": ["ticker", "extracted_at"], "unique": true}
+    ],
+    "document_schema": {
+      "ticker": "string",
+      "company_name": "string",
+      "sector": "string",
+      "industry": "string",
+      "exchange": "string",
+      "snapshot_data": "object",
+      "income_statement": "object",
+      "balance_sheet": "object",
+      "cash_flow": "object",
+      "insider_trading": "array",
+      "extracted_at": "datetime",
+      "source_url": "string"
+    }
+  },
+  "metadata": {
+    "total_snapshot_fields": 75,
+    "total_income_statement_fields": 22,
+    "total_balance_sheet_fields": 19,
+    "total_cash_flow_fields": 13,
+    "total_insider_trading_fields": 9,
+    "screener_tabs": 15,
+    "last_validated": "2025-12-21"
+  }
+}

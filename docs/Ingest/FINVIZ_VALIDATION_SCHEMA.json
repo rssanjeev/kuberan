@@ -1,0 +1,248 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kuberan.io/schemas/finviz_snapshot_v1.json",
+  "title": "FinViz Snapshot Schema v1",
+  "description": "JSON Schema for validating FinViz quote page snapshots including snapshot table and financial statements",
+  "type": "object",
+  "required": ["provider", "ticker", "snapshot_version", "fetched_at"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "const": "finviz",
+      "description": "Provider identifier"
+    },
+    "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}$",
+      "description": "Stock or ETF ticker symbol"
+    },
+    "snapshot_version": {
+      "type": "string",
+      "const": "v1",
+      "description": "Schema version for backward compatibility"
+    },
+    "as_of_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the data represents (YYYY-MM-DD)"
+    },
+    "fetched_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when data was fetched"
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": ["stock", "etf"],
+      "description": "Whether this is a stock or ETF"
+    },
+    "identity": {
+      "$ref": "#/definitions/identity"
+    },
+    "snapshot_table": {
+      "$ref": "#/definitions/snapshot_table"
+    },
+    "income_statement": {
+      "$ref": "#/definitions/financial_statement"
+    },
+    "balance_sheet": {
+      "$ref": "#/definitions/financial_statement"
+    },
+    "cash_flow": {
+      "$ref": "#/definitions/financial_statement"
+    },
+    "metadata": {
+      "$ref": "#/definitions/metadata"
+    }
+  },
+  "definitions": {
+    "identity": {
+      "type": "object",
+      "description": "Company/ETF identification information",
+      "properties": {
+        "company_name": { "type": "string" },
+        "exchange": { "type": "string" },
+        "country": { "type": "string" },
+        "sector": { "type": "string" },
+        "industry": { "type": "string" }
+      }
+    },
+    "raw_field": {
+      "type": "object",
+      "description": "Raw field value with optional paywall indicator",
+      "required": ["raw"],
+      "properties": {
+        "raw": {
+          "type": "string",
+          "description": "Raw string value exactly as displayed on FinViz"
+        },
+        "paywalled": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if this field is gated behind FinViz Elite"
+        }
+      }
+    },
+    "snapshot_table": {
+      "type": "object",
+      "description": "Snapshot table metrics (83+ fields)",
+      "properties": {
+        "index_name": { "$ref": "#/definitions/raw_field" },
+        "market_cap": { "$ref": "#/definitions/raw_field" },
+        "shares_outstanding": { "$ref": "#/definitions/raw_field" },
+        "float_shares": { "$ref": "#/definitions/raw_field" },
+        "pe_ratio": { "$ref": "#/definitions/raw_field" },
+        "forward_pe_ratio": { "$ref": "#/definitions/raw_field" },
+        "peg_ratio": { "$ref": "#/definitions/raw_field" },
+        "price_to_sales": { "$ref": "#/definitions/raw_field" },
+        "price_to_book": { "$ref": "#/definitions/raw_field" },
+        "price_to_cash": { "$ref": "#/definitions/raw_field" },
+        "price_to_free_cash_flow": { "$ref": "#/definitions/raw_field" },
+        "eps_ttm": { "$ref": "#/definitions/raw_field" },
+        "eps_next_year": { "$ref": "#/definitions/raw_field" },
+        "eps_next_quarter": { "$ref": "#/definitions/raw_field" },
+        "eps_growth_this_year": { "$ref": "#/definitions/raw_field" },
+        "eps_growth_next_year": { "$ref": "#/definitions/raw_field" },
+        "eps_growth_next_5y": { "$ref": "#/definitions/raw_field" },
+        "eps_growth_past_5y": { "$ref": "#/definitions/raw_field" },
+        "sales_growth_past_5y": { "$ref": "#/definitions/raw_field" },
+        "sales_growth_quarter": { "$ref": "#/definitions/raw_field" },
+        "roa": { "$ref": "#/definitions/raw_field" },
+        "roe": { "$ref": "#/definitions/raw_field" },
+        "roi": { "$ref": "#/definitions/raw_field" },
+        "gross_margin": { "$ref": "#/definitions/raw_field" },
+        "operating_margin": { "$ref": "#/definitions/raw_field" },
+        "profit_margin": { "$ref": "#/definitions/raw_field" },
+        "current_ratio": { "$ref": "#/definitions/raw_field" },
+        "quick_ratio": { "$ref": "#/definitions/raw_field" },
+        "debt_to_equity": { "$ref": "#/definitions/raw_field" },
+        "lt_debt_to_equity": { "$ref": "#/definitions/raw_field" },
+        "dividend_yield": { "$ref": "#/definitions/raw_field" },
+        "payout_ratio": { "$ref": "#/definitions/raw_field" },
+        "ex_dividend_date": { "$ref": "#/definitions/raw_field" },
+        "dividend_ttm": { "$ref": "#/definitions/raw_field" },
+        "dividend_growth_3y_5y": { "$ref": "#/definitions/raw_field" },
+        "insider_ownership": { "$ref": "#/definitions/raw_field" },
+        "insider_transaction_change": { "$ref": "#/definitions/raw_field" },
+        "institutional_ownership": { "$ref": "#/definitions/raw_field" },
+        "institutional_transaction_change": { "$ref": "#/definitions/raw_field" },
+        "short_float": { "$ref": "#/definitions/raw_field" },
+        "short_ratio": { "$ref": "#/definitions/raw_field" },
+        "short_interest": { "$ref": "#/definitions/raw_field" },
+        "target_price": { "$ref": "#/definitions/raw_field" },
+        "recommendation_score": { "$ref": "#/definitions/raw_field" },
+        "aum": { "$ref": "#/definitions/raw_field" },
+        "total_holdings": { "$ref": "#/definitions/raw_field" },
+        "nav_per_share": { "$ref": "#/definitions/raw_field" },
+        "expense_ratio": { "$ref": "#/definitions/raw_field" },
+        "fund_sponsor": { "$ref": "#/definitions/raw_field" },
+        "fund_family": { "$ref": "#/definitions/raw_field" },
+        "fund_category": { "$ref": "#/definitions/raw_field" },
+        "growth_value_style": { "$ref": "#/definitions/raw_field" },
+        "leverage_type": { "$ref": "#/definitions/raw_field" },
+        "flows_1m": { "$ref": "#/definitions/raw_field" },
+        "flows_3m": { "$ref": "#/definitions/raw_field" },
+        "flows_ytd": { "$ref": "#/definitions/raw_field" },
+        "flows_1y": { "$ref": "#/definitions/raw_field" },
+        "flows_3y": { "$ref": "#/definitions/raw_field" },
+        "flows_5y": { "$ref": "#/definitions/raw_field" },
+        "perf_week": { "$ref": "#/definitions/raw_field" },
+        "perf_month": { "$ref": "#/definitions/raw_field" },
+        "perf_quarter": { "$ref": "#/definitions/raw_field" },
+        "perf_half_year": { "$ref": "#/definitions/raw_field" },
+        "perf_year": { "$ref": "#/definitions/raw_field" },
+        "perf_ytd": { "$ref": "#/definitions/raw_field" },
+        "perf_3y": { "$ref": "#/definitions/raw_field" },
+        "perf_5y": { "$ref": "#/definitions/raw_field" },
+        "perf_10y": { "$ref": "#/definitions/raw_field" },
+        "return_1y": { "$ref": "#/definitions/raw_field" },
+        "return_3y": { "$ref": "#/definitions/raw_field" },
+        "return_5y": { "$ref": "#/definitions/raw_field" },
+        "return_10y": { "$ref": "#/definitions/raw_field" },
+        "high_52w": { "$ref": "#/definitions/raw_field" },
+        "low_52w": { "$ref": "#/definitions/raw_field" },
+        "percent_from_high_52w": { "$ref": "#/definitions/raw_field" },
+        "percent_from_low_52w": { "$ref": "#/definitions/raw_field" },
+        "ma_50d": { "$ref": "#/definitions/raw_field" },
+        "ma_200d": { "$ref": "#/definitions/raw_field" },
+        "sma_20d": { "$ref": "#/definitions/raw_field" },
+        "sma_50d": { "$ref": "#/definitions/raw_field" },
+        "sma_200d": { "$ref": "#/definitions/raw_field" },
+        "rsi_14": { "$ref": "#/definitions/raw_field" },
+        "atr_14": { "$ref": "#/definitions/raw_field" },
+        "beta": { "$ref": "#/definitions/raw_field" },
+        "volatility": { "$ref": "#/definitions/raw_field" },
+        "volume": { "$ref": "#/definitions/raw_field" },
+        "avg_volume": { "$ref": "#/definitions/raw_field" },
+        "relative_volume": { "$ref": "#/definitions/raw_field" },
+        "prev_close": { "$ref": "#/definitions/raw_field" },
+        "last_price": { "$ref": "#/definitions/raw_field" },
+        "session_change_percent": { "$ref": "#/definitions/raw_field" },
+        "trades": { "$ref": "#/definitions/raw_field" },
+        "ipo_date": { "$ref": "#/definitions/raw_field" },
+        "employees": { "$ref": "#/definitions/raw_field" },
+        "optionable": { "$ref": "#/definitions/raw_field" },
+        "shortable": { "$ref": "#/definitions/raw_field" },
+        "earnings_date": { "$ref": "#/definitions/raw_field" },
+        "income": { "$ref": "#/definitions/raw_field" },
+        "sales": { "$ref": "#/definitions/raw_field" },
+        "book_per_share": { "$ref": "#/definitions/raw_field" },
+        "cash_per_share": { "$ref": "#/definitions/raw_field" }
+      },
+      "additionalProperties": { "$ref": "#/definitions/raw_field" }
+    },
+    "financial_statement": {
+      "type": "object",
+      "description": "Financial statement with multiple periods",
+      "patternProperties": {
+        "^(TTM|FY_\\d{4}|Q[1-4]_\\d{4})$": {
+          "type": "object",
+          "description": "Period data (TTM, FY_2024, Q1_2024, etc.)",
+          "additionalProperties": {
+            "type": "string",
+            "description": "Raw metric value as string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extraction metadata",
+      "properties": {
+        "periods_available": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of financial periods extracted"
+        },
+        "paywall_detected": {
+          "type": "boolean",
+          "description": "Whether any Elite-gated content was detected"
+        },
+        "parsed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When parsing was completed"
+        },
+        "extraction_method": {
+          "type": "string",
+          "enum": ["playwright", "mcp_fetch", "manual"],
+          "description": "How HTML was extracted"
+        },
+        "parser_version": {
+          "type": "string",
+          "description": "Version of finviz_parser.py used"
+        },
+        "source_files": {
+          "type": "object",
+          "properties": {
+            "fullpage_html": { "type": "string" },
+            "income_statement_html": { "type": "string" },
+            "balance_sheet_html": { "type": "string" },
+            "cash_flow_html": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

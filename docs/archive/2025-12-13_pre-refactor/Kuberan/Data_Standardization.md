@@ -1,0 +1,16 @@
+Purpose: Data Standardization - Ensuring Consistency and Reliability Across Multiple Data Sources.
+
+General Standardization Philosophy
+- Standardization is crucial when aggregating data from multiple sources to ensure consistency, reliability, and accuracy.
+- For for this, we need to be able to establish a standard data model for the stocks, the overview, the financials, and all other features that we are developing over here.
+- Even though we are developing multiple features services and abilities for Kuberan app, we need to understand some thing that is completely basic. It is nothing but the data that we are collecting from multiple data sources are standardized.
+- Since we are talking about data model designing, we also need to understand something else a stock might have multiple sub features, starting off with overview, the financials, and in some cases, balance sheet, and other additional information that might come into our collection in the future.
+- At the end of the day, the data to be at via collecting or entirely based on the stocks, but the model that we are designing can be of multiple purposes, so we need to come up with terminologies that are consistent across the application and the end goal that we are trying to achieve.
+- So the goal must be to collect every possible data point related to a particle stock and then design different data. Models do utilize the data that were extracted to achieve the goal.
+- Each and every goal that we have can be a data model like for example, we can I have a data model to calculate the indicators which is technical indicators something like the moving averages. We can't even design data models to process the data that we have collected to identify significant changes in the market capitalization we can even design a data model to process Relative via collected to make sure that we are aware of new IPOs in the in the market. 
+- Establish clear rules and hierarchies for data precedence when conflicts arise between sources.
+- Regularly review and update standardization rules as new data sources are integrated or existing ones change
+- These are the goals that we have starting off with right now for this application the goals might change we might had new goals, so we need to be able to lay the foundation of this development of this application in such a way that it is adaptive and progressive in the future.
+- We need to come up with a standardization process that is efficient, but also mindful of all the resources that it is consuming and dumbs of maintaining the sanitization. You should be able to scale up all skill out based on the availability of resources at the goal of using the alarms are to make sure that we are making decisions to the best of our knowledge.
+- We can come up with a standardization process once we have two or more data sources, which we currently have, we have identified situations where the data points vary between data sources. For example, the location of a particular stock, but this standardization process should not be limited to such cases. The process should be on the lookout for disparity between various data sources for the same data point so we need to come up with the process that is smart enough to know what it is you look for but also at the same time it doesn't go haywire.
+
